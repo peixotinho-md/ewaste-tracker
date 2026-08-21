@@ -4,6 +4,11 @@
 
 PRAGMA foreign_keys = ON;
 
+-- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
+-- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
+-- dados/*.json, recriar é mais simples e mais seguro do que migrar.
+PRAGMA user_version = 2;
+
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
 -- --------------------------------------------------------------------------
@@ -84,6 +89,34 @@ CREATE INDEX idx_eventos_item ON eventos (item_codigo, em);
 -- (DROP TABLE não dispara gatilhos, e é por isso que reiniciar a demonstração
 --  recria o banco inteiro em vez de apagar linhas.)
 -- --------------------------------------------------------------------------
+-- --------------------------------------------------------------------------
+-- Atestado de apagamento seguro
+--
+-- Aparelhos com memória não volátil saem de casa ou da empresa com dados
+-- dentro. Na triagem, quem recebe declara QUAL é a mídia e COMO os dados foram
+-- destruídos — e o método precisa ser eficaz para aquele tipo de mídia
+-- (ver backend/modelo.py). Uma linha por item, e nunca mais alterada.
+-- --------------------------------------------------------------------------
+CREATE TABLE apagamentos (
+  item_codigo TEXT PRIMARY KEY REFERENCES itens (codigo) ON DELETE RESTRICT,
+  midia       TEXT NOT NULL,
+  metodo      TEXT NOT NULL,
+  responsavel TEXT NOT NULL DEFAULT '',
+  em          TEXT NOT NULL
+);
+
+CREATE TRIGGER apagamentos_sem_update
+BEFORE UPDATE ON apagamentos
+BEGIN
+  SELECT RAISE(ABORT, 'O atestado de apagamento é definitivo: alterar é proibido.');
+END;
+
+CREATE TRIGGER apagamentos_sem_delete
+BEFORE DELETE ON apagamentos
+BEGIN
+  SELECT RAISE(ABORT, 'O atestado de apagamento é definitivo: apagar é proibido.');
+END;
+
 CREATE TRIGGER eventos_sem_update
 BEFORE UPDATE ON eventos
 BEGIN

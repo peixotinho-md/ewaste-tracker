@@ -42,7 +42,11 @@
         "pt-cg-recicladora",
         "Recicladora Cerrado Verde"
       ]
-    ]
+    ],
+    "apagamento": {
+      "midia": "flash",
+      "metodo": "SECURE_ERASE"
+    }
   },
   {
     "codigo": "MS-9QW2-4TXK",
@@ -87,7 +91,11 @@
         "pt-cg-recicladora",
         "Recicladora Cerrado Verde"
       ]
-    ]
+    ],
+    "apagamento": {
+      "midia": "flash",
+      "metodo": "CRIPTO_ERASE"
+    }
   },
   {
     "codigo": "MS-5F8N-JD3Z",
@@ -126,7 +134,11 @@
         "pt-cg-recicladora",
         "Recicladora Cerrado Verde"
       ]
-    ]
+    ],
+    "apagamento": {
+      "midia": "magnetica",
+      "metodo": "DESTRUICAO_FISICA"
+    }
   },
   {
     "codigo": "MS-2KJ6-8YVF",

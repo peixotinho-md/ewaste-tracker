@@ -222,6 +222,86 @@ export function categoria(id) {
 }
 
 /* ------------------------------------------------------------------ *
+ * 2b. Apagamento seguro de mídias de dados
+ *
+ * Um aparelho descartado não carrega só metal: carrega dados. Apagar um
+ * arquivo ou formatar não destrói o conteúdo — só marca o espaço como livre.
+ * E a forma correta de destruir depende de COMO a mídia guarda o bit, o que é
+ * arquitetura do hardware, não software:
+ *
+ *   DISCO MAGNÉTICO (HDD) — o bit é a orientação magnética de uma região do
+ *   prato, e o endereço lógico corresponde a uma posição física estável.
+ *   Sobrescrever o setor destrói o dado; um campo magnético forte
+ *   (desmagnetização) apaga o disco inteiro.
+ *
+ *   MEMÓRIA FLASH (SSD, NVMe, eMMC) — o bit é carga presa numa célula, e o
+ *   endereço lógico NÃO corresponde a uma célula fixa: a flash translation
+ *   layer do controlador remapeia blocos para distribuir o desgaste (wear
+ *   leveling) e mantém uma reserva invisível ao sistema (over-provisioning).
+ *   Logo, sobrescrever pelo endereço lógico deixa cópias intactas em blocos
+ *   que o sistema operacional nem consegue endereçar, e desmagnetizar não faz
+ *   nada, porque não há magnetismo guardando o dado.
+ *
+ * Estas tabelas espelham `backend/modelo.py` e servem para a tela oferecer
+ * apenas o que funciona. A recusa que vale continua sendo a do servidor.
+ * ------------------------------------------------------------------ */
+
+/** Categorias que carregam memória não volátil. */
+export const CATEGORIAS_COM_MIDIA = new Set([
+  'celular', 'notebook', 'desktop', 'servidor', 'hd', 'impressora',
+]);
+
+export const MIDIAS = {
+  magnetica: { rotulo: 'Disco magnético (HDD)' },
+  flash: { rotulo: 'Memória flash (SSD, NVMe, eMMC, cartão)' },
+  sem_midia: { rotulo: 'Sem mídia de dados, ou já removida' },
+};
+
+export const METODOS_APAGAMENTO = {
+  SOBRESCRITA: {
+    rotulo: 'Sobrescrita de todos os setores',
+    midias: ['magnetica'],
+    porqueNao: 'Não alcança os blocos remapeados pelo wear leveling nem a área de over-provisioning: em flash, restam cópias legíveis.',
+  },
+  DESMAGNETIZACAO: {
+    rotulo: 'Desmagnetização (degausser)',
+    midias: ['magnetica'],
+    porqueNao: 'Em flash o bit é carga elétrica, não orientação magnética. O degausser não tem efeito nenhum.',
+  },
+  SECURE_ERASE: {
+    rotulo: 'ATA Secure Erase / NVMe Format',
+    midias: ['magnetica', 'flash'],
+    porqueNao: 'Aplicável apenas a mídias de dados.',
+  },
+  CRIPTO_ERASE: {
+    rotulo: 'Destruição da chave de criptografia',
+    midias: ['magnetica', 'flash'],
+    porqueNao: 'Aplicável apenas a mídias de dados.',
+  },
+  DESTRUICAO_FISICA: {
+    rotulo: 'Destruição física (trituração da mídia)',
+    midias: ['magnetica', 'flash'],
+    porqueNao: 'Aplicável apenas a mídias de dados.',
+  },
+  NAO_APLICAVEL: {
+    rotulo: 'Não aplicável — sem mídia de dados',
+    midias: ['sem_midia'],
+    porqueNao: 'O aparelho tem mídia de dados: informe como ela foi destruída.',
+  },
+};
+
+export function exigeApagamento(categoriaId) {
+  return CATEGORIAS_COM_MIDIA.has(categoriaId);
+}
+
+/** Métodos que realmente destroem o dado no tipo de mídia informado. */
+export function metodosParaMidia(midia) {
+  return Object.entries(METODOS_APAGAMENTO)
+    .filter(([, def]) => def.midias.includes(midia))
+    .map(([id, def]) => ({ id, ...def }));
+}
+
+/* ------------------------------------------------------------------ *
  * 3. Materiais e fator de CO2e evitado
  * ------------------------------------------------------------------ */
 

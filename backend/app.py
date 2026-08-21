@@ -220,6 +220,7 @@ def criar_evento(conexao, codigo):
         ponto_id=ponto_id,
         responsavel=modelo.texto(corpo.get("responsavel"), "responsavel"),
         observacao=modelo.texto(corpo.get("observacao"), "observacao"),
+        apagamento=corpo.get("apagamento"),
     )
     return jsonify(evento), 201
 

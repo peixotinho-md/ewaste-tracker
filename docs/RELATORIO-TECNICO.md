@@ -151,7 +151,9 @@ comprovação da destinação final.
    evitado e gargalos da cadeia;
 7. Permitir consulta sem conexão nos pontos de coleta;
 8. Garantir que as regras da cadeia sejam impostas pelo servidor e que o
-   histórico não possa ser alterado nem apagado.
+   histórico não possa ser alterado nem apagado;
+9. Assegurar que aparelhos com memória não volátil só sigam adiante com prova
+   de que os dados foram destruídos de forma compatível com a tecnologia da mídia.
 
 ---
 
@@ -191,6 +193,8 @@ ponta a ponta nem devolve essa informação a quem entregou o aparelho.
 | RF12 | Conta opcional com histórico de aparelhos do usuário | Implementado |
 | RF13 | Compartilhar dados entre dispositivos e usuários diferentes | Implementado (API + SQLite) |
 | RF14 | Autenticar operadores por perfil (ponto, cooperativa, recicladora) | **Pendente — ver Limitações** |
+| RF15 | Exigir atestado de apagamento de dados na triagem de aparelhos com memória não volátil | Implementado |
+| RF16 | Recusar método de apagamento incompatível com a tecnologia da mídia | Implementado |
 
 ### 6.2 Não funcionais
 
@@ -342,7 +346,53 @@ Existe um gatilho equivalente para `DELETE`. `etapa_atual`, na tabela `itens`, �
 apenas um espelho do último evento, mantido para consulta rápida — a verdade
 continua sendo a tabela de eventos.
 
-### 9.6 Concorrência
+### 9.6 Apagamento seguro: onde a arquitetura do hardware vira regra de negócio
+
+Um aparelho descartado não carrega só metal: carrega dados. É o caso direto do
+público que o próprio projeto identificou — as PMEs de TI que descartam "HDs,
+impressoras, servidores". Apagar um arquivo ou formatar **não destrói o
+conteúdo**: só marca o espaço como livre.
+
+E o método correto de destruição depende de **como a mídia guarda o bit**, o que
+é uma questão de arquitetura do hardware, não de software:
+
+| | Disco magnético (HDD) | Memória flash (SSD, NVMe, eMMC) |
+|---|---|---|
+| Como o bit é guardado | Orientação magnética de uma região do prato | Carga elétrica presa numa célula |
+| Endereço lógico → físico | Correspondência estável | **Não há**: a *flash translation layer* remapeia blocos o tempo todo |
+| Sobrescrever setores | Funciona | **Não funciona** — o *wear leveling* deixa cópias em blocos remapeados, e há ainda a área de *over-provisioning*, invisível ao sistema operacional |
+| Desmagnetizar (degausser) | Funciona | **Não faz nada** — não há magnetismo guardando o dado |
+| O que funciona em ambos | Secure Erase, crypto-erase, destruição física | Secure Erase (o próprio controlador apaga), crypto-erase, trituração |
+
+Na etapa `EM_TRIAGEM`, aparelhos das categorias com memória não volátil
+(`celular`, `notebook`, `desktop`, `servidor`, `hd`, `impressora`) só avançam
+com um **atestado de apagamento**: tipo de mídia e método usado. O servidor
+recusa a combinação ineficaz, e a recusa explica o motivo técnico:
+
+```
+POST /api/itens/MS-YFFG-ZXBC/eventos
+  {"etapa":"EM_TRIAGEM","apagamento":{"midia":"flash","metodo":"SOBRESCRITA"}}
+
+HTTP 400  "Sobrescrita de todos os setores" não destrói os dados em memória
+          flash (ssd, nvme, emmc, cartão). Sobrescrever pelo endereço lógico
+          não alcança os blocos que o wear leveling remapeou nem a área de
+          over-provisioning: em memória flash, restam cópias legíveis do dado.
+```
+
+Multifuncionais entram na lista porque as corporativas guardam cópias
+digitalizadas em disco ou memória flash interna — é uma fonte de vazamento que
+costuma passar despercebida no descarte.
+
+O atestado é gravado na mesma transação do avanço de etapa (ou o item avança
+com a declaração, ou não avança), fica visível no rastreio público junto ao
+certificado, e a tabela `apagamentos` tem os mesmos gatilhos de
+somente-acréscimo dos eventos: uma vez declarado, não se altera.
+
+Isso liga o projeto a duas coisas ao mesmo tempo: **Arquitetura de
+Computadores**, de forma aplicada e não decorativa, e a **LGPD**, já que
+descartar mídia sem destruir o dado é incidente de segurança, não descuido.
+
+### 9.7 Concorrência
 
 As escritas usam `BEGIN IMMEDIATE`, que toma o bloqueio de escrita já na
 abertura da transação, e não no primeiro `INSERT`. Isso importa porque as
@@ -351,7 +401,7 @@ antecipado, dois operadores lendo o mesmo QR ao mesmo tempo poderiam ambos ver
 `COLETADO` e gravar `EM_TRIAGEM` duas vezes. O banco opera em modo WAL, que
 permite leituras simultâneas às escritas.
 
-### 9.7 Superfície exposta pelo servidor
+### 9.8 Superfície exposta pelo servidor
 
 A lista de arquivos que o servidor entrega é explícita (`PAGINAS`,
 `ARQUIVOS_RAIZ` e `PASTAS_PUBLICAS`, em `app.py`). Um servidor que entregasse
@@ -359,7 +409,7 @@ qualquer arquivo da pasta acabaria servindo também `backend/etrilha.db` — o
 banco inteiro, com os hashes de senha — e a pasta `backup/`. O que não está na
 lista responde 404.
 
-### 9.8 Algoritmos relevantes
+### 9.9 Algoritmos relevantes
 
 - **Máquina de estados** (`validar_transicao`): só aceita o passo imediatamente
   seguinte; recusa retrocesso e salto de etapa, com mensagem explicando o motivo.
@@ -369,6 +419,9 @@ lista responde 404.
   alfabeto base32 **sem os caracteres I, L, O e U** — os que as pessoas confundem
   ao ler uma etiqueta suja. Detecta todos os erros de um caractere e a maioria das
   transposições. A normalização ainda corrige `O→0`, `I→1`, `L→1` e `U→V`.
+- **Validação do apagamento** (`validar_apagamento`): confere se o método
+  declarado destrói o dado naquele tipo de mídia; a tabela de compatibilidade
+  vem da arquitetura da mídia, não de convenção (seção 9.6).
 - **Haversine** (`distanciaKm`): distância entre o usuário e cada ponto de coleta,
   calculada no próprio aparelho — a localização não é enviada a lugar nenhum.
 - **Detecção de gargalo**: para cada etapa, média das durações **encerradas**
@@ -377,12 +430,12 @@ lista responde 404.
 - **Projeção cartográfica**: equirretangular, com o eixo X comprimido por
   `cos(latitude média)` para o estado não sair esticado.
 
-### 9.9 Articulação com as disciplinas
+### 9.10 Articulação com as disciplinas
 
 | Disciplina | Contribuição concreta ao projeto |
 |---|---|
 | **Algoritmos e Programação** | Máquina de estados, dígito verificador, Haversine, agregações e ordenações do painel |
-| **Arquitetura de Computadores** | A tabela de composição material sai da arquitetura real do hardware: ouro nos contatos e no encapsulamento dos circuitos integrados, cobre nas trilhas da placa e nos enrolamentos, alumínio nos dissipadores e no chassi, terras raras nos ímãs de HDs e alto-falantes. É esse conhecimento que permite estimar o que se recupera de cada aparelho |
+| **Arquitetura de Computadores** | Duas contribuições, ambas viradas em código. (1) O **atestado de apagamento** (seção 9.6): a diferença entre disco magnético e memória flash — orientação magnética contra carga em célula, endereçamento estável contra *flash translation layer* com *wear leveling* — define quais métodos destroem o dado, e essa distinção virou uma regra que o servidor impõe. (2) A **tabela de composição material** sai da arquitetura real do hardware: ouro nos contatos e no encapsulamento dos circuitos integrados, cobre nas trilhas da placa e nos enrolamentos, alumínio nos dissipadores e no chassi, terras raras nos ímãs de HDs e alto-falantes — é o que permite estimar o que se recupera de cada aparelho |
 | **Redes de Computadores** | Arquitetura cliente-servidor sobre HTTP; API REST com verbos e códigos de status; cookie de sessão; mesma origem para evitar CORS; e o QR transportando o identificador **sem depender de rede** no ponto de coleta |
 | **Sistemas Operacionais** | Processo servidor escutando numa porta; navegador como ambiente de execução com sandbox e **modelo de permissões** para câmera e geolocalização (o app nunca fala direto com o dispositivo); service worker como processo em segundo plano; concorrência, bloqueio de arquivo e journaling (WAL) no SQLite |
 
@@ -428,6 +481,12 @@ Marcos previstos no cronograma da DAC:
 | 14 | Chamar a API por fora da tela, com `curl`, pedindo uma etapa inválida | Recusado com HTTP 400 e a mesma mensagem da interface |
 | 15 | Tentar `UPDATE` ou `DELETE` em `eventos` direto no SQLite | Recusado pelos gatilhos do banco |
 | 16 | Pedir `backend/etrilha.db` pelo navegador | HTTP 404 — não está na lista de arquivos servidos |
+| 17 | Concluir a triagem de um HD sem informar o atestado | Recusado: a etapa não avança |
+| 18 | Declarar sobrescrita de setores em memória flash | Recusado, com a explicação do *wear leveling* |
+| 19 | Declarar desmagnetização em memória flash | Recusado: não há magnetismo guardando o dado |
+| 20 | Declarar ATA Secure Erase em memória flash | Aceito; atestado aparece no rastreio público |
+| 21 | Avançar um monitor (sem mídia) para a triagem | Aceito sem exigir atestado |
+| 22 | Tentar `UPDATE` ou `DELETE` na tabela `apagamentos` | Recusado pelos gatilhos |
 
 ### 11.2 Resultados obtidos
 

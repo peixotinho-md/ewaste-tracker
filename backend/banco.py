@@ -9,6 +9,7 @@ garante que o histórico de eventos não seja reescrito.
 """
 
 import json
+import re
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -80,10 +81,23 @@ def _tabelas_existem(conexao) -> bool:
     return linha["n"] > 0
 
 
+def _versao_do_arquivo(conexao) -> int:
+    return conexao.execute("PRAGMA user_version").fetchone()[0]
+
+
+def _versao_do_schema() -> int:
+    achado = re.search(r"PRAGMA user_version\s*=\s*(\d+)", CAMINHO_SCHEMA.read_text(encoding="utf-8"))
+    return int(achado.group(1)) if achado else 1
+
+
 def preparar(recriar: bool = False) -> None:
     """
-    Garante que o banco exista. Com `recriar=True`, apaga tudo e semeia de novo
-    (é o que o botão "reiniciar demonstração" faz).
+    Garante que o banco exista e esteja na versão atual do esquema.
+
+    Quando a versão gravada no arquivo é diferente da de `schema.sql`, o banco é
+    recriado. Num sistema em produção isso seria uma migração; aqui os dados são
+    de demonstração e vêm de `dados/*.json`, então recriar é mais simples e não
+    corre o risco de deixar o banco num estado meio migrado.
 
     A reinicialização derruba as tabelas em vez de apagar as linhas porque os
     gatilhos de somente-acréscimo proíbem DELETE em `eventos` — e DROP TABLE
@@ -91,12 +105,19 @@ def preparar(recriar: bool = False) -> None:
     """
     conexao = conectar()
     try:
-        if recriar:
+        desatualizado = _tabelas_existem(conexao) and _versao_do_arquivo(conexao) != _versao_do_schema()
+        if desatualizado:
+            print("  Esquema do banco desatualizado: recriando com os dados de demonstração.")
+
+        if recriar or desatualizado:
             conexao.executescript(
                 """
                 PRAGMA foreign_keys = OFF;
                 DROP TRIGGER IF EXISTS eventos_sem_update;
                 DROP TRIGGER IF EXISTS eventos_sem_delete;
+                DROP TRIGGER IF EXISTS apagamentos_sem_update;
+                DROP TRIGGER IF EXISTS apagamentos_sem_delete;
+                DROP TABLE IF EXISTS apagamentos;
                 DROP TABLE IF EXISTS eventos;
                 DROP TABLE IF EXISTS itens;
                 DROP TABLE IF EXISTS usuarios;
@@ -104,7 +125,7 @@ def preparar(recriar: bool = False) -> None:
                 """
             )
 
-        if recriar or not _tabelas_existem(conexao):
+        if recriar or desatualizado or not _tabelas_existem(conexao):
             conexao.executescript(CAMINHO_SCHEMA.read_text(encoding="utf-8"))
             _semear(conexao)
     finally:
@@ -157,6 +178,18 @@ def _semear(conexao) -> None:
                 [(item["codigo"], etapa, ponto, responsavel, quando(horas))
                  for etapa, horas, ponto, responsavel in trilha],
             )
+
+            # O atestado de apagamento nasce na triagem; itens de exemplo que
+            # ainda não chegaram lá não têm um.
+            apagamento = item.get("apagamento")
+            triagem = next((e for e in trilha if e[0] == "EM_TRIAGEM"), None)
+            if apagamento and triagem:
+                conexao.execute(
+                    """INSERT INTO apagamentos (item_codigo, midia, metodo, responsavel, em)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (item["codigo"], apagamento["midia"], apagamento["metodo"],
+                     triagem[3], quando(triagem[1])),
+                )
 
 
 # --------------------------------------------------------------------------- #
@@ -249,7 +282,21 @@ def obter_rastreio(conexao, codigo: str) -> dict | None:
         evento["ponto"] = pontos.get(evento["pontoId"])
         eventos.append(evento)
 
-    return {"item": item, "eventos": eventos}
+    return {"item": item, "eventos": eventos, "apagamento": obter_apagamento(conexao, codigo)}
+
+
+def obter_apagamento(conexao, codigo: str) -> dict | None:
+    linha = conexao.execute(
+        "SELECT * FROM apagamentos WHERE item_codigo = ?", (codigo,)
+    ).fetchone()
+    if linha is None:
+        return None
+    return {
+        "midia": linha["midia"],
+        "metodo": linha["metodo"],
+        "responsavel": linha["responsavel"],
+        "em": linha["em"],
+    }
 
 
 def itens_do_dono(conexao, usuario_id: str | None, visitante_id: str | None) -> list[dict]:
@@ -311,23 +358,43 @@ def criar_item(conexao, *, categoria, marca, peso_kg, ponto_origem_id,
     return obter_item(conexao, codigo)
 
 
-def registrar_evento(conexao, codigo, *, etapa, ponto_id, responsavel, observacao) -> dict:
+def registrar_evento(conexao, codigo, *, etapa, ponto_id, responsavel, observacao,
+                     apagamento=None) -> dict:
     """
     Acrescenta um elo à cadeia de custódia. A validação da transição roda
     dentro da transação, sobre a etapa lida do banco — nunca sobre o que o
     cliente afirmou ser a etapa atual.
+
+    Ao concluir a triagem de um aparelho com mídia de dados, o atestado de
+    apagamento é obrigatório e é gravado na mesma transação: ou o item avança
+    com a declaração, ou não avança.
     """
     agora = agora_iso()
 
     with transacao(conexao):
         linha = conexao.execute(
-            "SELECT etapa_atual FROM itens WHERE codigo = ?", (codigo,)
+            "SELECT etapa_atual, categoria FROM itens WHERE codigo = ?", (codigo,)
         ).fetchone()
         if linha is None:
             raise modelo.RegraViolada("Código de rastreio não encontrado.")
 
         # A validação acontece aqui, dentro da transação e do lado do servidor.
         modelo.validar_transicao(linha["etapa_atual"], etapa)
+
+        if etapa == "EM_TRIAGEM":
+            dados = apagamento or {}
+            midia, metodo = modelo.validar_apagamento(
+                linha["categoria"], dados.get("midia"), dados.get("metodo")
+            )
+            ja_existe = conexao.execute(
+                "SELECT 1 FROM apagamentos WHERE item_codigo = ?", (codigo,)
+            ).fetchone()
+            if not ja_existe:
+                conexao.execute(
+                    """INSERT INTO apagamentos (item_codigo, midia, metodo, responsavel, em)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (codigo, midia, metodo, responsavel or "Não informado", agora),
+                )
 
         cursor = conexao.execute(
             """INSERT INTO eventos (item_codigo, etapa, ponto_id, responsavel, observacao, em)

@@ -40,7 +40,8 @@ import * as store from './js/store.js';
 import { iniciarPagina, aviso, linhaDoTempo, seloEtapa, formatarData,
          formatarMassa, formatarNumero, formatarOuro, escapar } from './js/ui.js';
 import { normalizarCodigo, categoria, materiaisRecuperaveis, co2eEvitado,
-         MATERIAIS, ETAPA_FINAL, etapa as definicaoEtapa, estaPendente } from './js/model.js';
+         MATERIAIS, ETAPA_FINAL, etapa as definicaoEtapa, estaPendente,
+         exigeApagamento, MIDIAS, METODOS_APAGAMENTO } from './js/model.js';
 import { desenharQR } from './js/qr.js';
 
 await iniciarPagina();
@@ -136,6 +137,8 @@ async function mostrar(codigo) {
       ${linhaDoTempo(rastreio)}
     </section>
 
+    ${blocoApagamento(rastreio, cat)}
+
     <section class="cartao">
       <h2>${concluido ? 'Materiais recuperados' : 'Materiais que serão recuperados'}</h2>
       <p class="sutil">
@@ -161,6 +164,73 @@ async function mostrar(codigo) {
   entrada.value = item.codigo;
   document.title = `${item.codigo} · e-Trilha MS`;
 }
+
+/**
+ * Atestado de apagamento de dados.
+ *
+ * Aparece para aparelhos com memória não volátil: além do metal, eles saem de
+ * casa ou da empresa com dados dentro, e o descarte só é seguro se a mídia foi
+ * destruída de um jeito compatível com a tecnologia dela.
+ */
+function blocoApagamento(rastreio, cat) {
+  const { item, apagamento } = rastreio;
+
+  if (!exigeApagamento(item.categoria)) {
+    return `
+      <section class="cartao">
+        <h2>Segurança dos dados</h2>
+        <p class="sutil" style="margin:0">
+          ${escapar(cat?.rotulo ?? item.categoria)} não carrega memória não
+          volátil — não há dados a destruir neste aparelho.
+        </p>
+      </section>`;
+  }
+
+  if (!apagamento) {
+    return `
+      <section class="cartao">
+        <h2>Segurança dos dados</h2>
+        <div class="faixa faixa-info" style="margin:0">
+          Este aparelho tem memória não volátil e pode conter dados. O atestado
+          de apagamento é registrado na <strong>triagem</strong>, etapa que ele
+          ainda não alcançou.
+        </div>
+      </section>`;
+  }
+
+  const midia = MIDIAS[apagamento.midia]?.rotulo ?? apagamento.midia;
+  const metodo = METODOS_APAGAMENTO[apagamento.metodo]?.rotulo ?? apagamento.metodo;
+
+  return `
+    <section class="cartao">
+      <h2>Segurança dos dados</h2>
+      <div class="faixa" style="border-color:var(--verde-500)">
+        <strong>✓ Dados destruídos.</strong> Atestado registrado na triagem em
+        ${formatarData(apagamento.em)} por ${escapar(apagamento.responsavel)}.
+      </div>
+      <dl class="trilha-dados">
+        <div><dt>Mídia</dt><dd>${escapar(midia)}</dd></div>
+        <div><dt>Método</dt><dd>${escapar(metodo)}</dd></div>
+      </dl>
+      <p class="sutil" style="margin-top:.8rem">
+        ${escapar(EXPLICACAO_MIDIA[apagamento.midia] ?? '')}
+      </p>
+    </section>`;
+}
+
+/** Por que o método declarado funciona naquela mídia — o argumento de arquitetura. */
+const EXPLICACAO_MIDIA = {
+  magnetica:
+    'Em disco magnético o bit é a orientação magnética de uma região do prato, e o ' +
+    'endereço lógico corresponde a uma posição física estável — por isso sobrescrever ' +
+    'ou desmagnetizar destrói o dado de fato.',
+  flash:
+    'Em memória flash o bit é carga presa numa célula, e o controlador remapeia blocos ' +
+    'o tempo todo para distribuir o desgaste. Sobrescrever pelo endereço lógico deixaria ' +
+    'cópias em blocos inalcançáveis, e desmagnetizar não teria efeito nenhum — daí a ' +
+    'exigência de apagamento pelo próprio controlador, destruição da chave ou trituração.',
+  sem_midia: 'O aparelho não tem mídia de dados.',
+};
 
 /** Onde cada material aparece fisicamente no equipamento — ligação com Arquitetura de Computadores. */
 const ONDE = {

@@ -118,10 +118,15 @@ export async function criarItem({ categoria, marca, pesoKg, pontoOrigemId, respo
  * etapa lida do banco. Se for recusada, a mensagem do servidor sobe como erro
  * e a tela apenas a exibe.
  */
-export async function registrarEvento(codigo, { etapa, pontoId, responsavel, observacao }) {
+export async function registrarEvento(
+  codigo,
+  { etapa, pontoId, responsavel, observacao, apagamento = null }
+) {
   return api(`/itens/${encodeURIComponent(codigo)}/eventos`, {
     metodo: 'POST',
-    corpo: { etapa, pontoId, responsavel, observacao },
+    // `apagamento` só é usado ao concluir a triagem de um aparelho com mídia
+    // de dados; nas demais etapas o servidor ignora o campo.
+    corpo: { etapa, pontoId, responsavel, observacao, apagamento },
   });
 }
 

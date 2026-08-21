@@ -67,6 +67,9 @@ execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
    aparelho etapa por etapa até `PROCESSADO`.
    - No bloco *"Testar a validação da máquina de estados"*, tente pular uma
      etapa ou voltar: **o servidor** recusa e explica o porquê.
+   - Ao concluir a **triagem** de um notebook, HD ou celular, aparece o
+     **atestado de apagamento**. Escolha "memória flash" e tente
+     "sobrescrita de setores": o servidor recusa e explica o *wear leveling*.
 4. **`rastrear.html`** — abra em **outro navegador** e consulte o código: a
    trilha completa e o certificado aparecem, sem login. É a prova de que os
    dados são compartilhados, e não locais de cada máquina.
@@ -81,7 +84,8 @@ execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
 | `MS-3H7K-P2R6` | Notebook — ciclo completo, com certificado |
 | `MS-9QW2-4TXK` | Celular — ciclo completo, com certificado |
 | `MS-5F8N-JD3Z` | Servidor — em reciclagem |
-| `MS-2KJ6-8YVF` | Monitor — em triagem e **atrasado** |
+| `MS-2KJ6-8YVF` | Monitor — em triagem e **atrasado** (sem mídia de dados) |
+| `MS-8VNC-5RQ1` | HD — coletado; a próxima etapa exige o atestado de apagamento |
 | `MS-4WGR-7K2N` | Impressora — parada na coleta e **atrasada** |
 
 O botão **"Reiniciar demonstração"**, no painel, recria o banco com os dados de
@@ -136,6 +140,33 @@ Dá para explorar a API sem abrir o navegador:
 curl http://localhost:8000/api/saude
 curl http://localhost:8000/api/itens/MS-3H7K-P2R6/rastreio
 ```
+
+### Apagamento seguro: arquitetura do hardware como regra de negócio
+
+Um aparelho descartado carrega dados, não só metal — e é exatamente o caso das
+PMEs de TI que o projeto atende. Apagar arquivo ou formatar **não destrói o
+conteúdo**, e o método correto depende de **como a mídia guarda o bit**:
+
+| | Disco magnético (HDD) | Memória flash (SSD, NVMe, eMMC) |
+|---|---|---|
+| Como o bit é guardado | Orientação magnética no prato | Carga elétrica presa numa célula |
+| Endereço lógico → físico | Estável | **Não há**: a *flash translation layer* remapeia blocos |
+| Sobrescrever setores | Funciona | **Não funciona** — *wear leveling* e *over-provisioning* deixam cópias inalcançáveis |
+| Desmagnetizar | Funciona | **Não faz nada** — não há magnetismo guardando o dado |
+
+Na triagem, aparelhos com memória não volátil só avançam com um **atestado de
+apagamento** (mídia + método), e o servidor recusa a combinação ineficaz:
+
+```
+POST /api/itens/MS-YFFG-ZXBC/eventos
+  {"etapa":"EM_TRIAGEM","apagamento":{"midia":"flash","metodo":"SOBRESCRITA"}}
+
+HTTP 400  "Sobrescrita de todos os setores" não destrói os dados em memória
+          flash. Sobrescrever pelo endereço lógico não alcança os blocos que o
+          wear leveling remapeou nem a área de over-provisioning.
+```
+
+O atestado aparece no rastreio público junto ao certificado.
 
 ### O banco garante a cadeia de custódia
 
@@ -210,7 +241,7 @@ offline está listada como melhoria futura no Relatório Técnico.
 | Disciplina | Onde aparece |
 |---|---|
 | **Algoritmos e Programação** | Máquina de estados das etapas (`validar_transicao`), dígito verificador do código, Haversine, agregações do painel |
-| **Arquitetura de Computadores** | Tabela de composição material: ouro nos contatos e no encapsulamento dos CIs, cobre nas trilhas da placa, alumínio nos dissipadores, terras raras nos ímãs de HD |
+| **Arquitetura de Computadores** | **Atestado de apagamento**: a diferença entre disco magnético e memória flash (orientação magnética contra carga em célula; endereçamento estável contra *flash translation layer*) define quais métodos destroem o dado — e virou regra que o servidor impõe. Mais a tabela de composição material: ouro nos contatos e no encapsulamento dos CIs, cobre nas trilhas da placa, alumínio nos dissipadores, terras raras nos ímãs de HD |
 | **Redes de Computadores** | Arquitetura cliente-servidor sobre HTTP, API REST com verbos e códigos de status, cookie de sessão, mesma origem para evitar CORS, QR transportando o identificador **sem rede** no ponto de coleta |
 | **Sistemas Operacionais** | Navegador como ambiente de execução com sandbox e **permissões** (câmera, geolocalização); processo servidor escutando numa porta; service worker em segundo plano; concorrência e bloqueio de arquivo no SQLite |
 

@@ -64,7 +64,8 @@
 import * as store from './js/store.js';
 import { iniciarPagina, aviso, seloEtapa, formatarData, formatarMassa, escapar } from './js/ui.js';
 import { normalizarCodigo, categoria, proximaEtapa, ETAPAS, ETAPA_FINAL,
-         etapa as definicaoEtapa } from './js/model.js';
+         etapa as definicaoEtapa, exigeApagamento, metodosParaMidia,
+         MIDIAS, METODOS_APAGAMENTO } from './js/model.js';
 import { LeitorQR } from './js/qr.js';
 
 await iniciarPagina();
@@ -192,11 +193,18 @@ async function abrir(codigo) {
       </details>
     </div>`;
 
-  if (proxima) ligarFormulario(item, proxima);
+  if (proxima) {
+    ligarFormulario(item, proxima);
+    if (proxima.id === 'EM_TRIAGEM') ligarApagamento(item);
+  }
 
   document.getElementById('btn-livre').addEventListener('click', async () => {
+    const selMidia = document.getElementById('midia-ev');
     await avancar(item.codigo, document.getElementById('etapa-livre').value, {
       pontoId: null, responsavel: 'Teste de validação', observacao: '',
+      apagamento: selMidia
+        ? { midia: selMidia.value, metodo: document.getElementById('metodo-ev').value }
+        : null,
     });
   });
 }
@@ -218,6 +226,7 @@ function formularioAvanco(item, proxima) {
       <label for="resp-ev">Responsável pela leitura</label>
       <input id="resp-ev" maxlength="60" placeholder="Nome do operador ou da equipe">
     </div>
+    ${proxima.id === 'EM_TRIAGEM' ? blocoApagamento(item) : ''}
     <div class="campo">
       <label for="obs-ev">Observação <span class="sutil">(opcional)</span></label>
       <textarea id="obs-ev" maxlength="240" placeholder="Ex.: bateria removida e separada; carcaça trincada"></textarea>
@@ -229,12 +238,82 @@ function formularioAvanco(item, proxima) {
     </div>`;
 }
 
+/**
+ * Atestado de apagamento, exigido ao concluir a triagem de aparelhos que
+ * carregam memória não volátil. A lista de métodos muda conforme o tipo de
+ * mídia porque o que destrói o dado num disco magnético não destrói em flash.
+ */
+function blocoApagamento(item) {
+  if (!exigeApagamento(item.categoria)) {
+    return `
+      <div class="faixa">
+        Esta categoria não carrega mídia de dados — nada a apagar.
+      </div>`;
+  }
+  return `
+    <fieldset style="border:1px solid var(--borda);border-radius:var(--raio-sm);padding:.9rem;margin:0 0 1rem">
+      <legend class="sutil">Atestado de apagamento de dados</legend>
+      <p class="dica" style="margin-top:0">
+        Este aparelho tem memória não volátil e pode sair com dados dentro.
+        Formatar ou apagar arquivos <strong>não destrói o conteúdo</strong>.
+        Informe a mídia e o método usado.
+      </p>
+      <div class="campo">
+        <label for="midia-ev">Tipo de mídia</label>
+        <select id="midia-ev">
+          ${Object.entries(MIDIAS)
+            .map(([id, m]) => `<option value="${id}">${escapar(m.rotulo)}</option>`)
+            .join('')}
+        </select>
+      </div>
+      <div class="campo" style="margin-bottom:0">
+        <label for="metodo-ev">Método de destruição dos dados</label>
+        <select id="metodo-ev"></select>
+        <p class="dica" id="dica-metodo"></p>
+      </div>
+    </fieldset>`;
+}
+
+/** Repovoa os métodos válidos sempre que a mídia muda. */
+function ligarApagamento(item) {
+  const selMidia = document.getElementById('midia-ev');
+  const selMetodo = document.getElementById('metodo-ev');
+  if (!selMidia || !selMetodo) return;
+
+  function atualizar() {
+    const validos = metodosParaMidia(selMidia.value);
+    selMetodo.innerHTML = validos
+      .map((m) => `<option value="${m.id}">${escapar(m.rotulo)}</option>`)
+      .join('');
+
+    // Mostra o que ficou de fora e por quê: é a parte que explica a regra.
+    const excluidos = Object.entries(METODOS_APAGAMENTO)
+      .filter(([id]) => !validos.some((v) => v.id === id))
+      .filter(([id]) => id !== 'NAO_APLICAVEL' || selMidia.value !== 'sem_midia');
+
+    document.getElementById('dica-metodo').innerHTML = excluidos.length
+      ? `Não disponível para esta mídia: ${excluidos
+          .map(([, def]) => `<strong>${escapar(def.rotulo)}</strong> — ${escapar(def.porqueNao)}`)
+          .join(' ')}`
+      : '';
+  }
+
+  selMidia.addEventListener('change', atualizar);
+  // Aparelho com mídia começa em flash, que é o caso mais comum hoje.
+  selMidia.value = exigeApagamento(item.categoria) ? 'flash' : 'sem_midia';
+  atualizar();
+}
+
 function ligarFormulario(item, proxima) {
   document.getElementById('btn-avancar').addEventListener('click', async () => {
+    const selMidia = document.getElementById('midia-ev');
     await avancar(item.codigo, proxima.id, {
       pontoId: document.getElementById('ponto-ev').value || null,
       responsavel: document.getElementById('resp-ev').value,
       observacao: document.getElementById('obs-ev').value,
+      apagamento: selMidia
+        ? { midia: selMidia.value, metodo: document.getElementById('metodo-ev').value }
+        : null,
     });
   });
 }
