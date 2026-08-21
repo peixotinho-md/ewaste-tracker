@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rastrear aparelho · e-Trilha MS</title>
+<meta name="theme-color" content="#22773f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+<script src="vendor/qrcode.js"></script>
+</head>
+<body>
+
+<header class="cabecalho"><div data-cabecalho></div></header>
+
+<main class="estreito">
+
+  <section class="cartao nao-imprimir">
+    <h1>Rastrear aparelho</h1>
+    <p class="sutil">Consulta pública: qualquer pessoa com o código pode acompanhar o
+       caminho do dispositivo. Não é preciso ter conta.</p>
+    <form class="busca-codigo" id="form-busca">
+      <label class="oculto" for="codigo">Código de rastreio</label>
+      <input id="codigo" placeholder="MS-0000-0000" autocomplete="off"
+             spellcheck="false" maxlength="14" required>
+      <button class="botao" type="submit">Consultar</button>
+    </form>
+  </section>
+
+  <div id="resultado"></div>
+
+</main>
+
+<footer class="rodape nao-imprimir">
+  e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.
+</footer>
+
+<script type="module">
+import * as store from './js/store.js';
+import { iniciarPagina, aviso, linhaDoTempo, seloEtapa, formatarData,
+         formatarMassa, formatarNumero, formatarOuro, escapar } from './js/ui.js';
+import { normalizarCodigo, categoria, materiaisRecuperaveis, co2eEvitado,
+         MATERIAIS, ETAPA_FINAL, etapa as definicaoEtapa, estaPendente } from './js/model.js';
+import { desenharQR } from './js/qr.js';
+
+await iniciarPagina();
+
+const entrada = document.getElementById('codigo');
+const alvo = document.getElementById('resultado');
+
+document.getElementById('form-busca').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const codigo = normalizarCodigo(entrada.value);
+  if (!codigo) {
+    aviso('Código inválido. Confira os 8 caracteres da etiqueta.', 'erro');
+    return;
+  }
+  history.pushState({}, '', `?c=${encodeURIComponent(codigo)}`);
+  mostrar(codigo);
+});
+
+window.addEventListener('popstate', () => carregarDaUrl());
+
+async function mostrar(codigo) {
+  const rastreio = await store.obterRastreio(codigo);
+
+  if (!rastreio) {
+    alvo.innerHTML = `
+      <div class="cartao">
+        <div class="faixa faixa-alerta">
+          <strong>Código não encontrado.</strong>
+          O código <code>${escapar(codigo)}</code> tem formato válido, mas não
+          corresponde a nenhum aparelho registrado neste sistema.
+        </div>
+        <p>Verifique se digitou corretamente ou
+           <a href="registrar.html">registre este aparelho</a>.</p>
+      </div>`;
+    return;
+  }
+
+  const { item } = rastreio;
+  const cat = categoria(item.categoria);
+  const pendente = estaPendente(item);
+  const concluido = item.etapaAtual === ETAPA_FINAL;
+  const materiais = materiaisRecuperaveis(item);
+  const co2e = co2eEvitado(item);
+  const origem = rastreio.eventos[0]?.ponto;
+
+  alvo.innerHTML = `
+    <section class="cartao">
+      <div class="secao-titulo">
+        <div>
+          <p class="sutil" style="margin:0">Código de rastreio</p>
+          <div class="codigo-grande">${escapar(item.codigo)}</div>
+        </div>
+        <div class="qr-caixa" id="qr" style="max-width:130px"></div>
+      </div>
+
+      <div class="grade grade-2" style="margin-top:.5rem">
+        <div>
+          <h2 style="margin-bottom:.2rem">${escapar(cat?.rotulo ?? item.categoria)}</h2>
+          ${item.marca ? `<p class="sutil" style="margin:0 0 .5rem">${escapar(item.marca)}</p>` : ''}
+          <p style="margin:0">
+            ${seloEtapa(item.etapaAtual)}
+            ${pendente ? '<span class="selo" style="background:var(--vermelho-100);color:var(--vermelho-600)">atrasado</span>' : ''}
+          </p>
+        </div>
+        <dl class="trilha-dados">
+          <div><dt>Peso</dt><dd>${formatarMassa(item.pesoKg)}</dd></div>
+          <div><dt>Registrado em</dt><dd>${formatarData(item.criadoEm)}</dd></div>
+          <div><dt>Última atualização</dt><dd>${formatarData(item.atualizadoEm)}</dd></div>
+          ${origem ? `<div><dt>Entregue em</dt><dd>${escapar(origem.nome)}</dd></div>` : ''}
+        </dl>
+      </div>
+
+      ${pendente ? `
+        <div class="faixa faixa-alerta" style="margin-top:1rem">
+          <strong>Este aparelho está parado além do prazo previsto.</strong>
+          A etapa "${escapar(definicaoEtapa(item.etapaAtual).rotulo)}" deveria durar até
+          ${definicaoEtapa(item.etapaAtual).slaHoras} h. O caso aparece na lista de
+          pendências do <a href="painel.html">painel público</a>.
+        </div>` : ''}
+
+      ${concluido ? `
+        <div class="faixa" style="margin-top:1rem;border-color:var(--verde-500)">
+          <strong>✓ Destinação final comprovada.</strong>
+          Certificado emitido em ${formatarData(item.atualizadoEm)} por
+          ${escapar(rastreio.eventos.at(-1).responsavel)}.
+          <button class="botao botao-secundario nao-imprimir" style="margin-top:.6rem"
+                  onclick="window.print()">Imprimir certificado</button>
+        </div>` : ''}
+    </section>
+
+    <section class="cartao">
+      <h2>Trilha do aparelho</h2>
+      ${linhaDoTempo(rastreio)}
+    </section>
+
+    <section class="cartao">
+      <h2>${concluido ? 'Materiais recuperados' : 'Materiais que serão recuperados'}</h2>
+      <p class="sutil">
+        Estimativa a partir do peso e da composição média desta categoria de
+        equipamento. ${concluido ? '' : 'Só entra na contagem do painel quando a reciclagem for concluída.'}
+      </p>
+      <div class="rolagem">
+        <table>
+          <thead><tr><th>Material</th><th class="num">Quantidade</th><th>Onde está no aparelho</th></tr></thead>
+          <tbody>${linhasMateriais(materiais)}</tbody>
+        </table>
+      </div>
+      <p style="margin-top:1rem">
+        <strong>${formatarNumero(co2e, 1)} kg de CO₂e</strong> deixam de ser emitidos ao
+        recuperar estes materiais em vez de produzi-los do minério.
+      </p>
+      ${cat?.contaminantes?.length ? `
+        <p class="sutil">Contaminantes contidos, que o descarte comum liberaria no solo e na água:
+           ${cat.contaminantes.map(escapar).join(', ')}.</p>` : ''}
+    </section>`;
+
+  desenharQR(document.getElementById('qr'), item.codigo, { cellSize: 3, margin: 1 });
+  entrada.value = item.codigo;
+  document.title = `${item.codigo} · e-Trilha MS`;
+}
+
+/** Onde cada material aparece fisicamente no equipamento — ligação com Arquitetura de Computadores. */
+const ONDE = {
+  cobre: 'Trilhas da placa, fiação e enrolamentos de motores',
+  aluminio: 'Chassi, dissipadores de calor e carcaças',
+  aco: 'Estrutura, parafusos e blindagens',
+  plastico: 'Gabinete, conectores e isolamento de cabos',
+  vidro: 'Telas, visores e substratos',
+  terrasRaras: 'Ímãs de discos rígidos, alto-falantes e motores',
+  ouro: 'Contatos, conectores e encapsulamento dos circuitos integrados',
+};
+
+function linhasMateriais(materiais) {
+  const linhas = Object.entries(materiais)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, kg]) => `
+      <tr>
+        <td>${escapar(MATERIAIS[id]?.rotulo ?? id)}</td>
+        <td class="num">${id === 'ouro' ? formatarOuro(kg) : formatarMassa(kg)}</td>
+        <td class="sutil">${escapar(ONDE[id] ?? '')}</td>
+      </tr>`);
+  return linhas.join('') || '<tr><td colspan="3" class="sutil">Sem estimativa para esta categoria.</td></tr>';
+}
+
+function carregarDaUrl() {
+  const codigo = normalizarCodigo(new URLSearchParams(location.search).get('c'));
+  if (codigo) {
+    mostrar(codigo);
+  } else {
+    alvo.innerHTML = `
+      <div class="cartao vazio">
+        Informe um código de rastreio acima para ver a trilha do aparelho.
+      </div>`;
+    entrada.focus();
+  }
+}
+
+carregarDaUrl();
+</script>
+
+</body>
+</html>

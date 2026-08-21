@@ -1,0 +1,381 @@
+[
+  {
+    "id": "pt-cg-eco-norte",
+    "nome": "Ecoponto Campo Grande — Região Norte",
+    "tipo": "ecoponto",
+    "municipio": "Campo Grande",
+    "endereco": "Av. Ernesto Geisel, 2200 — Bairro Coophavila II",
+    "lat": -20.4426,
+    "lng": -54.6089,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–17h · Sáb, 7h–12h",
+    "telefone": "(67) 3000-0001"
+  },
+  {
+    "id": "pt-cg-eco-sul",
+    "nome": "Ecoponto Campo Grande — Região Sul",
+    "tipo": "ecoponto",
+    "municipio": "Campo Grande",
+    "endereco": "Rua Antônio Maria Coelho, 850 — Bairro Aero Rancho",
+    "lat": -20.5312,
+    "lng": -54.6478,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–17h",
+    "telefone": "(67) 3000-0002"
+  },
+  {
+    "id": "pt-cg-coop-reviver",
+    "nome": "Cooperativa Reviver Pantanal",
+    "tipo": "cooperativa",
+    "municipio": "Campo Grande",
+    "endereco": "Rua das Garças, 145 — Distrito Industrial",
+    "lat": -20.4991,
+    "lng": -54.5623,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 8h–17h",
+    "telefone": "(67) 3000-0003"
+  },
+  {
+    "id": "pt-cg-shopping",
+    "nome": "PEV Shopping Campo Grande",
+    "tipo": "pev",
+    "municipio": "Campo Grande",
+    "endereco": "Av. Afonso Pena, 4909 — Piso térreo, próximo à praça de alimentação",
+    "lat": -20.4585,
+    "lng": -54.5905,
+    "aceita": [
+      "celular",
+      "hd",
+      "cabos",
+      "bateria"
+    ],
+    "horario": "Todos os dias, 10h–22h",
+    "telefone": "(67) 3000-0004"
+  },
+  {
+    "id": "pt-cg-loja-tec",
+    "nome": "TecMais Assistência — Logística Reversa",
+    "tipo": "fabricante",
+    "municipio": "Campo Grande",
+    "endereco": "Rua 14 de Julho, 1120 — Centro",
+    "lat": -20.4649,
+    "lng": -54.6152,
+    "aceita": [
+      "celular",
+      "notebook",
+      "hd",
+      "cabos",
+      "bateria"
+    ],
+    "horario": "Seg a sex, 9h–18h · Sáb, 9h–13h",
+    "telefone": "(67) 3000-0005"
+  },
+  {
+    "id": "pt-cg-recicladora",
+    "nome": "Recicladora Cerrado Verde (credenciada)",
+    "tipo": "recicladora",
+    "municipio": "Campo Grande",
+    "endereco": "Rod. BR-262, km 12 — Distrito Industrial",
+    "lat": -20.4438,
+    "lng": -54.5207,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–16h (recebe apenas lotes de cooperativas)",
+    "telefone": "(67) 3000-0006"
+  },
+  {
+    "id": "pt-do-eco",
+    "nome": "Ecoponto Dourados — Vila Cachoeirinha",
+    "tipo": "ecoponto",
+    "municipio": "Dourados",
+    "endereco": "Rua Monte Alegre, 500 — Vila Cachoeirinha",
+    "lat": -22.2154,
+    "lng": -54.8342,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–17h",
+    "telefone": "(67) 3000-0011"
+  },
+  {
+    "id": "pt-do-coop",
+    "nome": "Cooperativa Sul-Mato-Grossense de Recicláveis",
+    "tipo": "cooperativa",
+    "municipio": "Dourados",
+    "endereco": "Av. Marcelino Pires, 6200 — Jardim Caramuru",
+    "lat": -22.2377,
+    "lng": -54.7891,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sáb, 8h–17h",
+    "telefone": "(67) 3000-0012"
+  },
+  {
+    "id": "pt-tl-eco",
+    "nome": "Ecoponto Três Lagoas — Jardim Alvorada",
+    "tipo": "ecoponto",
+    "municipio": "Três Lagoas",
+    "endereco": "Rua Egídio Thomé, 340 — Jardim Alvorada",
+    "lat": -20.7712,
+    "lng": -51.6834,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–16h",
+    "telefone": "(67) 3000-0021"
+  },
+  {
+    "id": "pt-tl-pev",
+    "nome": "PEV Campus UFMS Três Lagoas",
+    "tipo": "pev",
+    "municipio": "Três Lagoas",
+    "endereco": "Av. Ranulpho Marques Leal, 3484 — Hall da biblioteca",
+    "lat": -20.7936,
+    "lng": -51.7095,
+    "aceita": [
+      "celular",
+      "hd",
+      "cabos",
+      "bateria"
+    ],
+    "horario": "Seg a sex, 7h–22h",
+    "telefone": "(67) 3000-0022"
+  },
+  {
+    "id": "pt-co-eco",
+    "nome": "Ecoponto Corumbá — Porto Geral",
+    "tipo": "ecoponto",
+    "municipio": "Corumbá",
+    "endereco": "Rua Manoel Cavassa, 90 — Porto Geral",
+    "lat": -19.0117,
+    "lng": -57.6603,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–13h",
+    "telefone": "(67) 3000-0031"
+  },
+  {
+    "id": "pt-pp-pev",
+    "nome": "PEV Prefeitura de Ponta Porã",
+    "tipo": "pev",
+    "municipio": "Ponta Porã",
+    "endereco": "Rua Guia Lopes, 480 — Centro",
+    "lat": -22.5361,
+    "lng": -55.7259,
+    "aceita": [
+      "celular",
+      "hd",
+      "cabos",
+      "bateria"
+    ],
+    "horario": "Seg a sex, 8h–17h",
+    "telefone": "(67) 3000-0041"
+  },
+  {
+    "id": "pt-nv-coop",
+    "nome": "Cooperativa Naviraí Recicla",
+    "tipo": "cooperativa",
+    "municipio": "Naviraí",
+    "endereco": "Av. Amália Ruiz Zaib, 1500 — Jardim Progresso",
+    "lat": -23.0552,
+    "lng": -54.1866,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 8h–17h",
+    "telefone": "(67) 3000-0051"
+  },
+  {
+    "id": "pt-na-eco",
+    "nome": "Ecoponto Nova Andradina",
+    "tipo": "ecoponto",
+    "municipio": "Nova Andradina",
+    "endereco": "Av. Antônio Joaquim de Moura Andrade, 900 — Centro",
+    "lat": -22.2311,
+    "lng": -53.3402,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–17h",
+    "telefone": "(67) 3000-0061"
+  },
+  {
+    "id": "pt-aq-pev",
+    "nome": "PEV Aquidauana — Casa da Cultura",
+    "tipo": "pev",
+    "municipio": "Aquidauana",
+    "endereco": "Rua Estêvão Alves Corrêa, 1000 — Centro",
+    "lat": -20.4713,
+    "lng": -55.7833,
+    "aceita": [
+      "celular",
+      "hd",
+      "cabos",
+      "bateria"
+    ],
+    "horario": "Seg a sex, 8h–17h",
+    "telefone": "(67) 3000-0071"
+  },
+  {
+    "id": "pt-pa-eco",
+    "nome": "Ecoponto Paranaíba",
+    "tipo": "ecoponto",
+    "municipio": "Paranaíba",
+    "endereco": "Rua Antônio João, 1200 — Centro",
+    "lat": -19.6789,
+    "lng": -51.1954,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 7h–16h",
+    "telefone": "(67) 3000-0081"
+  },
+  {
+    "id": "pt-cx-pev",
+    "nome": "PEV Coxim — Terminal Rodoviário",
+    "tipo": "pev",
+    "municipio": "Coxim",
+    "endereco": "Av. Virgínia Ferreira, 250 — Centro",
+    "lat": -18.5089,
+    "lng": -54.7561,
+    "aceita": [
+      "celular",
+      "hd",
+      "cabos",
+      "bateria"
+    ],
+    "horario": "Todos os dias, 6h–20h",
+    "telefone": "(67) 3000-0091"
+  },
+  {
+    "id": "pt-mj-coop",
+    "nome": "Associação Maracaju Sustentável",
+    "tipo": "cooperativa",
+    "municipio": "Maracaju",
+    "endereco": "Rua Bela Vista, 77 — Vila Juquita",
+    "lat": -21.6182,
+    "lng": -55.1721,
+    "aceita": [
+      "celular",
+      "notebook",
+      "desktop",
+      "monitor",
+      "impressora",
+      "servidor",
+      "hd",
+      "cabos",
+      "bateria",
+      "eletrodomestico"
+    ],
+    "horario": "Seg a sex, 8h–16h",
+    "telefone": "(67) 3000-0101"
+  }
+]

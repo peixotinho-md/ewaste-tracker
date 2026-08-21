@@ -1,0 +1,296 @@
+[
+  {
+    "codigo": "MS-3H7K-P2R6",
+    "categoria": "notebook",
+    "marca": "Dell Latitude 3480",
+    "pesoKg": 1.9,
+    "pontoOrigemId": "pt-cg-eco-norte",
+    "trilha": [
+      [
+        "REGISTRADO",
+        620,
+        "pt-cg-eco-norte",
+        "Maria S. (doadora)"
+      ],
+      [
+        "COLETADO",
+        600,
+        "pt-cg-eco-norte",
+        "Equipe Ecoponto Norte"
+      ],
+      [
+        "EM_TRIAGEM",
+        552,
+        "pt-cg-coop-reviver",
+        "Cooperativa Reviver Pantanal"
+      ],
+      [
+        "EM_TRANSPORTE",
+        480,
+        "pt-cg-coop-reviver",
+        "Transporte MS Logística"
+      ],
+      [
+        "EM_RECICLAGEM",
+        430,
+        "pt-cg-recicladora",
+        "Recicladora Cerrado Verde"
+      ],
+      [
+        "PROCESSADO",
+        360,
+        "pt-cg-recicladora",
+        "Recicladora Cerrado Verde"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-9QW2-4TXK",
+    "categoria": "celular",
+    "marca": "Samsung Galaxy A20",
+    "pesoKg": 0.18,
+    "pontoOrigemId": "pt-cg-shopping",
+    "trilha": [
+      [
+        "REGISTRADO",
+        300,
+        "pt-cg-shopping",
+        "João P. (doador)"
+      ],
+      [
+        "COLETADO",
+        288,
+        "pt-cg-shopping",
+        "PEV Shopping Campo Grande"
+      ],
+      [
+        "EM_TRIAGEM",
+        240,
+        "pt-cg-coop-reviver",
+        "Cooperativa Reviver Pantanal"
+      ],
+      [
+        "EM_TRANSPORTE",
+        180,
+        "pt-cg-coop-reviver",
+        "Transporte MS Logística"
+      ],
+      [
+        "EM_RECICLAGEM",
+        140,
+        "pt-cg-recicladora",
+        "Recicladora Cerrado Verde"
+      ],
+      [
+        "PROCESSADO",
+        96,
+        "pt-cg-recicladora",
+        "Recicladora Cerrado Verde"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-5F8N-JD3Z",
+    "categoria": "servidor",
+    "marca": "HP ProLiant ML110 (descarte corporativo)",
+    "pesoKg": 15.4,
+    "pontoOrigemId": "pt-do-coop",
+    "trilha": [
+      [
+        "REGISTRADO",
+        260,
+        "pt-do-coop",
+        "TI — Empresa parceira Dourados"
+      ],
+      [
+        "COLETADO",
+        250,
+        "pt-do-coop",
+        "Cooperativa Sul-Mato-Grossense"
+      ],
+      [
+        "EM_TRIAGEM",
+        200,
+        "pt-do-coop",
+        "Cooperativa Sul-Mato-Grossense"
+      ],
+      [
+        "EM_TRANSPORTE",
+        150,
+        "pt-do-coop",
+        "Transporte MS Logística"
+      ],
+      [
+        "EM_RECICLAGEM",
+        100,
+        "pt-cg-recicladora",
+        "Recicladora Cerrado Verde"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-2KJ6-8YVF",
+    "categoria": "monitor",
+    "marca": "LG 22MP55 (LCD)",
+    "pesoKg": 3.2,
+    "pontoOrigemId": "pt-tl-eco",
+    "trilha": [
+      [
+        "REGISTRADO",
+        310,
+        "pt-tl-eco",
+        "Carlos M. (doador)"
+      ],
+      [
+        "COLETADO",
+        300,
+        "pt-tl-eco",
+        "Ecoponto Três Lagoas"
+      ],
+      [
+        "EM_TRIAGEM",
+        120,
+        "pt-tl-eco",
+        "Equipe de triagem Três Lagoas"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-7T4D-QNZ0",
+    "categoria": "cabos",
+    "marca": "Lote de cabos de rede e carregadores",
+    "pesoKg": 4.6,
+    "pontoOrigemId": "pt-cg-loja-tec",
+    "trilha": [
+      [
+        "REGISTRADO",
+        145,
+        "pt-cg-loja-tec",
+        "TecMais Assistência"
+      ],
+      [
+        "COLETADO",
+        140,
+        "pt-cg-loja-tec",
+        "TecMais Assistência"
+      ],
+      [
+        "EM_TRIAGEM",
+        96,
+        "pt-cg-coop-reviver",
+        "Cooperativa Reviver Pantanal"
+      ],
+      [
+        "EM_TRANSPORTE",
+        60,
+        "pt-cg-coop-reviver",
+        "Transporte MS Logística"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-6BXP-3M9K",
+    "categoria": "bateria",
+    "marca": "Lote de pilhas e baterias de celular",
+    "pesoKg": 2.1,
+    "pontoOrigemId": "pt-nv-coop",
+    "trilha": [
+      [
+        "REGISTRADO",
+        200,
+        "pt-nv-coop",
+        "Escola Municipal — campanha de coleta"
+      ],
+      [
+        "COLETADO",
+        190,
+        "pt-nv-coop",
+        "Cooperativa Naviraí Recicla"
+      ],
+      [
+        "EM_TRIAGEM",
+        72,
+        "pt-nv-coop",
+        "Cooperativa Naviraí Recicla"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-4WGR-7K2N",
+    "categoria": "impressora",
+    "marca": "HP LaserJet P1102",
+    "pesoKg": 5.9,
+    "pontoOrigemId": "pt-pa-eco",
+    "trilha": [
+      [
+        "REGISTRADO",
+        140,
+        "pt-pa-eco",
+        "Prefeitura de Paranaíba"
+      ],
+      [
+        "COLETADO",
+        130,
+        "pt-pa-eco",
+        "Ecoponto Paranaíba"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-8VNC-5RQ1",
+    "categoria": "hd",
+    "marca": "Seagate Barracuda 1TB (descarte de TI)",
+    "pesoKg": 0.52,
+    "pontoOrigemId": "pt-cg-loja-tec",
+    "trilha": [
+      [
+        "REGISTRADO",
+        40,
+        "pt-cg-loja-tec",
+        "TecMais Assistência"
+      ],
+      [
+        "COLETADO",
+        30,
+        "pt-cg-loja-tec",
+        "TecMais Assistência"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-1ZDK-6HP5",
+    "categoria": "desktop",
+    "marca": "Positivo Master D460",
+    "pesoKg": 7.8,
+    "pontoOrigemId": "pt-do-eco",
+    "trilha": [
+      [
+        "REGISTRADO",
+        26,
+        "pt-do-eco",
+        "Ana L. (doadora)"
+      ],
+      [
+        "COLETADO",
+        20,
+        "pt-do-eco",
+        "Ecoponto Dourados"
+      ]
+    ]
+  },
+  {
+    "codigo": "MS-0PRT-9CXE",
+    "categoria": "eletrodomestico",
+    "marca": "Micro-ondas Electrolux MEF33",
+    "pesoKg": 11.2,
+    "pontoOrigemId": "pt-aq-pev",
+    "trilha": [
+      [
+        "REGISTRADO",
+        8,
+        "pt-aq-pev",
+        "Roberto F. (doador)"
+      ]
+    ]
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "name": "e-Trilha MS — rastreamento de lixo eletrônico",
+  "short_name": "e-Trilha MS",
+  "description": "Acompanhe, etapa por etapa, o caminho do seu aparelho eletrônico até a reciclagem correta em Mato Grosso do Sul.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f6f8f6",
+  "theme_color": "#22773f",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Ler QR Code", "url": "./scanner.html" },
+    { "name": "Registrar aparelho", "url": "./registrar.html" },
+    { "name": "Pontos de coleta", "url": "./pontos.html" }
+  ]
+}

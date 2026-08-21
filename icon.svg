@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="e-Trilha MS">
+  <rect width="512" height="512" rx="96" fill="#22773f"/>
+  <!-- Trilha: três pontos ligados, do descarte à reciclagem -->
+  <path d="M136 356 L236 236 L336 316 L392 176" fill="none" stroke="#dcefe1"
+        stroke-width="20" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+  <circle cx="136" cy="356" r="30" fill="#dcefe1"/>
+  <circle cx="236" cy="236" r="24" fill="#dcefe1"/>
+  <circle cx="336" cy="316" r="24" fill="#dcefe1"/>
+  <circle cx="392" cy="176" r="38" fill="#8fe0ac"/>
+  <!-- Marca de conclusão no último ponto -->
+  <path d="M374 176 l12 14 l24 -28" fill="none" stroke="#10381f"
+        stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

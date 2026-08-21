@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>e-Trilha MS — rastreamento de lixo eletrônico</title>
+<meta name="description" content="Acompanhe, etapa por etapa, o caminho do seu aparelho eletrônico até a reciclagem correta em Mato Grosso do Sul.">
+<meta name="theme-color" content="#22773f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="cabecalho"><div data-cabecalho></div></header>
+
+<main>
+
+  <section class="cartao">
+    <h1>Onde está o seu aparelho?</h1>
+    <p>Digite o código impresso na etiqueta para ver em que etapa da reciclagem
+       o dispositivo está. <strong>Não é preciso ter conta.</strong></p>
+
+    <form class="busca-codigo" id="form-busca">
+      <label class="oculto" for="codigo">Código de rastreio</label>
+      <input id="codigo" name="codigo" placeholder="MS-0000-0000" autocomplete="off"
+             spellcheck="false" inputmode="latin" maxlength="14" required>
+      <button class="botao botao-grande" type="submit">Rastrear</button>
+    </form>
+    <p class="sutil" style="margin-top:.6rem">
+      Pode digitar com ou sem hífen, em maiúsculas ou minúsculas — o sistema corrige.
+      Sem a etiqueta em mãos? <a href="conta.html">Entre na sua conta</a> para ver seus aparelhos.
+    </p>
+  </section>
+
+  <section class="grade grade-4" id="numeros" aria-label="Números do estado"></section>
+
+  <section class="cartao">
+    <div class="secao-titulo">
+      <h2>Como funciona</h2>
+      <a class="botao botao-secundario" href="registrar.html">Registrar um aparelho</a>
+    </div>
+    <ol class="grade grade-3" style="list-style:none;padding:0;margin:0;counter-reset:passo">
+      <li class="numero">
+        <div class="valor">1</div>
+        <div class="rotulo"><strong>Registre o aparelho</strong></div>
+        <p class="nota">Informe o tipo de dispositivo e o ponto onde vai entregar.
+           O sistema gera um código único e um QR Code.</p>
+      </li>
+      <li class="numero">
+        <div class="valor">2</div>
+        <div class="rotulo"><strong>Imprima e cole a etiqueta</strong></div>
+        <p class="nota">O QR fica colado no aparelho e vai com ele por toda a cadeia,
+           mesmo onde não há internet.</p>
+      </li>
+      <li class="numero">
+        <div class="valor">3</div>
+        <div class="rotulo"><strong>Cada etapa lê o QR</strong></div>
+        <p class="nota">Ponto de coleta, cooperativa, transporte e recicladora registram
+           a passagem lendo a mesma etiqueta.</p>
+      </li>
+      <li class="numero">
+        <div class="valor">4</div>
+        <div class="rotulo"><strong>Você acompanha</strong></div>
+        <p class="nota">A cada leitura, a trilha do aparelho é atualizada e fica
+           consultável pelo código.</p>
+      </li>
+      <li class="numero">
+        <div class="valor">5</div>
+        <div class="rotulo"><strong>Certificado no fim</strong></div>
+        <p class="nota">Quando a recicladora conclui, é emitido o comprovante de
+           destinação final do aparelho.</p>
+      </li>
+      <li class="numero">
+        <div class="valor">6</div>
+        <div class="rotulo"><strong>O estado enxerga o todo</strong></div>
+        <p class="nota">O <a href="painel.html">painel público</a> mostra volumes,
+           materiais recuperados e onde a logística reversa está travando.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="grade grade-2">
+    <div class="cartao">
+      <h2>O problema</h2>
+      <p>Celulares, computadores, baterias e cabos costumam ir para o lixo comum ou
+         ficar parados em casas e empresas. O resultado é contaminação do solo e da
+         água por chumbo, mercúrio e cádmio, e o desperdício de cobre, alumínio,
+         ouro e terras raras que voltariam à cadeia produtiva.</p>
+      <p>A Lei 12.305/2010 obriga a logística reversa de eletroeletrônicos, mas
+         quem entrega o aparelho <strong>não tem como saber se ele realmente foi
+         reciclado</strong>. É essa lacuna de confiança que o e-Trilha MS fecha.</p>
+    </div>
+    <div class="cartao">
+      <h2>Encontre onde entregar</h2>
+      <p>São <strong id="qtd-pontos">—</strong> pontos de coleta mapeados em
+         <strong id="qtd-municipios">—</strong> municípios de Mato Grosso do Sul,
+         com filtro por cidade e por tipo de resíduo aceito.</p>
+      <div class="botoes">
+        <a class="botao" href="pontos.html">Ver pontos de coleta</a>
+        <a class="botao botao-secundario" href="scanner.html">Sou operador: ler QR</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="rodape">
+  e-Trilha MS · Protótipo acadêmico — DAC 262, Tecnologia em Análise e Desenvolvimento de Sistemas.<br>
+  Dados de demonstração armazenados apenas neste navegador.
+</footer>
+
+<script type="module">
+import * as store from './js/store.js';
+import { calcularIndicadores, equivalencias } from './js/indicadores.js';
+import { iniciarPagina, aviso, formatarMassa, formatarNumero } from './js/ui.js';
+import { normalizarCodigo } from './js/model.js';
+
+await iniciarPagina();
+
+/* --- busca por código, sem exigir conta --- */
+document.getElementById('form-busca').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const bruto = document.getElementById('codigo').value;
+  const codigo = normalizarCodigo(bruto);
+  if (!codigo) {
+    aviso('Código inválido. Confira os 8 caracteres da etiqueta.', 'erro');
+    return;
+  }
+  location.href = `rastrear.html?c=${encodeURIComponent(codigo)}`;
+});
+
+/* --- números do estado --- */
+const [itens, eventos, pontos] = await Promise.all([
+  store.listarItens(), store.listarTodosEventos(), store.listarPontos(),
+]);
+const ind = calcularIndicadores(itens, eventos, pontos);
+const eq = equivalencias(ind.co2eKg);
+
+document.getElementById('numeros').innerHTML = `
+  <div class="numero">
+    <div class="valor">${formatarMassa(ind.massaDesviadaKg)}</div>
+    <div class="rotulo">desviados do aterro</div>
+    <div class="nota">${ind.totalProcessados} aparelhos com destinação comprovada</div>
+  </div>
+  <div class="numero">
+    <div class="valor">${ind.totalEmCurso}</div>
+    <div class="rotulo">aparelhos em trânsito</div>
+    <div class="nota">${formatarMassa(ind.massaEmCursoKg)} sendo rastreados agora</div>
+  </div>
+  <div class="numero">
+    <div class="valor">${formatarNumero(ind.co2eKg, 0)} kg</div>
+    <div class="rotulo">de CO₂e evitados</div>
+    <div class="nota">equivale a ${formatarNumero(eq.kmDeCarro, 0)} km de carro</div>
+  </div>
+  <div class="numero">
+    <div class="valor">${formatarNumero(ind.taxaConclusao * 100, 0)}%</div>
+    <div class="rotulo">chegaram ao fim da cadeia</div>
+    <div class="nota">${ind.pendentes.length} parado(s) além do prazo</div>
+  </div>`;
+
+document.getElementById('qtd-pontos').textContent = ind.totalPontos;
+document.getElementById('qtd-municipios').textContent = ind.municipiosAtendidos;
+
+/* --- se veio um código na URL (por exemplo de um QR lido pela câmera do celular) --- */
+const daUrl = normalizarCodigo(new URLSearchParams(location.search).get('c'));
+if (daUrl) location.replace(`rastrear.html?c=${encodeURIComponent(daUrl)}`);
+</script>
+
+</body>
+</html>

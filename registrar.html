@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registrar aparelho · e-Trilha MS</title>
+<meta name="theme-color" content="#22773f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+<script src="vendor/qrcode.js"></script>
+</head>
+<body>
+
+<header class="cabecalho"><div data-cabecalho></div></header>
+
+<main class="estreito">
+
+  <section class="cartao" id="painel-form">
+    <h1>Registrar aparelho para descarte</h1>
+    <p class="sutil">
+      O registro gera um código único e um QR Code para colar no aparelho.
+      <strong>Não é preciso ter conta</strong> — se você criar uma depois, os
+      aparelhos registrados neste navegador passam a aparecer nela.
+    </p>
+
+    <form id="form">
+      <div class="campo">
+        <label for="categoria">Tipo de aparelho</label>
+        <select id="categoria" required></select>
+        <p class="dica" id="dica-categoria"></p>
+      </div>
+
+      <div class="campo">
+        <label for="marca">Marca e modelo <span class="sutil">(opcional)</span></label>
+        <input id="marca" placeholder="Ex.: Dell Latitude 3480" maxlength="80" autocomplete="off">
+      </div>
+
+      <div class="campo">
+        <label for="peso">Peso aproximado (kg)</label>
+        <input id="peso" type="number" step="0.01" min="0.01" max="500" required>
+        <p class="dica">Preenchido com o peso médio da categoria. Ajuste se souber o valor real —
+           é o peso que alimenta os indicadores de material recuperado.</p>
+      </div>
+
+      <div class="campo">
+        <label for="ponto">Onde você vai entregar</label>
+        <select id="ponto" required></select>
+        <p class="dica">A lista mostra apenas pontos que aceitam este tipo de aparelho.
+           <a href="pontos.html">Ver todos os pontos no mapa</a>.</p>
+      </div>
+
+      <div class="campo">
+        <label for="responsavel">Seu nome <span class="sutil">(opcional)</span></label>
+        <input id="responsavel" maxlength="60" autocomplete="name"
+               placeholder="Aparece no histórico como quem registrou">
+      </div>
+
+      <div class="botoes">
+        <button class="botao botao-grande" type="submit">Gerar código e QR Code</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="cartao oculto" id="painel-ok">
+    <div class="faixa" style="border-color:var(--verde-500)">
+      <strong>✓ Aparelho registrado.</strong> A trilha começou na etapa
+      <em>Registrado</em>. Imprima a etiqueta e cole no aparelho antes de entregá-lo.
+    </div>
+
+    <div class="grade grade-2" style="align-items:center">
+      <div>
+        <p class="sutil" style="margin:0">Código de rastreio</p>
+        <div class="codigo-grande" id="codigo-novo"></div>
+        <p class="sutil">Guarde este código: com ele, qualquer pessoa consulta o
+           andamento sem precisar de conta.</p>
+        <div class="botoes">
+          <a class="botao" id="link-etiqueta" href="etiqueta.html">Imprimir etiqueta</a>
+          <a class="botao botao-secundario" href="scanner.html">Abrir o leitor de QR</a>
+          <a class="botao botao-secundario" id="link-rastreio" href="#">Ver a trilha</a>
+          <button class="botao botao-secundario" id="btn-outro" type="button">Registrar outro</button>
+        </div>
+      </div>
+      <div class="centro">
+        <div class="qr-caixa" id="qr-novo"></div>
+        <button class="botao botao-secundario" id="btn-ampliar" type="button" style="margin-top:.6rem">
+          Ampliar para leitura
+        </button>
+        <p class="dica">Amplie e aponte a câmera de outro aparelho para esta tela
+           — dá para testar o leitor sem imprimir nada.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="rodape">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+
+<script type="module">
+import * as store from './js/store.js';
+import { iniciarPagina, aviso, escapar } from './js/ui.js';
+import { CATEGORIAS, categoria } from './js/model.js';
+import { desenharQR } from './js/qr.js';
+
+await iniciarPagina();
+
+const selCategoria = document.getElementById('categoria');
+const selPonto = document.getElementById('ponto');
+const inputPeso = document.getElementById('peso');
+const dica = document.getElementById('dica-categoria');
+const pontos = await store.listarPontos();
+
+/* --- categorias --- */
+selCategoria.innerHTML = CATEGORIAS.map(
+  (c) => `<option value="${c.id}">${escapar(c.rotulo)}</option>`
+).join('');
+
+/**
+ * Ao trocar a categoria: sugere o peso médio e refaz a lista de pontos,
+ * porque um PEV de shopping recebe celular mas não recebe geladeira.
+ */
+function aoTrocarCategoria() {
+  const cat = categoria(selCategoria.value);
+  inputPeso.value = cat.pesoMedioKg;
+  dica.textContent = cat.contaminantes.length
+    ? `Contém ${cat.contaminantes.join(', ')} — por isso não pode ir no lixo comum.`
+    : '';
+
+  const aceitos = pontos.filter((p) => p.aceita.includes(cat.id));
+  const porMunicipio = new Map();
+  for (const p of aceitos) {
+    if (!porMunicipio.has(p.municipio)) porMunicipio.set(p.municipio, []);
+    porMunicipio.get(p.municipio).push(p);
+  }
+  selPonto.innerHTML = [...porMunicipio.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+    .map(([municipio, lista]) =>
+      `<optgroup label="${escapar(municipio)}">${lista
+        .map((p) => `<option value="${p.id}">${escapar(p.nome)}</option>`)
+        .join('')}</optgroup>`
+    ).join('');
+}
+
+selCategoria.addEventListener('change', aoTrocarCategoria);
+aoTrocarCategoria();
+
+/* --- envio --- */
+document.getElementById('form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  try {
+    const item = await store.criarItem({
+      categoria: selCategoria.value,
+      marca: document.getElementById('marca').value,
+      pesoKg: inputPeso.value,
+      pontoOrigemId: selPonto.value,
+      responsavel: document.getElementById('responsavel').value.trim() || null,
+    });
+
+    document.getElementById('codigo-novo').textContent = item.codigo;
+    desenharQR(document.getElementById('qr-novo'), item.codigo, { cellSize: 5, margin: 2 });
+    document.getElementById('link-rastreio').href = `rastrear.html?c=${encodeURIComponent(item.codigo)}`;
+    document.getElementById('link-etiqueta').href = `etiqueta.html?c=${encodeURIComponent(item.codigo)}`;
+
+    document.getElementById('painel-form').classList.add('oculto');
+    document.getElementById('painel-ok').classList.remove('oculto');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    aviso(`Aparelho registrado: ${item.codigo}`);
+  } catch (erro) {
+    aviso(erro.message, 'erro');
+  }
+});
+
+/**
+ * Amplia o QR sobre fundo branco, ocupando a tela.
+ * Serve para apontar a câmera de outro aparelho e testar o leitor sem imprimir —
+ * a webcam do próprio notebook não enxerga a tela dele mesmo.
+ */
+document.getElementById('btn-ampliar').addEventListener('click', () => {
+  const codigo = document.getElementById('codigo-novo').textContent;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'qr-overlay';
+  overlay.tabIndex = -1;
+  overlay.innerHTML = `
+    <div class="qr-overlay-caixa">
+      <div id="qr-ampliado"></div>
+      <p class="qr-overlay-codigo">${escapar(codigo)}</p>
+      <p class="qr-overlay-dica">Toque, clique ou pressione Esc para fechar</p>
+    </div>`;
+  document.body.append(overlay);
+
+  desenharQR(overlay.querySelector('#qr-ampliado'), codigo, { cellSize: 8, margin: 2 });
+
+  const fechar = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', aoTeclar);
+  };
+  const aoTeclar = (ev) => { if (ev.key === 'Escape') fechar(); };
+
+  overlay.addEventListener('click', fechar);
+  document.addEventListener('keydown', aoTeclar);
+  overlay.focus();
+});
+
+document.getElementById('btn-outro').addEventListener('click', () => {
+  document.getElementById('form').reset();
+  aoTrocarCategoria();
+  document.getElementById('painel-ok').classList.add('oculto');
+  document.getElementById('painel-form').classList.remove('oculto');
+});
+</script>
+
+</body>
+</html>

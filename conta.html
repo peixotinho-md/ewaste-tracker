@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minha conta · e-Trilha MS</title>
+<meta name="theme-color" content="#22773f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="cabecalho"><div data-cabecalho></div></header>
+
+<main class="estreito">
+  <div id="conteudo"></div>
+</main>
+
+<footer class="rodape">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+
+<script type="module">
+import * as store from './js/store.js';
+import * as auth from './js/auth.js';
+import { iniciarPagina, aviso, cartaoItem, escapar, formatarMassa, formatarNumero } from './js/ui.js';
+import { ETAPA_FINAL, co2eEvitado } from './js/model.js';
+
+await iniciarPagina();
+const conteudo = document.getElementById('conteudo');
+
+await desenhar();
+
+async function desenhar() {
+  const usuario = await auth.atual();
+  conteudo.innerHTML = usuario ? await telaLogado(usuario) : await telaVisitante();
+  ligarEventos(usuario);
+}
+
+/* ------------------------------------------------------------------ *
+ * Visitante — conta é opcional, não uma barreira
+ * ------------------------------------------------------------------ */
+
+async function telaVisitante() {
+  const meusItens = await store.meusItens();
+
+  return `
+    <section class="cartao">
+      <h1>Conta (opcional)</h1>
+      <p>
+        Você <strong>não precisa</strong> de conta para usar o e-Trilha MS:
+        registrar um aparelho, imprimir a etiqueta e consultar a trilha pelo código
+        funcionam sem cadastro. A conta serve só para reunir num lugar só tudo o
+        que você já enviou para reciclagem.
+      </p>
+      <div class="botoes">
+        <a class="botao botao-secundario" href="registrar.html">Registrar aparelho sem conta</a>
+        <a class="botao botao-secundario" href="rastrear.html">Consultar por código</a>
+      </div>
+    </section>
+
+    ${meusItens.length ? `
+      <section class="cartao">
+        <h2>Registrados nesta sessão</h2>
+        <p class="sutil">
+          ${meusItens.length} aparelho(s) registrado(s) por você sem conta. Se criar
+          uma conta ou entrar agora, eles passam a ficar vinculados a ela.
+        </p>
+        <div class="grade grade-2">${meusItens.map(cartaoItem).join('')}</div>
+      </section>` : ''}
+
+    <div class="grade grade-2" style="align-items:start">
+      <section class="cartao">
+        <h2>Entrar</h2>
+        <form id="form-entrar">
+          <div class="campo">
+            <label for="e-email">E-mail</label>
+            <input id="e-email" type="email" autocomplete="email" required>
+          </div>
+          <div class="campo">
+            <label for="e-senha">Senha</label>
+            <input id="e-senha" type="password" autocomplete="current-password" required>
+          </div>
+          <button class="botao" type="submit">Entrar</button>
+        </form>
+      </section>
+
+      <section class="cartao">
+        <h2>Criar conta</h2>
+        <form id="form-cadastrar">
+          <div class="campo">
+            <label for="c-nome">Nome</label>
+            <input id="c-nome" autocomplete="name" required maxlength="60">
+          </div>
+          <div class="campo">
+            <label for="c-email">E-mail</label>
+            <input id="c-email" type="email" autocomplete="email" required>
+          </div>
+          <div class="campo">
+            <label for="c-senha">Senha</label>
+            <input id="c-senha" type="password" autocomplete="new-password" required minlength="6">
+            <p class="dica">Mínimo de 6 caracteres.</p>
+          </div>
+          <button class="botao" type="submit">Criar conta</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="faixa faixa-info">
+      <strong>Como a senha é tratada:</strong> ela vai para o servidor, que a guarda
+      com PBKDF2 (sal aleatório e milhares de iterações) — nunca em texto claro. A
+      sessão é um cookie assinado e HttpOnly, que o JavaScript da página não consegue ler.
+      Falta apenas HTTPS, necessário em uso real para a senha não trafegar em texto
+      claro na rede; na demonstração tudo acontece dentro da própria máquina.
+      <strong>Ainda assim, não use aqui uma senha que você usa em outro lugar.</strong>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Usuário logado
+ * ------------------------------------------------------------------ */
+
+async function telaLogado(usuario) {
+  const itens = await store.meusItens();
+  const concluidos = itens.filter((i) => i.etapaAtual === ETAPA_FINAL);
+  const massa = itens.reduce((t, i) => t + (Number(i.pesoKg) || 0), 0);
+  const co2e = concluidos.reduce((t, i) => t + co2eEvitado(i), 0);
+
+  return `
+    <section class="cartao">
+      <div class="secao-titulo">
+        <div>
+          <h1 style="margin:0">Olá, ${escapar(usuario.nome.split(' ')[0])}</h1>
+          <p class="sutil" style="margin:0">${escapar(usuario.email)}</p>
+        </div>
+        <button class="botao botao-secundario" id="btn-sair" type="button">Sair</button>
+      </div>
+    </section>
+
+    <section class="grade grade-3" style="margin-bottom:1.25rem">
+      <div class="numero">
+        <div class="valor">${itens.length}</div>
+        <div class="rotulo">aparelhos enviados</div>
+        <div class="nota">${concluidos.length} com destinação comprovada</div>
+      </div>
+      <div class="numero">
+        <div class="valor">${formatarMassa(massa)}</div>
+        <div class="rotulo">de e-waste encaminhado</div>
+      </div>
+      <div class="numero">
+        <div class="valor">${formatarNumero(co2e, 1)} kg</div>
+        <div class="rotulo">de CO₂e evitados por você</div>
+        <div class="nota">contando só o que já foi reciclado</div>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <div class="secao-titulo">
+        <h2>Meus aparelhos</h2>
+        <div class="botoes">
+          <a class="botao" href="registrar.html">Registrar novo</a>
+          <a class="botao botao-secundario" href="etiqueta.html">Imprimir etiquetas</a>
+        </div>
+      </div>
+      ${itens.length
+        ? `<div class="grade grade-2">${itens
+              .sort((a, b) => new Date(b.atualizadoEm) - new Date(a.atualizadoEm))
+              .map(cartaoItem).join('')}</div>`
+        : '<p class="vazio">Você ainda não registrou nenhum aparelho.</p>'}
+    </section>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Eventos
+ * ------------------------------------------------------------------ */
+
+function ligarEventos(usuario) {
+  if (usuario) {
+    document.getElementById('btn-sair').addEventListener('click', async () => {
+      await auth.sair();
+      aviso('Sessão encerrada. O rastreio por código continua funcionando.');
+      await desenhar();
+    });
+    return;
+  }
+
+  document.getElementById('form-entrar').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    try {
+      const { usuario: u, adotados } = await auth.entrar({
+        email: document.getElementById('e-email').value,
+        senha: document.getElementById('e-senha').value,
+      });
+      aviso(`Bem-vindo de volta, ${u.nome.split(' ')[0]}.` + (adotados ? ` ${adotados} aparelho(s) vinculado(s) à sua conta.` : ''));
+      await desenhar();
+    } catch (erro) {
+      aviso(erro.message, 'erro');
+    }
+  });
+
+  document.getElementById('form-cadastrar').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    try {
+      const { adotados } = await auth.cadastrar({
+        nome: document.getElementById('c-nome').value,
+        email: document.getElementById('c-email').value,
+        senha: document.getElementById('c-senha').value,
+      });
+      aviso(`Conta criada.` + (adotados ? ` ${adotados} aparelho(s) deste navegador foram vinculados a ela.` : ''));
+      await desenhar();
+    } catch (erro) {
+      aviso(erro.message, 'erro');
+    }
+  });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Banco de dados local (recriado a partir de dados/*.json)
+backend/etrilha.db
+backend/etrilha.db-wal
+backend/etrilha.db-shm
+
+# Chave de assinatura do cookie de sessão
+backend/.chave-sessao
+
+# Log do servidor
+backend/_servidor.log
+
+# Ambientes virtuais e caches do Python
+.venv/
+__pycache__/
+
+# Cópia da versão anterior: o histórico do git já cumpre esse papel
+backup/

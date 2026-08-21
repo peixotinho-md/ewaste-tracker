@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pontos de coleta em MS · e-Trilha MS</title>
+<meta name="theme-color" content="#22773f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="cabecalho"><div data-cabecalho></div></header>
+
+<main>
+
+  <h1>Pontos de coleta em Mato Grosso do Sul</h1>
+  <p class="sutil" style="margin-top:-.5rem">
+    Onde entregar cada tipo de resíduo eletrônico. Clique num município do mapa
+    para filtrar a lista.
+  </p>
+
+  <div class="faixa faixa-info nao-imprimir">
+    <strong>Dados de demonstração.</strong> Os pontos abaixo são fictícios,
+    posicionados sobre coordenadas reais dos municípios. Antes de qualquer uso
+    real é preciso levantá-los junto às prefeituras, à Green Eletron e às
+    cooperativas locais.
+  </div>
+
+  <div class="grade grade-2" style="align-items:start">
+
+    <section class="cartao">
+      <div class="mapa-caixa" id="mapa"></div>
+      <div class="chips" id="legenda" style="margin-top:.8rem"></div>
+      <p class="sutil" style="margin:.8rem 0 0">
+        Mapa esquemático, desenhado em SVG a partir das coordenadas dos municípios.
+        Não usa serviço externo de mapas — funciona sem internet.
+      </p>
+    </section>
+
+    <section class="cartao">
+      <div class="grade grade-2" style="gap:.8rem">
+        <div class="campo" style="margin:0">
+          <label for="f-municipio">Município</label>
+          <select id="f-municipio"><option value="">Todos</option></select>
+        </div>
+        <div class="campo" style="margin:0">
+          <label for="f-categoria">Aceita este aparelho</label>
+          <select id="f-categoria"><option value="">Qualquer tipo</option></select>
+        </div>
+      </div>
+
+      <div class="botoes" style="margin:.8rem 0">
+        <button class="botao botao-secundario" id="btn-perto" type="button">Ordenar pelos mais próximos de mim</button>
+      </div>
+      <p class="sutil" id="estado-local" style="margin-top:-.4rem"></p>
+
+      <p class="sutil" id="contagem"></p>
+      <div class="lista-pontos" id="lista"></div>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="rodape">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+
+<script type="module">
+import * as store from './js/store.js';
+import { iniciarPagina, aviso, escapar } from './js/ui.js';
+import { CATEGORIAS, TIPOS_PONTO, categoria, distanciaKm } from './js/model.js';
+import { CONTORNO_MS } from './js/geo-ms.js';
+
+await iniciarPagina();
+
+const pontos = await store.listarPontos();
+let minhaPosicao = null;
+let municipioSelecionado = '';
+
+/* ------------------------------------------------------------------ *
+ * Projeção e desenho do mapa
+ * ------------------------------------------------------------------ */
+
+/**
+ * Projeção equirretangular simples: longitude vira X, latitude vira Y.
+ * O eixo X é comprimido por cos(latitude média) para o estado não sair
+ * esticado — a mesma correção que qualquer mapa em pequena escala usa.
+ */
+function criarProjecao(contorno, altura = 640) {
+  const lons = contorno.map((p) => p[0]);
+  const lats = contorno.map((p) => p[1]);
+  const lonMin = Math.min(...lons), lonMax = Math.max(...lons);
+  const latMin = Math.min(...lats), latMax = Math.max(...lats);
+  const latMedia = ((latMin + latMax) / 2) * (Math.PI / 180);
+
+  const margem = 24;
+  const k = (altura - margem * 2) / (latMax - latMin);
+  const kx = k * Math.cos(latMedia);
+
+  const projetar = (lat, lon) => [
+    margem + (lon - lonMin) * kx,
+    margem + (latMax - lat) * k,
+  ];
+  return {
+    projetar,
+    largura: margem * 2 + (lonMax - lonMin) * kx,
+    altura,
+  };
+}
+
+const proj = criarProjecao(CONTORNO_MS);
+
+/** Municípios com pontos, agregados para virar as bolhas do mapa. */
+function municipiosAgregados(lista) {
+  const mapa = new Map();
+  for (const p of lista) {
+    const atual = mapa.get(p.municipio) ?? { municipio: p.municipio, pontos: [], lat: 0, lng: 0 };
+    atual.pontos.push(p);
+    mapa.set(p.municipio, atual);
+  }
+  for (const m of mapa.values()) {
+    // Centro do município = média das coordenadas dos seus pontos.
+    m.lat = m.pontos.reduce((t, p) => t + p.lat, 0) / m.pontos.length;
+    m.lng = m.pontos.reduce((t, p) => t + p.lng, 0) / m.pontos.length;
+  }
+  return [...mapa.values()];
+}
+
+function desenharMapa(visiveis) {
+  const agregados = municipiosAgregados(pontos);
+  const visiveisPorMunicipio = new Set(visiveis.map((p) => p.municipio));
+
+  const contorno = CONTORNO_MS
+    .map(([lon, lat]) => proj.projetar(lat, lon).join(','))
+    .join(' ');
+
+  const bolhas = agregados.map((m) => {
+    const [x, y] = proj.projetar(m.lat, m.lng);
+    const r = 5 + Math.min(9, m.pontos.length * 1.8);
+    const ativo = visiveisPorMunicipio.has(m.municipio);
+    const selecionado = municipioSelecionado === m.municipio;
+    return `
+      <g class="mapa-ponto" data-municipio="${escapar(m.municipio)}"
+         data-selecionado="${selecionado}" tabindex="0" role="button"
+         aria-label="${escapar(m.municipio)}: ${m.pontos.length} ponto(s) de coleta">
+        <circle cx="${x}" cy="${y}" r="${r}"
+                fill="${ativo ? 'var(--verde-600)' : 'var(--tinta-fraca)'}"
+                fill-opacity="${ativo ? 0.9 : 0.35}"/>
+        <text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10"
+              font-weight="700" fill="#fff">${m.pontos.length}</text>
+        <text class="mapa-cidade" x="${x}" y="${y + r + 12}" text-anchor="middle">${escapar(m.municipio)}</text>
+      </g>`;
+  }).join('');
+
+  const eu = minhaPosicao
+    ? (() => {
+        const [x, y] = proj.projetar(minhaPosicao.lat, minhaPosicao.lng);
+        return `<circle cx="${x}" cy="${y}" r="6" fill="var(--azul-600)" stroke="#fff" stroke-width="2">
+                  <title>Você está aqui</title></circle>`;
+      })()
+    : '';
+
+  document.getElementById('mapa').innerHTML = `
+    <svg viewBox="0 0 ${proj.largura} ${proj.altura}" role="img"
+         aria-label="Mapa esquemático de Mato Grosso do Sul com os municípios que têm ponto de coleta">
+      <polygon class="mapa-contorno" points="${contorno}"/>
+      ${bolhas}
+      ${eu}
+    </svg>`;
+
+  for (const g of document.querySelectorAll('.mapa-ponto')) {
+    const acionar = () => {
+      const m = g.dataset.municipio;
+      municipioSelecionado = municipioSelecionado === m ? '' : m;
+      document.getElementById('f-municipio').value = municipioSelecionado;
+      atualizar();
+    };
+    g.addEventListener('click', acionar);
+    g.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); acionar(); }
+    });
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Filtros e lista
+ * ------------------------------------------------------------------ */
+
+const selMunicipio = document.getElementById('f-municipio');
+const selCategoria = document.getElementById('f-categoria');
+
+selMunicipio.innerHTML += (await store.listarMunicipiosComPonto())
+  .map((m) => `<option value="${escapar(m)}">${escapar(m)}</option>`).join('');
+selCategoria.innerHTML += CATEGORIAS
+  .map((c) => `<option value="${c.id}">${escapar(c.rotulo)}</option>`).join('');
+
+document.getElementById('legenda').innerHTML = Object.entries(TIPOS_PONTO)
+  .map(([, t]) => `<span class="chip" style="cursor:default">
+      <span class="bolinha" style="background:${t.cor}"></span> ${escapar(t.rotulo)}
+    </span>`).join('');
+
+selMunicipio.addEventListener('change', () => {
+  municipioSelecionado = selMunicipio.value;
+  atualizar();
+});
+selCategoria.addEventListener('change', atualizar);
+
+document.getElementById('btn-perto').addEventListener('click', () => {
+  const estado = document.getElementById('estado-local');
+  if (!navigator.geolocation) {
+    aviso('Este navegador não oferece geolocalização.', 'erro');
+    return;
+  }
+  estado.textContent = 'Pedindo permissão de localização…';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      minhaPosicao = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      estado.textContent = 'Ordenado pela distância até você (cálculo feito no próprio aparelho).';
+      atualizar();
+    },
+    (erro) => {
+      estado.textContent = `Não foi possível obter a localização: ${erro.message}`;
+    },
+    { timeout: 10000 }
+  );
+});
+
+function filtrar() {
+  return pontos.filter(
+    (p) =>
+      (!municipioSelecionado || p.municipio === municipioSelecionado) &&
+      (!selCategoria.value || p.aceita.includes(selCategoria.value))
+  );
+}
+
+function atualizar() {
+  let visiveis = filtrar();
+
+  if (minhaPosicao) {
+    visiveis = visiveis
+      .map((p) => ({ ...p, km: distanciaKm(minhaPosicao.lat, minhaPosicao.lng, p.lat, p.lng) }))
+      .sort((a, b) => a.km - b.km);
+  } else {
+    visiveis.sort((a, b) => a.municipio.localeCompare(b.municipio, 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  const catFiltro = categoria(selCategoria.value);
+  document.getElementById('contagem').textContent =
+    `${visiveis.length} ponto(s)` +
+    (municipioSelecionado ? ` em ${municipioSelecionado}` : ' em MS') +
+    (catFiltro ? ` que aceitam ${catFiltro.rotulo.toLowerCase()}` : '');
+
+  document.getElementById('lista').innerHTML = visiveis.length
+    ? visiveis.map(cartaoPonto).join('')
+    : '<p class="vazio">Nenhum ponto atende a esses filtros.</p>';
+
+  desenharMapa(visiveis);
+}
+
+function cartaoPonto(p) {
+  const tipo = TIPOS_PONTO[p.tipo] ?? { rotulo: p.tipo, cor: 'var(--tinta-fraca)' };
+  const aceitaRotulos = p.aceita.map((id) => categoria(id)?.rotulo ?? id);
+  return `
+    <article class="ponto" data-selecionado="${municipioSelecionado === p.municipio}">
+      <h3>${escapar(p.nome)}</h3>
+      <span class="tipo"><span class="bolinha" style="background:${tipo.cor}"></span>${escapar(tipo.rotulo)}</span>
+      ${p.km != null ? `<span class="distancia"> · ${p.km.toFixed(1)} km de você</span>` : ''}
+      <p>${escapar(p.endereco)}<br>${escapar(p.municipio)} — MS</p>
+      <p><strong>Horário:</strong> ${escapar(p.horario)} · <strong>Telefone:</strong> ${escapar(p.telefone)}</p>
+      <p class="sutil"><strong>Aceita:</strong> ${aceitaRotulos.map(escapar).join(' · ')}</p>
+    </article>`;
+}
+
+/* Permite chegar já filtrado por link: pontos.html?municipio=Dourados */
+const daUrl = new URLSearchParams(location.search).get('municipio');
+if (daUrl) {
+  municipioSelecionado = daUrl;
+  selMunicipio.value = daUrl;
+}
+
+atualizar();
+</script>
+
+</body>
+</html>

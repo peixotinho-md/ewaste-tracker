@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de indicadores · e-Trilha MS</title>
+<meta name="theme-color" content="#22773f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="cabecalho"><div data-cabecalho></div></header>
+
+<main>
+
+  <div class="secao-titulo">
+    <div>
+      <h1>Painel de indicadores</h1>
+      <p class="sutil" style="margin:0">
+        Visão para gestores públicos, cooperativas e empresas: o que foi desviado
+        do aterro, o que foi recuperado e onde a logística reversa está travando.
+      </p>
+    </div>
+    <button class="botao botao-secundario" id="btn-reiniciar" type="button">Reiniciar demonstração</button>
+  </div>
+
+  <section class="grade grade-4" id="numeros" style="margin-bottom:1.25rem"></section>
+
+  <div class="grade grade-2" style="align-items:start">
+    <section class="cartao">
+      <h2>Onde estão os aparelhos</h2>
+      <p class="sutil">Distribuição pela cadeia de custódia.</p>
+      <div class="rolagem"><table id="tab-etapas"></table></div>
+    </section>
+
+    <section class="cartao">
+      <h2>Tempo médio por etapa</h2>
+      <p class="sutil">
+        Comparado ao prazo previsto (SLA). Acima de 100% significa que a etapa,
+        em média, está estourando o prazo — é assim que o gargalo aparece.
+      </p>
+      <div class="rolagem"><table id="tab-tempos"></table></div>
+      <p id="gargalo" style="margin-top:.8rem"></p>
+    </section>
+  </div>
+
+  <section class="cartao" id="cartao-pendencias">
+    <h2>Pendências</h2>
+    <p class="sutil">Aparelhos parados além do prazo da etapa em que estão. Estes são
+       os casos que exigem cobrança do responsável.</p>
+    <div class="rolagem" id="pendencias-corpo"></div>
+  </section>
+
+  <section class="cartao">
+    <h2>Materiais devolvidos à cadeia produtiva</h2>
+    <p class="sutil">
+      Contabilizados apenas nos aparelhos com reciclagem concluída. A estimativa
+      vem da composição média de cada categoria aplicada ao peso registrado.
+    </p>
+    <div class="rolagem"><table id="tab-materiais"></table></div>
+    <div class="faixa" style="margin:1rem 0 0;border-color:var(--verde-500)" id="co2"></div>
+  </section>
+
+  <div class="grade grade-2" style="align-items:start">
+    <section class="cartao">
+      <h2>Por município</h2>
+      <div class="rolagem"><table id="tab-municipios"></table></div>
+    </section>
+    <section class="cartao">
+      <h2>Por tipo de aparelho</h2>
+      <div class="rolagem"><table id="tab-categorias"></table></div>
+    </section>
+  </div>
+
+</main>
+
+<footer class="rodape">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+
+<script type="module">
+import * as store from './js/store.js';
+import { calcularIndicadores, equivalencias } from './js/indicadores.js';
+import { iniciarPagina, aviso, seloEtapa, formatarData, formatarMassa,
+         formatarNumero, formatarOuro, formatarDuracao, escapar } from './js/ui.js';
+import { MATERIAIS, categoria } from './js/model.js';
+
+await iniciarPagina();
+
+async function desenhar() {
+  const [itens, eventos, pontos] = await Promise.all([
+    store.listarItens(), store.listarTodosEventos(), store.listarPontos(),
+  ]);
+  const ind = calcularIndicadores(itens, eventos, pontos);
+  const eq = equivalencias(ind.co2eKg);
+
+  /* --- números principais --- */
+  document.getElementById('numeros').innerHTML = `
+    <div class="numero">
+      <div class="valor">${formatarMassa(ind.massaDesviadaKg)}</div>
+      <div class="rotulo">desviados do aterro</div>
+      <div class="nota">${ind.totalProcessados} de ${ind.totalItens} aparelhos concluídos</div>
+    </div>
+    <div class="numero">
+      <div class="valor">${formatarNumero(ind.taxaConclusao * 100, 0)}%</div>
+      <div class="rotulo">taxa de conclusão da cadeia</div>
+      <div class="nota">ciclo médio de ${formatarDuracao(ind.cicloMedioHoras)}</div>
+    </div>
+    <div class="numero">
+      <div class="valor">${formatarNumero(ind.co2eKg, 0)} kg</div>
+      <div class="rotulo">CO₂e evitado</div>
+      <div class="nota">≈ ${formatarNumero(eq.arvoresPorAno, 0)} árvores absorvendo por um ano</div>
+    </div>
+    <div class="numero ${ind.pendentes.length ? 'numero-alerta' : ''}">
+      <div class="valor">${ind.pendentes.length}</div>
+      <div class="rotulo">aparelhos atrasados</div>
+      <div class="nota">${ind.totalEmCurso} em curso · ${ind.totalPontos} pontos em ${ind.municipiosAtendidos} municípios</div>
+    </div>`;
+
+  /* --- etapas --- */
+  const maxEtapa = Math.max(1, ...ind.porEtapa.map((e) => e.quantidade));
+  document.getElementById('tab-etapas').innerHTML = `
+    <thead><tr><th>Etapa</th><th class="num">Aparelhos</th><th class="num">Massa</th><th style="width:32%"></th></tr></thead>
+    <tbody>${ind.porEtapa.map((e) => `
+      <tr>
+        <td>${seloEtapa(e.id)}</td>
+        <td class="num">${e.quantidade}</td>
+        <td class="num">${formatarMassa(e.pesoKg)}</td>
+        <td><div class="barra"><span style="width:${(e.quantidade / maxEtapa) * 100}%"></span></div></td>
+      </tr>`).join('')}</tbody>`;
+
+  /* --- tempos e gargalo --- */
+  document.getElementById('tab-tempos').innerHTML = `
+    <thead><tr><th>Etapa</th><th class="num">Média</th><th class="num">Prazo</th><th style="width:28%">% do prazo</th></tr></thead>
+    <tbody>${ind.tempos.map((t) => {
+      const pct = t.razaoSla == null ? null : t.razaoSla * 100;
+      const estourou = pct != null && pct > 100;
+      return `
+        <tr>
+          <td>${escapar(t.rotulo)}<br><span class="sutil">${t.amostras} medição(ões)</span></td>
+          <td class="num">${formatarDuracao(t.mediaHoras)}</td>
+          <td class="num">${t.slaHoras} h</td>
+          <td>
+            ${pct == null ? '<span class="sutil">sem dados</span>' : `
+              <div class="barra ${estourou ? 'barra-alerta' : ''}">
+                <span style="width:${Math.min(100, pct)}%"></span>
+              </div>
+              <span class="sutil">${formatarNumero(pct, 0)}%</span>`}
+          </td>
+        </tr>`;
+    }).join('')}</tbody>`;
+
+  document.getElementById('gargalo').innerHTML = ind.gargalo
+    ? `<strong>Gargalo atual:</strong> ${escapar(ind.gargalo.rotulo)} —
+       média de ${formatarDuracao(ind.gargalo.mediaHoras)} contra um prazo de
+       ${ind.gargalo.slaHoras} h (${formatarNumero(ind.gargalo.razaoSla * 100, 0)}% do previsto).`
+    : '<span class="sutil">Ainda não há etapas concluídas suficientes para apontar um gargalo.</span>';
+
+  /* --- pendências --- */
+  document.getElementById('pendencias-corpo').innerHTML = ind.pendentes.length
+    ? `<table>
+         <thead><tr><th>Código</th><th>Aparelho</th><th>Parado em</th><th class="num">Há quanto tempo</th><th class="num">Prazo</th></tr></thead>
+         <tbody>${ind.pendentes.map((i) => `
+           <tr>
+             <td><a href="rastrear.html?c=${encodeURIComponent(i.codigo)}"><code>${escapar(i.codigo)}</code></a></td>
+             <td>${escapar(categoria(i.categoria)?.rotulo ?? i.categoria)}</td>
+             <td>${seloEtapa(i.etapaAtual)}<br><span class="sutil">desde ${formatarData(i.atualizadoEm)}</span></td>
+             <td class="num" style="color:var(--vermelho-600);font-weight:600">${formatarDuracao(i.horasParado)}</td>
+             <td class="num">${i.slaHoras} h</td>
+           </tr>`).join('')}</tbody>
+       </table>`
+    : '<p class="vazio">Nenhum aparelho atrasado. Toda a cadeia está dentro do prazo.</p>';
+
+  /* --- materiais --- */
+  const materiais = Object.entries(ind.materiais).sort((a, b) => b[1] - a[1]);
+  document.getElementById('tab-materiais').innerHTML = materiais.length
+    ? `<thead><tr><th>Material</th><th class="num">Recuperado</th><th class="num">CO₂e evitado</th></tr></thead>
+       <tbody>${materiais.map(([id, kg]) => `
+         <tr>
+           <td>${escapar(MATERIAIS[id]?.rotulo ?? id)}</td>
+           <td class="num">${id === 'ouro' ? formatarOuro(kg) : formatarMassa(kg)}</td>
+           <td class="num">${formatarNumero(kg * (MATERIAIS[id]?.co2ePorKg ?? 0), 1)} kg</td>
+         </tr>`).join('')}</tbody>`
+    : '<tbody><tr><td class="vazio">Nenhum aparelho concluiu a reciclagem ainda.</td></tr></tbody>';
+
+  document.getElementById('co2').innerHTML = `
+    <strong>${formatarNumero(ind.co2eKg, 1)} kg de CO₂e</strong> deixaram de ser emitidos —
+    o equivalente a ${formatarNumero(eq.kmDeCarro, 0)} km rodados de carro, ou ao que
+    ${formatarNumero(eq.arvoresPorAno, 0)} árvores absorvem em um ano.`;
+
+  /* --- recortes --- */
+  document.getElementById('tab-municipios').innerHTML = tabelaGrupo(ind.porMunicipio, 'Município');
+  document.getElementById('tab-categorias').innerHTML = tabelaGrupo(ind.porCategoria, 'Tipo');
+}
+
+function tabelaGrupo(grupos, titulo) {
+  const maior = Math.max(1, ...grupos.map((g) => g.pesoKg));
+  return `
+    <thead><tr><th>${titulo}</th><th class="num">Aparelhos</th><th class="num">Massa</th><th style="width:26%"></th></tr></thead>
+    <tbody>${grupos.map((g) => `
+      <tr>
+        <td>${escapar(g.chave)}<br><span class="sutil">${g.processados} concluído(s)</span></td>
+        <td class="num">${g.quantidade}</td>
+        <td class="num">${formatarMassa(g.pesoKg)}</td>
+        <td><div class="barra"><span style="width:${(g.pesoKg / maior) * 100}%"></span></div></td>
+      </tr>`).join('')}</tbody>`;
+}
+
+document.getElementById('btn-reiniciar').addEventListener('click', async () => {
+  if (!confirm('Apagar todos os dados deste navegador e recarregar os dados de demonstração?')) return;
+  await store.reiniciar();
+  aviso('Demonstração reiniciada.');
+  await desenhar();
+});
+
+await desenhar();
+</script>
+
+</body>
+</html>
