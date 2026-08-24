@@ -16,6 +16,10 @@
 <main>
 
   <h1>Leitura de etiqueta</h1>
+  <!-- TODO: esta tela grava eventos na cadeia de custódia e hoje abre para
+       qualquer visitante, com o nome do responsável digitado à mão. Exigir
+       login de operador aqui e recusar o POST de evento no servidor sem
+       sessão. Ver TODO.md, item 1. -->
   <p class="sutil" style="margin-top:-.5rem">
     Tela de quem opera a cadeia: ponto de coleta, cooperativa, transporte e recicladora.
     Ler o QR registra a passagem do aparelho pela etapa.
@@ -304,6 +308,12 @@ function ligarApagamento(item) {
   atualizar();
 }
 
+/*
+ * TODO: o clique grava o evento na hora, e o histórico é append-only — não há
+ * desfazer. Interpor uma tela de confirmação mostrando o que será gravado
+ * (código, etapa atual → nova, local, responsável e o atestado de apagamento
+ * quando houver) antes de chamar `avancar`. Ver TODO.md, item 2.
+ */
 function ligarFormulario(item, proxima) {
   document.getElementById('btn-avancar').addEventListener('click', async () => {
     const selMidia = document.getElementById('midia-ev');

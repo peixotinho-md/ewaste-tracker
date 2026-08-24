@@ -30,6 +30,10 @@ CREATE INDEX idx_pontos_municipio ON pontos (municipio);
 -- --------------------------------------------------------------------------
 -- Usuários (a conta é opcional em todo o fluxo)
 -- --------------------------------------------------------------------------
+-- TODO: falta a coluna `papel` (visitante | operador | admin). Operador é quem
+-- pode escrever na cadeia de custódia pelo scanner; admin é quem concede e
+-- revoga esse papel. Alterar aqui exige subir o PRAGMA user_version.
+-- Ver TODO.md, itens 1 e 3.
 CREATE TABLE usuarios (
   id         TEXT PRIMARY KEY,
   nome       TEXT NOT NULL,
