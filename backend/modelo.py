@@ -279,6 +279,46 @@ def normalizar_codigo(entrada) -> str | None:
 # Limites de tamanho dos campos livres
 # --------------------------------------------------------------------------- #
 
+# --------------------------------------------------------------------------- #
+# Papéis das contas
+#
+# Quem lê a etiqueta é quem ESCREVE na cadeia de custódia: cada leitura grava um
+# evento afirmando que o aparelho passou por uma etapa. Deixar isso aberto
+# derrubaria a única coisa que o sistema promete — que a trilha é confiável.
+#
+# Por isso o cadastro pela tela nasce como `visitante`, sem poder de escrita, e
+# a promoção a `operador` é ato de um `admin`, registrado na trilha de
+# administração. Esta verificação vive no servidor porque é lá que ela vale:
+# esconder um botão não impede ninguém de chamar a API com curl.
+# --------------------------------------------------------------------------- #
+
+PAPEIS = {
+    "visitante": "Visitante",
+    "operador": "Operador",
+    "admin": "Administrador",
+}
+
+#: Papéis que podem gravar eventos na cadeia de custódia.
+PAPEIS_QUE_ESCREVEM = {"operador", "admin"}
+
+
+def pode_escrever(papel: str | None) -> bool:
+    return papel in PAPEIS_QUE_ESCREVEM
+
+
+def validar_papel(papel) -> str:
+    if papel not in PAPEIS:
+        raise RegraViolada("Papel inválido. Use visitante, operador ou admin.")
+    return papel
+
+
+def validar_senha(senha) -> str:
+    senha = str(senha or "")
+    if len(senha) < 6:
+        raise RegraViolada("A senha precisa ter ao menos 6 caracteres.")
+    return senha
+
+
 LIMITES = {
     "marca": 80,
     "responsavel": 60,

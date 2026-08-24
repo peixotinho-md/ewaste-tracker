@@ -49,6 +49,27 @@ O banco (`backend/etrilha.db`) é criado e populado automaticamente na primeira
 execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
 `vendor/` — não há build nem `npm install`.
 
+### Contas de demonstração
+
+A carga inicial cria duas contas, também impressas no terminal ao subir o
+servidor:
+
+| Papel | E-mail | Senha | O que pode |
+|---|---|---|---|
+| Administrador | `admin@etrilha.ms` | `etrilha-admin` | gerenciar contas e papéis, além de tudo do operador |
+| Operador | `operador@etrilha.ms` | `etrilha-operador` | ler QR e registrar as etapas, pelo Ecoponto Região Norte |
+
+Roteiro de apresentação com essas contas em
+[docs/CREDENCIAIS-DEMO.md](docs/CREDENCIAIS-DEMO.md).
+
+São credenciais **públicas, de demonstração**. O primeiro administrador nasce
+aqui de propósito: como só um admin promove outro, não pode haver
+auto-promoção pela tela — num sistema real esse primeiro cadastro seria um
+comando de instalação.
+
+Quem se cadastra pela tela nasce como **visitante**: registra e acompanha os
+próprios aparelhos, mas não grava etapas na cadeia de custódia de terceiros.
+
 > **Câmera:** só funciona em contexto seguro. Em `http://localhost` funciona.
 > Pelo celular na rede local (`http://192.168.x.x`) o navegador bloqueia, porque
 > HTTP puro não é contexto seguro — nesse caso use a digitação manual do código,
@@ -63,8 +84,15 @@ execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
    - **"Ampliar para leitura"** abre o QR em tela cheia: dá para ler com a
      câmera de outro aparelho, sem imprimir nada.
 2. **`etiqueta.html`** — imprima (ou pré-visualize) a folha de etiquetas.
-3. **`scanner.html`** — ligue a câmera, aponte para a etiqueta e avance o
-   aparelho etapa por etapa até `PROCESSADO`.
+3. **`scanner.html`** — a tela pede login: entre como
+   `operador@etrilha.ms` / `etrilha-operador`. Ligue a câmera, aponte para a
+   etiqueta e avance o aparelho etapa por etapa até `PROCESSADO`.
+   - Antes de gravar, aparece a **tela de confirmação** com o que será
+     registrado — código, categoria, etapa de origem e destino, local,
+     assinatura e o atestado de apagamento. O histórico é somente de
+     acréscimo: não existe desfazer.
+   - O campo "responsável" não existe: quem assina é a conta autenticada, e
+     quem preenche esse campo é o servidor.
    - No bloco *"Testar a validação da máquina de estados"*, tente pular uma
      etapa ou voltar: **o servidor** recusa e explica o porquê.
    - Ao concluir a **triagem** de um notebook, HD ou celular, aparece o
@@ -76,6 +104,11 @@ execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
 5. **`pontos.html`** — filtre os pontos de coleta por município e por aparelho.
 6. **`painel.html`** — massa desviada do aterro, materiais recuperados, CO₂e
    evitado, gargalo da cadeia e lista de pendências.
+7. **`admin.html`** — entre como `admin@etrilha.ms` / `etrilha-admin`. Promova
+   uma conta a operador, vincule-a a um ponto de coleta e veja a alteração
+   aparecer na **trilha de administração**. Tente rebaixar o único
+   administrador: o servidor recusa, para o sistema não ficar sem quem
+   gerencie as contas.
 
 **Códigos já cadastrados:**
 
@@ -125,12 +158,15 @@ decide o que é gravado é o servidor.
 | `GET` | `/api/itens/<codigo>` | Um item |
 | `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos |
 | `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` |
-| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa (valida a transição) |
+| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa — **exige operador** (valida a transição) |
 | `GET` | `/api/sessao` | Usuário logado, se houver |
 | `POST` | `/api/sessao` | Entrar |
 | `DELETE` | `/api/sessao` | Sair |
 | `POST` | `/api/usuarios` | Criar conta |
 | `GET` | `/api/meus-itens` | Itens do usuário logado ou do visitante |
+| `GET` | `/api/admin/usuarios` | Lista as contas — **exige admin** |
+| `PATCH` | `/api/admin/usuarios/<id>` | Papel, ponto vinculado e senha — **exige admin** |
+| `GET` | `/api/admin/alteracoes` | Trilha de administração — **exige admin** |
 | `POST` | `/api/demo/reiniciar` | Recria o banco com os dados de exemplo |
 | `GET` | `/api/saude` | Diagnóstico: servidor e contagens do banco |
 
@@ -139,7 +175,41 @@ Dá para explorar a API sem abrir o navegador:
 ```bash
 curl http://localhost:8000/api/saude
 curl http://localhost:8000/api/itens/MS-3H7K-P2R6/rastreio
+
+# Escrever na cadeia de custódia sem ser operador: 401
+curl -X POST -H "Content-Type: application/json" -d "{\"etapa\":\"COLETADO\"}"      http://localhost:8000/api/itens/MS-8VNC-5RQ1/eventos
 ```
+
+### Quem pode escrever na cadeia de custódia
+
+Ler é público: qualquer pessoa consulta um código, sem conta. **Escrever não.**
+Quem lê a etiqueta é quem declara que o aparelho passou por uma etapa, e essa
+declaração assinada é o produto do sistema — aberta a qualquer um, não valeria
+nada.
+
+| Papel | Registrar o próprio aparelho | Ler QR e avançar etapa | Gerenciar contas |
+|---|---|---|---|
+| Visitante (com ou sem conta) | sim | não | não |
+| Operador | sim | sim | não |
+| Administrador | sim | sim | sim |
+
+Três decisões que sustentam isso:
+
+- **A verificação é do servidor.** As telas do operador e do administrador
+  somem do menu para quem não tem o papel, mas é o `POST`/`PATCH` que responde
+  401 (falta entrar) ou 403 (entrou, sem permissão) — inclusive para chamadas
+  feitas por fora da tela.
+- **O papel é lido do banco a cada requisição**, nunca guardado no cookie:
+  revogar o papel de alguém passa a valer na hora, sem esperar a sessão dela
+  expirar.
+- **O servidor carimba a assinatura e o local.** O nome do responsável vem da
+  conta autenticada e o ponto vem do vínculo dela, então o formulário não
+  consegue assinar com o nome de outra pessoa nem registrar passagem por um
+  local onde não trabalha.
+
+Promover alguém a operador é conceder poder de escrita no histórico, então a
+concessão também deixa rastro: a tabela `alteracoes_conta` guarda quem alterou
+o quê e quando, com os mesmos gatilhos de somente-acréscimo dos eventos.
 
 ### Apagamento seguro: arquitetura do hardware como regra de negócio
 
@@ -194,10 +264,11 @@ index.html        Home: consulta pública por código + números do estado
 rastrear.html     Trilha do aparelho, materiais recuperados e certificado
 registrar.html    Cadastro do dispositivo, código + QR, QR ampliado
 etiqueta.html     Folha de etiquetas QR para impressão
-scanner.html      Leitura da etiqueta e registro da etapa (tela do operador)
+scanner.html      Leitura da etiqueta e registro da etapa (exige operador)
 pontos.html       Mapa SVG de MS + lista filtrável de pontos de coleta
 painel.html       Indicadores para gestores, cooperativas e empresas
 conta.html        Conta opcional e histórico do usuário
+admin.html        Contas, papéis e trilha de administração (exige admin)
 
 backend/app.py      Flask: rotas da API + entrega das páginas
 backend/banco.py    Conexão SQLite, esquema, carga inicial, transações
@@ -249,9 +320,16 @@ offline está listada como melhoria futura no Relatório Técnico.
 
 ## Limitações desta versão
 
-- **Sem controle de perfis.** Qualquer pessoa com o código pode registrar
-  qualquer etapa. Num sistema real, só um operador credenciado da etapa
-  correspondente poderia fazê-lo.
+- **O credenciamento do operador é por confiança no administrador.** Existe
+  papel, vínculo com ponto de coleta e trilha de quem concedeu o quê, mas nada
+  amarra a conta a uma pessoa física verificada — não há documento, contrato
+  com a cooperativa nem segundo fator. Num sistema real, o credenciamento
+  passaria pelo cadastro do órgão ambiental.
+- **Qualquer operador pode avançar qualquer aparelho.** O papel não distingue
+  as etapas: quem opera a coleta consegue registrar também a reciclagem. Separar
+  as competências por etapa é melhoria mapeada.
+- **Senha redefinida pelo admin é entregue fora do sistema.** Não há envio por
+  e-mail nem obrigação de troca no primeiro acesso.
 - **Sem HTTPS.** A senha trafega em texto claro. Em `localhost` isso não é
   problema; em rede, é.
 - **Gravação exige conexão.** Não há fila de sincronização offline.

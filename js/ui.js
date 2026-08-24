@@ -70,7 +70,14 @@ async function montarCabecalho() {
   const atualPath = location.pathname.split('/').pop() || 'index.html';
   const usuario = await auth.atual();
 
-  const links = PAGINAS.map(
+  // A administração só aparece para quem é admin. Esconder o link é
+  // conveniência: a rota da API continua fechada por conta própria, no
+  // servidor, para quem tentar abrir a página direto pela URL.
+  const paginas = auth.ehAdmin(usuario)
+    ? [...PAGINAS, { href: 'admin.html', rotulo: 'Administração' }]
+    : PAGINAS;
+
+  const links = paginas.map(
     (p) =>
       `<a href="${p.href}"${p.href === atualPath ? ' aria-current="page"' : ''}>${p.rotulo}</a>`
   ).join('');
@@ -82,7 +89,9 @@ async function montarCabecalho() {
     </a>
     <nav aria-label="Navegação principal">${links}</nav>
     <a class="conta-link" href="conta.html">
-      ${usuario ? `<span class="avatar" aria-hidden="true">${escapar(usuario.nome[0].toUpperCase())}</span> ${escapar(usuario.nome.split(' ')[0])}`
+      ${usuario ? `<span class="avatar" aria-hidden="true">${escapar(usuario.nome[0].toUpperCase())}</span>
+                   ${escapar(usuario.nome.split(' ')[0])}
+                   ${usuario.papel !== 'visitante' ? seloPapel(usuario.papel) : ''}`
                 : 'Entrar <span class="opcional">(opcional)</span>'}
     </a>`;
 }
@@ -106,6 +115,72 @@ export function aviso(mensagem, tipo = 'ok') {
   caixa.append(item);
   setTimeout(() => item.classList.add('saindo'), 4200);
   setTimeout(() => item.remove(), 4800);
+}
+
+/** Selo com o papel da conta. Visitante não recebe selo: é o normal. */
+export function seloPapel(papel) {
+  const def = auth.PAPEIS[papel];
+  if (!def) return '';
+  return `<span class="selo selo-papel selo-${papel}">${escapar(def.rotulo)}</span>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Confirmação de ação definitiva
+ * ------------------------------------------------------------------ */
+
+/**
+ * Pergunta antes de gravar algo que não tem volta, mostrando exatamente o que
+ * será gravado.
+ *
+ * Usa `<dialog>` nativo, e não o `confirm()` do navegador, por três motivos:
+ * o `confirm()` só aceita texto puro (não caberia o resumo do que vai ser
+ * registrado), trava a thread da página, e tem aparência de erro do sistema em
+ * vez de decisão consciente.
+ *
+ * O botão de cancelar vem PRIMEIRO no DOM e recebe o foco ao abrir, de
+ * propósito: um Enter distraído volta para a correção em vez de confirmar.
+ * Fechar pelo Esc também equivale a cancelar.
+ *
+ * @returns {Promise<boolean>} true se a pessoa confirmou.
+ */
+export function confirmar({ titulo, corpo = '', alerta = '', confirmar: textoOk = 'Confirmar',
+                            cancelar: textoCancelar = 'Voltar e corrigir' }) {
+  return new Promise((resolver) => {
+    const dialogo = document.createElement('dialog');
+    dialogo.className = 'confirmacao';
+    dialogo.innerHTML = `
+      <h2>${escapar(titulo)}</h2>
+      ${corpo}
+      ${alerta ? `<div class="faixa faixa-alerta">${alerta}</div>` : ''}
+      <div class="botoes confirmacao-botoes">
+        <button class="botao botao-secundario" type="button" data-resposta="nao">${escapar(textoCancelar)}</button>
+        <button class="botao" type="button" data-resposta="sim">${escapar(textoOk)}</button>
+      </div>`;
+
+    // A resposta é dada no clique, e não no evento `close` do diálogo: assim a
+    // promessa não depende da entrega assíncrona desse evento, que se mostrou
+    // pouco confiável em navegador sem interface (usado nos testes). O guarda
+    // `respondido` garante uma resposta só, venha ela do botão ou do Esc.
+    let respondido = false;
+    const responder = (ok) => {
+      if (respondido) return;
+      respondido = true;
+      if (dialogo.open) dialogo.close();
+      dialogo.remove();
+      resolver(ok);
+    };
+
+    dialogo.querySelectorAll('[data-resposta]').forEach((botao) =>
+      botao.addEventListener('click', () => responder(botao.dataset.resposta === 'sim'))
+    );
+    // Esc (evento `cancel`) e qualquer outro fechamento equivalem a desistir.
+    dialogo.addEventListener('cancel', () => responder(false));
+    dialogo.addEventListener('close', () => responder(false));
+
+    document.body.append(dialogo);
+    dialogo.showModal();
+    dialogo.querySelector('[data-resposta="nao"]').focus();
+  });
 }
 
 /* ------------------------------------------------------------------ *

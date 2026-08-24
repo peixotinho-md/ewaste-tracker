@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
@@ -30,17 +30,66 @@ CREATE INDEX idx_pontos_municipio ON pontos (municipio);
 -- --------------------------------------------------------------------------
 -- Usuários (a conta é opcional em todo o fluxo)
 -- --------------------------------------------------------------------------
--- TODO: falta a coluna `papel` (visitante | operador | admin). Operador é quem
--- pode escrever na cadeia de custódia pelo scanner; admin é quem concede e
--- revoga esse papel. Alterar aqui exige subir o PRAGMA user_version.
--- Ver TODO.md, itens 1 e 3.
+-- O papel decide o que a conta pode fazer:
+--
+--   visitante  registra os próprios aparelhos e consulta — é o padrão de quem
+--              se cadastra pela tela;
+--   operador   além disso, ESCREVE na cadeia de custódia pelo leitor de QR;
+--   admin      concede e revoga o papel de operador e redefine senhas.
+--
+-- O padrão é `visitante` de propósito: ninguém ganha poder de escrita só por
+-- criar uma conta. Quem promove é um admin, e a promoção fica registrada em
+-- `alteracoes_conta`.
+--
+-- `ponto_id` amarra o operador ao local onde ele trabalha. O servidor usa esse
+-- vínculo para carimbar o evento, em vez de aceitar o local que a tela mandou.
 CREATE TABLE usuarios (
   id         TEXT PRIMARY KEY,
   nome       TEXT NOT NULL,
   email      TEXT NOT NULL UNIQUE COLLATE NOCASE,
   senha_hash TEXT NOT NULL,
-  criado_em  TEXT NOT NULL
+  criado_em  TEXT NOT NULL,
+  papel      TEXT NOT NULL DEFAULT 'visitante'
+             CHECK (papel IN ('visitante', 'operador', 'admin')),
+  ponto_id   TEXT REFERENCES pontos (id) ON DELETE SET NULL
 );
+
+CREATE INDEX idx_usuarios_papel ON usuarios (papel);
+
+-- --------------------------------------------------------------------------
+-- Trilha de administração das contas
+--
+-- Promover alguém a operador é dar poder de escrever no histórico dos
+-- aparelhos. Essa concessão precisa da mesma prestação de contas que ela
+-- protege: quem alterou, o que alterou e quando. Também é somente de
+-- acréscimo, pelos mesmos gatilhos usados nos eventos.
+--
+-- `de` e `para` guardam o valor antigo e o novo. Numa troca de senha ficam
+-- vazios: o que importa registrar é que houve redefinição, nunca o segredo.
+-- --------------------------------------------------------------------------
+CREATE TABLE alteracoes_conta (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  alvo_id  TEXT NOT NULL REFERENCES usuarios (id) ON DELETE RESTRICT,
+  autor_id TEXT NOT NULL REFERENCES usuarios (id) ON DELETE RESTRICT,
+  acao     TEXT NOT NULL,
+  de       TEXT NOT NULL DEFAULT '',
+  para     TEXT NOT NULL DEFAULT '',
+  em       TEXT NOT NULL
+);
+
+CREATE INDEX idx_alteracoes_alvo ON alteracoes_conta (alvo_id, em);
+
+CREATE TRIGGER alteracoes_sem_update
+BEFORE UPDATE ON alteracoes_conta
+BEGIN
+  SELECT RAISE(ABORT, 'A trilha de administração é somente de acréscimo: alterar é proibido.');
+END;
+
+CREATE TRIGGER alteracoes_sem_delete
+BEFORE DELETE ON alteracoes_conta
+BEGIN
+  SELECT RAISE(ABORT, 'A trilha de administração é somente de acréscimo: apagar é proibido.');
+END;
 
 -- --------------------------------------------------------------------------
 -- Itens (dispositivos descartados)

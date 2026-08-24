@@ -412,6 +412,51 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   text-align: center;
 }
 
+/* ---------- Selos de papel da conta ---------- */
+
+.selo-papel { margin-left: 0.35rem; }
+.selo-operador { background: var(--azul-100); color: var(--azul-600); }
+.selo-admin { background: var(--terra-100); color: var(--terra-600); }
+.selo-visitante { background: var(--fundo); color: var(--tinta-media); }
+
+/* ---------- Diálogo de confirmação ---------- */
+
+.confirmacao {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  background: var(--superficie);
+  color: var(--tinta);
+  padding: 1.4rem;
+  max-width: 520px;
+  width: calc(100vw - 2rem);
+}
+
+.confirmacao::backdrop { background: rgba(16, 30, 20, 0.45); }
+.confirmacao h2 { margin: 0 0 0.6rem; }
+.confirmacao .trilha-dados { margin-bottom: 1rem; }
+.confirmacao .faixa { margin: 0 0 1rem; }
+
+/* O botão que confirma fica à direita e o de voltar à esquerda; o de voltar
+   também vem antes no HTML, para receber o foco ao abrir. */
+.confirmacao-botoes { justify-content: flex-end; margin-top: 0.4rem; }
+
+/* Setas do "de → para" no resumo da mudança de etapa. */
+.confirmacao-mudanca {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+}
+
+/* ---------- Tabela de contas (administração) ---------- */
+
+.tabela-contas td { vertical-align: middle; }
+.tabela-contas .acoes { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.tabela-contas select { padding: 0.35rem 0.5rem; }
+
 /* ---------- Impressão ---------- */
 
 @media print {

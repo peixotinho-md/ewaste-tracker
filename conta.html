@@ -21,11 +21,28 @@
 <script type="module">
 import * as store from './js/store.js';
 import * as auth from './js/auth.js';
-import { iniciarPagina, aviso, cartaoItem, escapar, formatarMassa, formatarNumero } from './js/ui.js';
+import { iniciarPagina, aviso, cartaoItem, seloPapel, escapar, formatarMassa,
+         formatarNumero } from './js/ui.js';
 import { ETAPA_FINAL, co2eEvitado } from './js/model.js';
 
 await iniciarPagina();
 const conteudo = document.getElementById('conteudo');
+
+/**
+ * Para onde voltar depois de entrar.
+ *
+ * A lista de destinos é fechada de propósito: aceitar qualquer valor de `?destino=`
+ * transformaria esta tela num trampolim para outro site — o visitante clicaria
+ * num link do e-Trilha MS, faria login de verdade e cairia em página alheia.
+ */
+const DESTINOS = { 'scanner.html': 'o leitor de QR', 'admin.html': 'a administração' };
+const destino = DESTINOS[new URLSearchParams(location.search).get('destino')]
+  ? new URLSearchParams(location.search).get('destino')
+  : null;
+
+function irParaDestino() {
+  if (destino) location.href = destino;
+}
 
 await desenhar();
 
@@ -43,11 +60,13 @@ async function telaVisitante() {
   const meusItens = await store.meusItens();
 
   return `
+    ${destino ? `
+      <div class="faixa faixa-info">
+        <strong>Entre para continuar.</strong> Você tentou abrir ${escapar(DESTINOS[destino])},
+        que grava na cadeia de custódia e por isso exige uma conta com permissão.
+      </div>` : ''}
+
     <section class="cartao">
-      <!-- TODO: falta o papel da conta (visitante / operador / admin) e uma
-           tela de administração para conceder e revogar o papel de operador,
-           redefinir senha e conferir as contas existentes.
-           Ver TODO.md, item 3. -->
       <h1>Conta (opcional)</h1>
       <p>
         Você <strong>não precisa</strong> de conta para usar o e-Trilha MS:
@@ -133,10 +152,25 @@ async function telaLogado(usuario) {
       <div class="secao-titulo">
         <div>
           <h1 style="margin:0">Olá, ${escapar(usuario.nome.split(' ')[0])}</h1>
-          <p class="sutil" style="margin:0">${escapar(usuario.email)}</p>
+          <p class="sutil" style="margin:0">
+            ${escapar(usuario.email)} ${seloPapel(usuario.papel)}
+          </p>
         </div>
         <button class="botao botao-secundario" id="btn-sair" type="button">Sair</button>
       </div>
+
+      <p class="sutil" style="margin:.8rem 0 0">
+        ${escapar(auth.PAPEIS[usuario.papel]?.descricao ?? '')}
+        ${usuario.papel === 'visitante' ? `
+          Para registrar a passagem de aparelhos pelas etapas é preciso o papel de
+          operador, concedido por um administrador.` : ''}
+      </p>
+
+      ${auth.podeOperar(usuario) ? `
+        <div class="botoes" style="margin-top:.9rem">
+          <a class="botao" href="scanner.html">Abrir o leitor de QR</a>
+          ${auth.ehAdmin(usuario) ? '<a class="botao botao-secundario" href="admin.html">Administrar contas</a>' : ''}
+        </div>` : ''}
     </section>
 
     <section class="grade grade-3" style="margin-bottom:1.25rem">
@@ -194,6 +228,7 @@ function ligarEventos(usuario) {
         senha: document.getElementById('e-senha').value,
       });
       aviso(`Bem-vindo de volta, ${u.nome.split(' ')[0]}.` + (adotados ? ` ${adotados} aparelho(s) vinculado(s) à sua conta.` : ''));
+      if (destino) { irParaDestino(); return; }
       await desenhar();
     } catch (erro) {
       aviso(erro.message, 'erro');
@@ -209,6 +244,8 @@ function ligarEventos(usuario) {
         senha: document.getElementById('c-senha').value,
       });
       aviso(`Conta criada.` + (adotados ? ` ${adotados} aparelho(s) deste navegador foram vinculados a ela.` : ''));
+      // Conta nova nasce como visitante: mandar direto ao destino que exige
+      // operador só mostraria a mesma barreira de novo.
       await desenhar();
     } catch (erro) {
       aviso(erro.message, 'erro');

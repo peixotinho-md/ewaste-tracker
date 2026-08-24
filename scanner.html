@@ -16,49 +16,12 @@
 <main>
 
   <h1>Leitura de etiqueta</h1>
-  <!-- TODO: esta tela grava eventos na cadeia de custódia e hoje abre para
-       qualquer visitante, com o nome do responsável digitado à mão. Exigir
-       login de operador aqui e recusar o POST de evento no servidor sem
-       sessão. Ver TODO.md, item 1. -->
   <p class="sutil" style="margin-top:-.5rem">
     Tela de quem opera a cadeia: ponto de coleta, cooperativa, transporte e recicladora.
-    Ler o QR registra a passagem do aparelho pela etapa.
+    Ler o QR registra a passagem do aparelho pela etapa — por isso ela exige conta de operador.
   </p>
 
-  <div class="grade grade-2" style="align-items:start">
-
-    <section class="cartao">
-      <h2>Câmera</h2>
-      <div class="camera">
-        <video id="video" muted playsinline></video>
-        <div class="mira"></div>
-        <div class="estado" id="estado-camera">Câmera desligada.</div>
-      </div>
-      <div class="botoes" style="margin-top:.8rem">
-        <button class="botao" id="btn-camera">Ligar câmera</button>
-      </div>
-      <p class="dica" style="margin-top:.6rem">
-        O navegador pede sua permissão antes de acessar a câmera — é o sistema
-        operacional que controla o dispositivo, não esta página. A câmera só é
-        liberada em páginas seguras: use <code>http://localhost</code> ou HTTPS.
-      </p>
-
-      <hr style="border:none;border-top:1px solid var(--borda);margin:1.2rem 0">
-
-      <h2>Ou digite o código</h2>
-      <p class="sutil">Sempre disponível — etiqueta riscada, suja ou câmera indisponível não podem travar a operação.</p>
-      <form class="busca-codigo" id="form-manual">
-        <label class="oculto" for="manual">Código de rastreio</label>
-        <input id="manual" placeholder="MS-0000-0000" autocomplete="off" spellcheck="false" maxlength="14" required>
-        <button class="botao" type="submit">Abrir</button>
-      </form>
-    </section>
-
-    <section id="painel-item">
-      <div class="cartao vazio">Leia uma etiqueta ou digite um código para começar.</div>
-    </section>
-
-  </div>
+  <div id="area"></div>
 
 </main>
 
@@ -66,7 +29,9 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import { iniciarPagina, aviso, seloEtapa, formatarData, formatarMassa, escapar } from './js/ui.js';
+import * as auth from './js/auth.js';
+import { iniciarPagina, aviso, seloEtapa, seloPapel, confirmar, formatarData,
+         formatarMassa, escapar } from './js/ui.js';
 import { normalizarCodigo, categoria, proximaEtapa, ETAPAS, ETAPA_FINAL,
          etapa as definicaoEtapa, exigeApagamento, metodosParaMidia,
          MIDIAS, METODOS_APAGAMENTO } from './js/model.js';
@@ -74,69 +39,210 @@ import { LeitorQR } from './js/qr.js';
 
 await iniciarPagina();
 
-const painel = document.getElementById('painel-item');
-const estado = document.getElementById('estado-camera');
-const btnCamera = document.getElementById('btn-camera');
+const area = document.getElementById('area');
+
+/* ------------------------------------------------------------------ *
+ * Guarda de acesso
+ *
+ * Quem lê a etiqueta é quem ESCREVE na cadeia de custódia: cada leitura grava
+ * um evento afirmando que o aparelho passou por uma etapa, assinado com o nome
+ * de quem registrou. Aberta a qualquer visitante, essa declaração não provaria
+ * nada — daria para avançar a etapa de um aparelho que nunca se recebeu, ou
+ * emitir um atestado de apagamento sem ter destruído mídia alguma.
+ *
+ * A verificação daqui apenas evita mostrar uma tela que não vai funcionar.
+ * Quem realmente fecha a porta é o servidor: `POST /api/itens/<codigo>/eventos`
+ * responde 401 a quem não entrou e 403 a quem entrou sem ser operador, mesmo
+ * que a chamada venha de fora da tela.
+ * ------------------------------------------------------------------ */
+
+const operador = await auth.exigirPapel('operador', 'admin');
 const pontos = await store.listarPontos();
+
+/* Guardado aqui porque a câmera precisa ser desligada se o papel for revogado
+   no meio da operação e a tela trocar. */
+let leitor = null;
+
+if (operador) {
+  area.innerHTML = telaOperacao();
+  ligarCamera();
+  ligarEntradaManual();
+  abrirDaUrl();
+} else {
+  area.innerHTML = await telaSemAcesso();
+}
+
+/**
+ * Explica por que a tela está fechada e leva ao login, preservando o destino.
+ *
+ * Sem servidor no ar não há como saber quem é a pessoa, então cai aqui também.
+ * A mensagem separa os dois casos: o problema pode ser de permissão ou de
+ * conexão, e a saída é diferente em cada um. Nada de fila de gravações
+ * offline — um evento gravado localmente sem passar pela validação do servidor
+ * furaria a cadeia de custódia.
+ */
+async function telaSemAcesso() {
+  const usuario = await auth.atual();
+
+  if (!usuario) {
+    return `
+      <section class="cartao" style="max-width:640px">
+        <h2>Esta área é da operação</h2>
+        <p>
+          Registrar a passagem de um aparelho é declarar, com assinatura, que ele
+          esteve em suas mãos naquela etapa. Por isso é preciso entrar com uma
+          conta de <strong>operador</strong> antes de abrir o leitor.
+        </p>
+        <div class="botoes">
+          <a class="botao" href="conta.html?destino=scanner.html">Entrar como operador</a>
+          <a class="botao botao-secundario" href="rastrear.html">Só quero consultar um código</a>
+        </div>
+        <p class="dica" style="margin-top:1rem">
+          Se o servidor estiver fora do ar, esta tela também não abre: a gravação
+          precisa da validação do servidor para não furar a cadeia de custódia.
+          A consulta pública continua funcionando com os dados já guardados.
+        </p>
+      </section>`;
+  }
+
+  return `
+    <section class="cartao" style="max-width:640px">
+      <h2>Sua conta não é de operador</h2>
+      <p>
+        Você entrou como <strong>${escapar(usuario.nome)}</strong> ${seloPapel(usuario.papel)}.
+        Esta conta registra e acompanha os próprios aparelhos, mas não grava
+        etapas na cadeia de custódia de terceiros.
+      </p>
+      <p class="sutil">
+        Quem concede o papel de operador é um administrador, que também vincula
+        a conta ao ponto de coleta onde você trabalha. A concessão fica
+        registrada na trilha de administração.
+      </p>
+      <div class="botoes">
+        <a class="botao botao-secundario" href="conta.html">Ver minha conta</a>
+        <a class="botao botao-secundario" href="rastrear.html">Consultar por código</a>
+      </div>
+    </section>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Tela da operação
+ * ------------------------------------------------------------------ */
+
+function telaOperacao() {
+  const ponto = pontos.find((p) => p.id === operador.pontoId);
+  return `
+    <div class="faixa faixa-info">
+      Operando como <strong>${escapar(operador.nome)}</strong> ${seloPapel(operador.papel)}
+      ${ponto
+        ? `— ${escapar(ponto.nome)}, ${escapar(ponto.municipio)}.`
+        : '— sem ponto fixo vinculado; o local é escolhido a cada registro.'}
+      É este nome que assina cada etapa registrada.
+    </div>
+
+    <div class="grade grade-2" style="align-items:start">
+
+      <section class="cartao">
+        <h2>Câmera</h2>
+        <div class="camera">
+          <video id="video" muted playsinline></video>
+          <div class="mira"></div>
+          <div class="estado" id="estado-camera">Câmera desligada.</div>
+        </div>
+        <div class="botoes" style="margin-top:.8rem">
+          <button class="botao" id="btn-camera">Ligar câmera</button>
+        </div>
+        <p class="dica" style="margin-top:.6rem">
+          O navegador pede sua permissão antes de acessar a câmera — é o sistema
+          operacional que controla o dispositivo, não esta página. A câmera só é
+          liberada em páginas seguras: use <code>http://localhost</code> ou HTTPS.
+        </p>
+
+        <hr style="border:none;border-top:1px solid var(--borda);margin:1.2rem 0">
+
+        <h2>Ou digite o código</h2>
+        <p class="sutil">Sempre disponível — etiqueta riscada, suja ou câmera indisponível não podem travar a operação.</p>
+        <form class="busca-codigo" id="form-manual">
+          <label class="oculto" for="manual">Código de rastreio</label>
+          <input id="manual" placeholder="MS-0000-0000" autocomplete="off" spellcheck="false" maxlength="14" required>
+          <button class="botao" type="submit">Abrir</button>
+        </form>
+      </section>
+
+      <section id="painel-item">
+        <div class="cartao vazio">Leia uma etiqueta ou digite um código para começar.</div>
+      </section>
+
+    </div>`;
+}
 
 /* ------------------------------------------------------------------ *
  * Câmera
  * ------------------------------------------------------------------ */
 
-const leitor = new LeitorQR(document.getElementById('video'), {
-  onLeitura: (texto, codigo) => {
-    if (codigo) {
-      // Vibra onde o hardware permite: confirma a leitura sem exigir olhar a tela.
-      navigator.vibrate?.(80);
-      estado.textContent = `Lido: ${codigo} · ${leitor.metodo}`;
-      abrir(codigo);
-    } else {
-      estado.textContent = 'QR lido, mas não é uma etiqueta do e-Trilha MS.';
+function ligarCamera() {
+  const estado = document.getElementById('estado-camera');
+  const btnCamera = document.getElementById('btn-camera');
+
+  leitor = new LeitorQR(document.getElementById('video'), {
+    onLeitura: (texto, codigo) => {
+      if (codigo) {
+        // Vibra onde o hardware permite: confirma a leitura sem exigir olhar a tela.
+        navigator.vibrate?.(80);
+        estado.textContent = `Lido: ${codigo} · ${leitor.metodo}`;
+        abrir(codigo);
+      } else {
+        estado.textContent = 'QR lido, mas não é uma etiqueta do e-Trilha MS.';
+      }
+    },
+    onErro: (erro) => { estado.textContent = `Falha ao analisar o quadro: ${erro.message}`; },
+  });
+
+  btnCamera.addEventListener('click', async () => {
+    if (leitor.ativo) {
+      leitor.parar();
+      btnCamera.textContent = 'Ligar câmera';
+      estado.textContent = 'Câmera desligada.';
+      return;
     }
-  },
-  onErro: (erro) => { estado.textContent = `Falha ao analisar o quadro: ${erro.message}`; },
-});
+    estado.textContent = 'Solicitando permissão…';
+    try {
+      await leitor.iniciar();
+      btnCamera.textContent = 'Desligar câmera';
+      estado.textContent = `Procurando etiqueta… (${leitor.metodo})`;
+    } catch (erro) {
+      estado.textContent = erro.message;
+      aviso(erro.message, 'erro');
+    }
+  });
 
-btnCamera.addEventListener('click', async () => {
-  if (leitor.ativo) {
-    leitor.parar();
-    btnCamera.textContent = 'Ligar câmera';
-    estado.textContent = 'Câmera desligada.';
-    return;
-  }
-  estado.textContent = 'Solicitando permissão…';
-  try {
-    await leitor.iniciar();
-    btnCamera.textContent = 'Desligar câmera';
-    estado.textContent = `Procurando etiqueta… (${leitor.metodo})`;
-  } catch (erro) {
-    estado.textContent = erro.message;
-    aviso(erro.message, 'erro');
-  }
-});
-
-window.addEventListener('pagehide', () => leitor.parar());
+  window.addEventListener('pagehide', () => leitor.parar());
+}
 
 /* ------------------------------------------------------------------ *
  * Entrada manual
  * ------------------------------------------------------------------ */
 
-document.getElementById('form-manual').addEventListener('submit', (ev) => {
-  ev.preventDefault();
-  const codigo = normalizarCodigo(document.getElementById('manual').value);
-  if (!codigo) {
-    aviso('Código inválido. O dígito verificador não confere.', 'erro');
-    return;
-  }
-  abrir(codigo);
-});
+function ligarEntradaManual() {
+  document.getElementById('form-manual').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const codigo = normalizarCodigo(document.getElementById('manual').value);
+    if (!codigo) {
+      aviso('Código inválido. O dígito verificador não confere.', 'erro');
+      return;
+    }
+    abrir(codigo);
+  });
+}
 
 /* ------------------------------------------------------------------ *
  * Painel do item lido
  * ------------------------------------------------------------------ */
 
 async function abrir(codigo) {
+  const painel = document.getElementById('painel-item');
   const rastreio = await store.obterRastreio(codigo);
+
   if (!rastreio) {
     painel.innerHTML = `
       <div class="cartao">
@@ -202,35 +308,46 @@ async function abrir(codigo) {
     if (proxima.id === 'EM_TRIAGEM') ligarApagamento(item);
   }
 
-  document.getElementById('btn-livre').addEventListener('click', async () => {
-    const selMidia = document.getElementById('midia-ev');
-    await avancar(item.codigo, document.getElementById('etapa-livre').value, {
-      pontoId: null, responsavel: 'Teste de validação', observacao: '',
-      apagamento: selMidia
-        ? { midia: selMidia.value, metodo: document.getElementById('metodo-ev').value }
-        : null,
-    });
+  document.getElementById('btn-livre').addEventListener('click', async (ev) => {
+    // Passa pela mesma confirmação do fluxo normal: se a etapa escolhida for
+    // válida, isto grava de verdade — não é uma simulação.
+    const etapaId = document.getElementById('etapa-livre').value;
+    await avancar(ev.currentTarget, item, etapaId, coletarDados());
   });
 }
 
+/**
+ * Formulário da próxima etapa.
+ *
+ * Não há campo "responsável": quem assina é a conta autenticada, e é o
+ * servidor que preenche esse campo. Um nome digitado provaria apenas que
+ * alguém sabe digitar.
+ */
 function formularioAvanco(item, proxima) {
+  const meuPonto = pontos.find((p) => p.id === operador.pontoId);
   const aceitos = pontos.filter((p) => p.aceita.includes(item.categoria));
+
   return `
     <div class="faixa faixa-info">
       Próxima etapa: <strong>${escapar(proxima.rotulo)}</strong> — ${escapar(proxima.descricao)}
     </div>
+
     <div class="campo">
       <label for="ponto-ev">Local / organização</label>
-      <select id="ponto-ev">
-        <option value="">Não informar</option>
-        ${aceitos.map((p) => `<option value="${p.id}"${p.id === item.pontoOrigemId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`).join('')}
-      </select>
+      ${meuPonto
+        ? `<input id="ponto-ev" value="${escapar(meuPonto.nome)} — ${escapar(meuPonto.municipio)}" disabled>
+           <p class="dica">Vem do ponto vinculado à sua conta. O servidor grava este
+              local independentemente do que a tela enviar, para ninguém registrar
+              passagem por onde não trabalha.</p>`
+        : `<select id="ponto-ev">
+             <option value="">Não informar</option>
+             ${aceitos.map((p) => `<option value="${p.id}"${p.id === item.pontoOrigemId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`).join('')}
+           </select>
+           <p class="dica">Sua conta não tem ponto fixo vinculado, então o local é escolhido aqui.</p>`}
     </div>
-    <div class="campo">
-      <label for="resp-ev">Responsável pela leitura</label>
-      <input id="resp-ev" maxlength="60" placeholder="Nome do operador ou da equipe">
-    </div>
+
     ${proxima.id === 'EM_TRIAGEM' ? blocoApagamento(item) : ''}
+
     <div class="campo">
       <label for="obs-ev">Observação <span class="sutil">(opcional)</span></label>
       <textarea id="obs-ev" maxlength="240" placeholder="Ex.: bateria removida e separada; carcaça trincada"></textarea>
@@ -308,45 +425,125 @@ function ligarApagamento(item) {
   atualizar();
 }
 
-/*
- * TODO: o clique grava o evento na hora, e o histórico é append-only — não há
- * desfazer. Interpor uma tela de confirmação mostrando o que será gravado
- * (código, etapa atual → nova, local, responsável e o atestado de apagamento
- * quando houver) antes de chamar `avancar`. Ver TODO.md, item 2.
- */
 function ligarFormulario(item, proxima) {
-  document.getElementById('btn-avancar').addEventListener('click', async () => {
-    const selMidia = document.getElementById('midia-ev');
-    await avancar(item.codigo, proxima.id, {
-      pontoId: document.getElementById('ponto-ev').value || null,
-      responsavel: document.getElementById('resp-ev').value,
-      observacao: document.getElementById('obs-ev').value,
-      apagamento: selMidia
-        ? { midia: selMidia.value, metodo: document.getElementById('metodo-ev').value }
-        : null,
-    });
+  document.getElementById('btn-avancar').addEventListener('click', async (ev) => {
+    await avancar(ev.currentTarget, item, proxima.id, coletarDados());
   });
 }
 
-async function avancar(codigo, etapaId, dados) {
+/** Lê o formulário. O responsável não está aqui: quem preenche é o servidor. */
+function coletarDados() {
+  const selMidia = document.getElementById('midia-ev');
+  const selPonto = document.getElementById('ponto-ev');
+  return {
+    // Campo desabilitado (ponto fixo do operador) não tem valor a enviar — e o
+    // servidor usaria o ponto da conta de qualquer forma.
+    pontoId: selPonto && !selPonto.disabled ? selPonto.value || null : null,
+    observacao: document.getElementById('obs-ev')?.value ?? '',
+    apagamento: selMidia
+      ? { midia: selMidia.value, metodo: document.getElementById('metodo-ev').value }
+      : null,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Confirmação e gravação
+ * ------------------------------------------------------------------ */
+
+/**
+ * Mostra o que será gravado e só então grava.
+ *
+ * O histórico é somente de acréscimo — os gatilhos do banco recusam UPDATE e
+ * DELETE em `eventos`, então NÃO EXISTE desfazer. Num galpão com dezenas de
+ * aparelhos, ler o QR errado é fácil; por isso a confirmação repete o código e
+ * a categoria do aparelho, e não só a etapa.
+ */
+async function avancar(botao, item, etapaId, dados) {
+  const ok = await confirmarRegistro(item, etapaId, dados);
+  if (!ok) return;
+
+  // Trava o botão durante a chamada: dois cliques seguidos gravariam dois
+  // eventos, e o segundo já não teria como ser apagado.
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = 'Registrando…';
+
   try {
-    await store.registrarEvento(codigo, { etapa: etapaId, ...dados });
+    await store.registrarEvento(item.codigo, { etapa: etapaId, ...dados });
     const rotulo = definicaoEtapa(etapaId).rotulo;
     aviso(
       etapaId === ETAPA_FINAL
-        ? `${codigo}: reciclagem concluída, certificado emitido.`
-        : `${codigo} avançou para "${rotulo}".`
+        ? `${item.codigo}: reciclagem concluída, certificado emitido.`
+        : `${item.codigo} avançou para "${rotulo}".`
     );
-    await abrir(codigo);
+    await abrir(item.codigo);
   } catch (erro) {
-    // A regra é aplicada no store, não na tela: a interface só mostra o motivo.
+    // A regra é aplicada no servidor, não na tela: a interface só mostra o motivo.
     aviso(erro.message, 'erro');
+    if (erro.status === 401 || erro.status === 403) {
+      // O papel pode ter sido revogado no meio da operação. Desliga a câmera e
+      // redesenha a tela, para não deixar aberto um formulário que já não
+      // funciona nem uma captura de vídeo sem dono.
+      leitor?.parar();
+      area.innerHTML = await telaSemAcesso();
+      return;
+    }
+    botao.disabled = false;
+    botao.textContent = textoOriginal;
   }
 }
 
+function confirmarRegistro(item, etapaId, dados) {
+  const cat = categoria(item.categoria);
+  const destino = definicaoEtapa(etapaId);
+  const ponto = pontos.find((p) => p.id === (operador.pontoId || dados.pontoId));
+  const precisaApagamento = etapaId === 'EM_TRIAGEM' && exigeApagamento(item.categoria);
+
+  const corpo = `
+    <p class="sutil" style="margin:0 0 .3rem">Aparelho lido</p>
+    <div class="confirmacao-mudanca">
+      <code style="color:var(--verde-600);font-weight:700">${escapar(item.codigo)}</code>
+      <span>${escapar(cat?.rotulo ?? item.categoria)}${item.marca ? ` · ${escapar(item.marca)}` : ''}</span>
+    </div>
+
+    <div class="confirmacao-mudanca">
+      ${seloEtapa(item.etapaAtual)}
+      <span aria-hidden="true">→</span>
+      ${seloEtapa(etapaId)}
+    </div>
+
+    <dl class="trilha-dados">
+      <div><dt>Assinado por</dt><dd>${escapar(operador.nome)}</dd></div>
+      <div><dt>Local</dt><dd>${ponto ? `${escapar(ponto.nome)} — ${escapar(ponto.municipio)}` : 'Não informado'}</dd></div>
+      ${dados.observacao ? `<div><dt>Observação</dt><dd>${escapar(dados.observacao)}</dd></div>` : ''}
+      ${precisaApagamento ? `
+        <div><dt>Mídia</dt><dd>${escapar(MIDIAS[dados.apagamento?.midia]?.rotulo ?? '—')}</dd></div>
+        <div><dt>Apagamento</dt><dd>${escapar(METODOS_APAGAMENTO[dados.apagamento?.metodo]?.rotulo ?? '—')}</dd></div>` : ''}
+    </dl>
+
+    ${precisaApagamento ? `
+      <p class="dica">
+        Ao confirmar, você declara que os dados deste aparelho foram destruídos
+        pelo método acima. O atestado fica público na consulta do código.
+      </p>` : ''}`;
+
+  return confirmar({
+    titulo: `Registrar "${destino.rotulo}"?`,
+    corpo,
+    alerta: `<strong>Este registro é definitivo.</strong> O histórico da cadeia de
+             custódia é somente de acréscimo: o próprio banco recusa alterar ou
+             apagar um evento já gravado. Confira o código do aparelho antes de
+             confirmar.`,
+    confirmar: 'Confirmar e registrar',
+    cancelar: 'Voltar e corrigir',
+  });
+}
+
 /* Um código na URL (?c=) abre direto — útil ao vir de outra tela. */
-const daUrl = normalizarCodigo(new URLSearchParams(location.search).get('c'));
-if (daUrl) abrir(daUrl);
+function abrirDaUrl() {
+  const daUrl = normalizarCodigo(new URLSearchParams(location.search).get('c'));
+  if (daUrl) abrir(daUrl);
+}
 </script>
 
 </body>

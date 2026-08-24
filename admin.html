@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administração · e-Trilha MS</title>
+<meta name="theme-color" content="#22773f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="cabecalho"><div data-cabecalho></div></header>
+
+<main>
+  <div id="conteudo"></div>
+</main>
+
+<footer class="rodape">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+
+<script type="module">
+import * as store from './js/store.js';
+import * as auth from './js/auth.js';
+import { iniciarPagina, aviso, confirmar, seloPapel, escapar, formatarData } from './js/ui.js';
+
+await iniciarPagina();
+
+const conteudo = document.getElementById('conteudo');
+
+/* Nomes das ações na trilha. Declarado aqui, e não junto de quem o usa, porque
+   `const` não é içado: o `await` de topo executa antes das linhas de baixo. */
+const NOMES_DE_ACAO = { papel: 'Papel', ponto: 'Ponto de coleta', senha: 'Senha' };
+
+/* ------------------------------------------------------------------ *
+ * Guarda de acesso
+ *
+ * Como no leitor de QR, esconder a tela é conveniência. Quem fecha a porta é o
+ * servidor: as rotas `/api/admin/*` respondem 403 a quem não é admin, mesmo
+ * que a chamada venha de fora daqui.
+ * ------------------------------------------------------------------ */
+
+const admin = await auth.exigirPapel('admin');
+let pontos = [];
+
+if (admin) {
+  pontos = await store.listarPontos();
+  await desenhar();
+} else {
+  conteudo.innerHTML = await telaSemAcesso();
+}
+
+async function telaSemAcesso() {
+  const usuario = await auth.atual();
+  return `
+    <section class="cartao" style="max-width:640px">
+      <h2>Área restrita à administração</h2>
+      <p>
+        Esta tela concede e revoga permissões — inclusive a de gravar na cadeia
+        de custódia. Só contas com papel de <strong>administrador</strong> a abrem.
+      </p>
+      ${usuario
+        ? `<p class="sutil">Você entrou como ${escapar(usuario.nome)} ${seloPapel(usuario.papel)}.</p>`
+        : `<div class="botoes">
+             <a class="botao" href="conta.html?destino=admin.html">Entrar</a>
+           </div>`}
+    </section>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Tela
+ * ------------------------------------------------------------------ */
+
+async function desenhar() {
+  const [usuarios, alteracoes] = await Promise.all([
+    store.listarUsuarios(),
+    store.listarAlteracoes(),
+  ]);
+
+  const contagem = (papel) => usuarios.filter((u) => u.papel === papel).length;
+
+  conteudo.innerHTML = `
+    <h1>Administração de contas</h1>
+    <p class="sutil" style="margin-top:-.5rem">
+      Papéis, vínculo com ponto de coleta e redefinição de senha.
+      Nome e e-mail pertencem à pessoa: quem os altera é o dono da conta.
+    </p>
+
+    <section class="grade grade-3" style="margin-bottom:1.25rem">
+      <div class="numero">
+        <div class="valor">${usuarios.length}</div>
+        <div class="rotulo">contas cadastradas</div>
+      </div>
+      <div class="numero">
+        <div class="valor">${contagem('operador')}</div>
+        <div class="rotulo">operadores</div>
+        <div class="nota">podem gravar etapas na cadeia de custódia</div>
+      </div>
+      <div class="numero">
+        <div class="valor">${contagem('admin')}</div>
+        <div class="rotulo">administradores</div>
+        <div class="nota">o sistema nunca fica sem nenhum</div>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Contas</h2>
+      <div class="rolagem">
+        <table class="tabela-contas">
+          <thead>
+            <tr>
+              <th>Conta</th>
+              <th>Papel</th>
+              <th>Ponto de coleta</th>
+              <th class="num">Aparelhos</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>${usuarios.map(linhaUsuario).join('')}</tbody>
+        </table>
+      </div>
+      <p class="dica" style="margin-top:.8rem">
+        O ponto de coleta vale para operadores: o servidor carimba esse local no
+        evento, em vez de aceitar o que a tela enviar. Assim ninguém registra
+        passagem por onde não trabalha.
+      </p>
+    </section>
+
+    <section class="cartao">
+      <h2>Trilha de administração</h2>
+      <p class="sutil">
+        Conceder o papel de operador é dar poder de escrever no histórico dos
+        aparelhos. Por isso a concessão também deixa rastro — e este registro é
+        somente de acréscimo, como o dos eventos: o banco recusa alterá-lo ou
+        apagá-lo.
+      </p>
+      ${alteracoes.length ? `
+        <div class="rolagem">
+          <table>
+            <thead><tr><th>Quando</th><th>Conta</th><th>Mudança</th><th>Por</th></tr></thead>
+            <tbody>${alteracoes.map(linhaAlteracao).join('')}</tbody>
+          </table>
+        </div>` : '<p class="vazio">Nenhuma alteração registrada ainda.</p>'}
+    </section>`;
+
+  ligarEventos(usuarios);
+}
+
+function linhaUsuario(usuario) {
+  const aceitaPonto = usuario.papel === 'operador';
+  return `
+    <tr data-id="${escapar(usuario.id)}">
+      <td>
+        <strong>${escapar(usuario.nome)}</strong>${usuario.souEu ? ' <span class="etiqueta">você</span>' : ''}
+        <br><span class="sutil">${escapar(usuario.email)}</span>
+        <br><span class="sutil">desde ${formatarData(usuario.criadoEm)}</span>
+      </td>
+      <td>
+        <select data-campo="papel"${usuario.souEu ? ' disabled' : ''}>
+          ${Object.entries(auth.PAPEIS).map(([id, def]) =>
+            `<option value="${id}"${id === usuario.papel ? ' selected' : ''}>${escapar(def.rotulo)}</option>`
+          ).join('')}
+        </select>
+        ${usuario.souEu ? '<p class="dica">Você não altera o próprio papel.</p>' : ''}
+      </td>
+      <td>
+        <select data-campo="ponto"${aceitaPonto ? '' : ' disabled'}>
+          <option value="">Sem ponto fixo</option>
+          ${pontos.map((p) =>
+            `<option value="${escapar(p.id)}"${p.id === usuario.pontoId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`
+          ).join('')}
+        </select>
+      </td>
+      <td class="num">${usuario.itens}</td>
+      <td>
+        <div class="acoes">
+          <button class="botao botao-secundario" data-acao="salvar" type="button">Aplicar</button>
+        </div>
+        <details style="margin-top:.5rem">
+          <summary class="sutil">Redefinir senha</summary>
+          <div class="busca-codigo" style="margin-top:.5rem">
+            <label class="oculto" for="senha-${escapar(usuario.id)}">Nova senha</label>
+            <input id="senha-${escapar(usuario.id)}" data-campo="senha" type="password"
+                   autocomplete="new-password" minlength="6" placeholder="Nova senha">
+            <button class="botao botao-secundario" data-acao="senha" type="button">Definir</button>
+          </div>
+          <p class="dica">
+            A senha antiga não é lida em lugar nenhum — nem por você. O servidor
+            guarda apenas o hash PBKDF2 da nova, e a trilha registra que houve
+            redefinição, nunca o valor.
+          </p>
+        </details>
+      </td>
+    </tr>`;
+}
+
+function linhaAlteracao(a) {
+  const nomeDoPonto = (id) => pontos.find((p) => p.id === id)?.nome ?? id;
+  let mudanca;
+
+  if (a.acao === 'papel') {
+    mudanca = `${escapar(auth.PAPEIS[a.de]?.rotulo ?? a.de)} → <strong>${escapar(auth.PAPEIS[a.para]?.rotulo ?? a.para)}</strong>`;
+  } else if (a.acao === 'ponto') {
+    mudanca = `${a.de ? escapar(nomeDoPonto(a.de)) : 'sem ponto'} → <strong>${a.para ? escapar(nomeDoPonto(a.para)) : 'sem ponto'}</strong>`;
+  } else {
+    mudanca = 'senha redefinida';
+  }
+
+  return `
+    <tr>
+      <td class="sutil">${formatarData(a.em)}</td>
+      <td>${escapar(a.alvoNome)}</td>
+      <td>${escapar(NOMES_DE_ACAO[a.acao] ?? a.acao)}: ${mudanca}</td>
+      <td class="sutil">${escapar(a.autorNome)}</td>
+    </tr>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ações
+ * ------------------------------------------------------------------ */
+
+function ligarEventos(usuarios) {
+  const porId = new Map(usuarios.map((u) => [u.id, u]));
+
+  // O papel escolhido muda o que faz sentido preencher: só operador tem ponto.
+  conteudo.querySelectorAll('select[data-campo="papel"]').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      const selPonto = sel.closest('tr').querySelector('select[data-campo="ponto"]');
+      selPonto.disabled = sel.value !== 'operador';
+      if (selPonto.disabled) selPonto.value = '';
+    });
+  });
+
+  conteudo.querySelectorAll('button[data-acao="salvar"]').forEach((botao) => {
+    botao.addEventListener('click', () => salvar(botao, porId));
+  });
+
+  conteudo.querySelectorAll('button[data-acao="senha"]').forEach((botao) => {
+    botao.addEventListener('click', () => redefinirSenha(botao, porId));
+  });
+}
+
+async function salvar(botao, porId) {
+  const linha = botao.closest('tr');
+  const usuario = porId.get(linha.dataset.id);
+  const papel = linha.querySelector('select[data-campo="papel"]').value;
+  const selPonto = linha.querySelector('select[data-campo="ponto"]');
+  const pontoId = selPonto.disabled ? '' : selPonto.value;
+
+  const mudancas = {};
+  if (papel !== usuario.papel) mudancas.papel = papel;
+  if ((pontoId || null) !== (usuario.pontoId || null)) mudancas.pontoId = pontoId;
+
+  if (!Object.keys(mudancas).length) {
+    aviso('Nada mudou nesta conta.');
+    return;
+  }
+
+  // Promover é conceder poder de escrita no histórico; rebaixar é retirá-lo de
+  // alguém que talvez esteja no meio de um turno. Os dois merecem uma parada.
+  if (mudancas.papel && !(await confirmarPapel(usuario, papel, pontoId))) return;
+
+  await aplicar(botao, usuario.id, mudancas, 'Conta atualizada.');
+}
+
+function confirmarPapel(usuario, papel, pontoId) {
+  const ponto = pontos.find((p) => p.id === pontoId);
+  const ganhaEscrita = papel !== 'visitante' && usuario.papel === 'visitante';
+  const perdeEscrita = papel === 'visitante' && usuario.papel !== 'visitante';
+
+  return confirmar({
+    titulo: `Alterar o papel de ${usuario.nome}?`,
+    corpo: `
+      <div class="confirmacao-mudanca">
+        ${seloPapel(usuario.papel)}
+        <span aria-hidden="true">→</span>
+        ${seloPapel(papel)}
+      </div>
+      <dl class="trilha-dados">
+        <div><dt>Conta</dt><dd>${escapar(usuario.email)}</dd></div>
+        ${papel === 'operador'
+          ? `<div><dt>Ponto vinculado</dt><dd>${ponto ? escapar(ponto.nome) : 'Sem ponto fixo'}</dd></div>`
+          : ''}
+      </dl>
+      <p class="dica">
+        ${ganhaEscrita
+          ? 'A conta passa a poder registrar a passagem de aparelhos pelas etapas, e cada evento será assinado com este nome.'
+          : perdeEscrita
+            ? 'A conta perde o acesso ao leitor de QR imediatamente, mesmo com a sessão dela aberta. Os eventos que ela já registrou permanecem — o histórico é somente de acréscimo.'
+            : 'O poder de escrita na cadeia de custódia é mantido.'}
+      </p>`,
+    alerta: `Esta alteração fica registrada na trilha de administração, com seu nome
+             e a data. O registro não pode ser apagado depois.`,
+    confirmar: 'Confirmar alteração',
+  });
+}
+
+async function redefinirSenha(botao, porId) {
+  const linha = botao.closest('tr');
+  const usuario = porId.get(linha.dataset.id);
+  const campo = linha.querySelector('input[data-campo="senha"]');
+  const senha = campo.value;
+
+  if (senha.length < 6) {
+    aviso('A senha precisa ter ao menos 6 caracteres.', 'erro');
+    campo.focus();
+    return;
+  }
+
+  const ok = await confirmar({
+    titulo: `Redefinir a senha de ${usuario.nome}?`,
+    corpo: `
+      <p>A senha atual deixa de valer na hora. Combine com a pessoa como
+         entregar a nova — e peça que ela troque depois.</p>
+      <dl class="trilha-dados">
+        <div><dt>Conta</dt><dd>${escapar(usuario.email)}</dd></div>
+      </dl>`,
+    alerta: 'A trilha de administração registra que você redefiniu esta senha.',
+    confirmar: 'Redefinir senha',
+  });
+  if (!ok) return;
+
+  await aplicar(botao, usuario.id, { senha }, 'Senha redefinida.');
+}
+
+/** Chamada única ao servidor, com o botão travado enquanto ela acontece. */
+async function aplicar(botao, id, mudancas, mensagem) {
+  const texto = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = 'Salvando…';
+  try {
+    await store.atualizarUsuario(id, mudancas);
+    aviso(mensagem);
+    await desenhar();
+  } catch (erro) {
+    // Regras como "o sistema não fica sem administrador" são do servidor: a
+    // tela apenas mostra o motivo que ele deu.
+    aviso(erro.message, 'erro');
+    botao.disabled = false;
+    botao.textContent = texto;
+  }
+}
+</script>
+
+</body>
+</html>

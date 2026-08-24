@@ -192,7 +192,12 @@ ponta a ponta nem devolve essa informação a quem entregou o aparelho.
 | RF11 | Exibir indicadores de massa, material recuperado, CO₂e, gargalo e pendências | Implementado |
 | RF12 | Conta opcional com histórico de aparelhos do usuário | Implementado |
 | RF13 | Compartilhar dados entre dispositivos e usuários diferentes | Implementado (API + SQLite) |
-| RF14 | Autenticar operadores por perfil (ponto, cooperativa, recicladora) | **Pendente — ver Limitações** |
+| RF14 | Exigir conta de operador para registrar etapas, com o papel verificado no servidor | Implementado |
+| RF17 | Vincular o operador a um ponto de coleta e carimbar assinatura e local a partir da sessão | Implementado |
+| RF18 | Confirmar a mudança de etapa mostrando o que será gravado, antes de gravar | Implementado |
+| RF19 | Administrar contas: conceder e revogar papéis, vincular ponto e redefinir senha | Implementado |
+| RF20 | Registrar em trilha somente de acréscimo quem alterou o quê nas contas | Implementado |
+| RF21 | Distinguir a etapa que cada operador pode registrar (coleta, triagem, reciclagem) | **Pendente — ver Limitações** |
 | RF15 | Exigir atestado de apagamento de dados na triagem de aparelhos com memória não volátil | Implementado |
 | RF16 | Recusar método de apagamento incompatível com a tecnologia da mídia | Implementado |
 
@@ -304,30 +309,49 @@ exibição e não para decidir se uma gravação é aceita.
 | `GET` | `/api/itens/<codigo>` | Um item |
 | `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos |
 | `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` |
-| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa (valida a transição) |
+| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa, valida a transição — **exige operador** |
 | `GET` / `POST` / `DELETE` | `/api/sessao` | Usuário atual, entrar, sair |
 | `POST` | `/api/usuarios` | Criar conta |
 | `GET` | `/api/meus-itens` | Itens do usuário logado ou do visitante |
+| `GET` | `/api/admin/usuarios` | Lista as contas com papel, ponto e nº de aparelhos — **exige admin** |
+| `PATCH` | `/api/admin/usuarios/<id>` | Altera papel, ponto vinculado e senha — **exige admin** |
+| `GET` | `/api/admin/alteracoes` | Trilha de administração — **exige admin** |
 | `POST` | `/api/demo/reiniciar` | Recria o banco com os dados de exemplo |
 | `GET` | `/api/saude` | Diagnóstico do servidor e do banco |
 
 Os códigos de status carregam significado: `201` quando algo é criado, `400`
 quando uma regra de negócio é violada (com a mensagem já pronta para a tela),
-`401` em credencial inválida e `404` quando o código não existe.
+`401` quando falta autenticação, `403` quando a conta está autenticada mas não
+tem o papel exigido, e `404` quando o código não existe. A diferença entre 401 e
+403 não é decorativa: a tela usa a primeira para pedir login e a segunda para
+explicar que entrar de novo não resolveria.
+
+O `PATCH` de `/api/admin/usuarios/<id>` é parcial de propósito: só os campos
+presentes no corpo são alterados. `pontoId` ausente significa "não mexer";
+`pontoId` presente e vazio significa "desvincular do ponto" — sem essa
+distinção, salvar o papel de um operador apagaria o posto dele sem querer.
 
 ### 9.4 Modelo de dados
 
 | Tabela | Colunas |
 |---|---|
 | `pontos` | `id`, `nome`, `tipo`, `municipio`, `endereco`, `lat`, `lng`, `aceita`, `horario`, `telefone` |
-| `usuarios` | `id`, `nome`, `email` (UNIQUE), `senha_hash`, `criado_em` |
+| `usuarios` | `id`, `nome`, `email` (UNIQUE), `senha_hash`, `criado_em`, `papel`, `ponto_id` |
 | `itens` | `codigo` (PK), `categoria`, `marca`, `peso_kg`, `dono_id`, `visitante_id`, `ponto_origem_id`, `criado_em`, `atualizado_em`, `etapa_atual`, `demo` |
 | `eventos` | `id`, `item_codigo`, `etapa`, `ponto_id`, `responsavel`, `observacao`, `em` |
+| `apagamentos` | `item_codigo` (PK), `midia`, `metodo`, `responsavel`, `em` |
+| `alteracoes_conta` | `id`, `alvo_id`, `autor_id`, `acao`, `de`, `para`, `em` |
 
 Um item pertence a um usuário (`dono_id`) **ou** a um visitante sem conta
 (`visitante_id`, guardado no cookie de sessão). Ao criar conta, os itens do
 visitante são adotados por ela — é isso que mantém o cadastro opcional sem
 perder o histórico de quem registrou antes de se cadastrar.
+
+`papel` tem `visitante` como padrão no próprio `CHECK` da coluna, e não no
+código: quem se cadastra pela tela não ganha poder de escrita, e mandar
+`"papel": "admin"` no JSON do cadastro não muda isso, porque o `INSERT` do
+cadastro nem escreve essa coluna. `ponto_id` amarra o operador ao local onde
+trabalha, e é dele que o servidor tira o ponto gravado no evento.
 
 ### 9.5 O banco garante a cadeia de custódia
 
@@ -392,7 +416,81 @@ Isso liga o projeto a duas coisas ao mesmo tempo: **Arquitetura de
 Computadores**, de forma aplicada e não decorativa, e a **LGPD**, já que
 descartar mídia sem destruir o dado é incidente de segurança, não descuido.
 
-### 9.7 Concorrência
+### 9.7 Autorização: quem pode escrever na cadeia
+
+Ler é público — qualquer pessoa consulta um código, sem conta. Escrever não.
+Quem lê a etiqueta é quem declara que o aparelho passou por uma etapa, e essa
+declaração assinada é o produto do sistema: aberta a qualquer um, não provaria
+nada. Três papéis dividem o acesso:
+
+| Papel | Registrar o próprio aparelho | Ler QR e avançar etapa | Gerenciar contas |
+|---|---|---|---|
+| Visitante (com ou sem conta) | sim | não | não |
+| Operador | sim | sim | não |
+| Administrador | sim | sim | sim |
+
+Quatro decisões sustentam esse controle:
+
+**A verificação é do servidor.** As telas do operador e do administrador somem
+do menu de quem não tem o papel, mas esconder o botão não é segurança: o
+`POST /api/itens/<codigo>/eventos` responde **401** a quem não entrou e **403**
+a quem entrou sem permissão, inclusive para chamadas feitas por `curl`. A
+distinção entre os dois códigos é usada pela tela: 401 pede login, 403 explica
+que a conta não tem o papel — entrar de novo não resolveria.
+
+**O papel é lido do banco a cada requisição**, e não guardado no cookie de
+sessão. Guardá-lo no cookie seria mais rápido, mas revogar o papel de alguém só
+teria efeito quando a sessão dela expirasse. Do jeito que está, a revogação vale
+já na requisição seguinte — o que foi verificado em teste, com a sessão do
+operador aberta.
+
+**O servidor carimba a assinatura e o local.** O nome do responsável vem da
+conta autenticada e o ponto vem do vínculo dela; os campos equivalentes no corpo
+da requisição são descartados. Sem isso, qualquer operador poderia assinar com o
+nome de outra pessoa ou registrar passagem por um local onde não trabalha — e a
+assinatura provaria apenas que alguém sabe digitar.
+
+**Conceder o papel também deixa rastro.** Promover alguém a operador é dar poder
+de escrever no histórico dos aparelhos, então essa concessão precisa da mesma
+prestação de contas que ela protege. A tabela `alteracoes_conta` guarda quem
+alterou o quê, quando e por quem, com os mesmos gatilhos de somente-acréscimo
+dos eventos. Senha redefinida entra na trilha como fato — nunca o valor. O hash
+da senha não sai na API em nenhuma rota, nem para o administrador: ele não tem
+uso legítimo na tela, e vazá-lo daria material para ataque de dicionário fora do
+sistema.
+
+Duas regras de integridade completam:
+
+- **o sistema nunca fica sem administrador**: rebaixar o último admin é
+  recusado, e a contagem é feita *dentro* da transação, para que dois admins se
+  rebaixando ao mesmo tempo não deixem o sistema sem nenhum — é o mesmo motivo
+  do `BEGIN IMMEDIATE` da seção 9.8;
+- **ninguém rebaixa a si mesmo**, que é o caso mais comum de tiro no pé.
+
+O primeiro administrador nasce na carga inicial, fora da tela. Não poderia ser
+diferente: se a interface permitisse a auto-promoção, o controle não valeria
+nada. Num sistema real esse cadastro seria um comando de instalação.
+
+### 9.7.1 Confirmação antes de gravar
+
+O histórico é somente de acréscimo, e o banco recusa `UPDATE` e `DELETE` em
+`eventos`: **não existe desfazer**. Num galpão de triagem com dezenas de
+aparelhos, ler o QR errado é fácil, e um clique a mais deixaria marca permanente
+na cadeia de custódia do aparelho errado.
+
+Por isso o clique não grava direto. Entre o botão e a gravação existe uma tela
+de confirmação que mostra **o que será gravado**: o código e a categoria do
+aparelho — que é o que pega o QR trocado —, a etapa atual e a de destino, o
+local, a assinatura e, quando for triagem, a mídia e o método de apagamento
+declarados. O aviso diz *por que* é definitivo, e não apenas que é.
+
+Três detalhes decorrem disso: o botão de voltar recebe o foco ao abrir, para que
+um Enter distraído corrija em vez de confirmar; o botão de confirmar é
+desabilitado durante a chamada, para que dois cliques não gravem dois eventos; e
+a confirmação não usa o `confirm()` do navegador, que aceita só texto puro, trava
+a página e tem cara de erro do sistema em vez de decisão consciente.
+
+### 9.8 Concorrência
 
 As escritas usam `BEGIN IMMEDIATE`, que toma o bloqueio de escrita já na
 abertura da transação, e não no primeiro `INSERT`. Isso importa porque as
@@ -401,7 +499,7 @@ antecipado, dois operadores lendo o mesmo QR ao mesmo tempo poderiam ambos ver
 `COLETADO` e gravar `EM_TRIAGEM` duas vezes. O banco opera em modo WAL, que
 permite leituras simultâneas às escritas.
 
-### 9.8 Superfície exposta pelo servidor
+### 9.9 Superfície exposta pelo servidor
 
 A lista de arquivos que o servidor entrega é explícita (`PAGINAS`,
 `ARQUIVOS_RAIZ` e `PASTAS_PUBLICAS`, em `app.py`). Um servidor que entregasse
@@ -409,7 +507,7 @@ qualquer arquivo da pasta acabaria servindo também `backend/etrilha.db` — o
 banco inteiro, com os hashes de senha — e a pasta `backup/`. O que não está na
 lista responde 404.
 
-### 9.9 Algoritmos relevantes
+### 9.10 Algoritmos relevantes
 
 - **Máquina de estados** (`validar_transicao`): só aceita o passo imediatamente
   seguinte; recusa retrocesso e salto de etapa, com mensagem explicando o motivo.
@@ -430,14 +528,14 @@ lista responde 404.
 - **Projeção cartográfica**: equirretangular, com o eixo X comprimido por
   `cos(latitude média)` para o estado não sair esticado.
 
-### 9.10 Articulação com as disciplinas
+### 9.11 Articulação com as disciplinas
 
 | Disciplina | Contribuição concreta ao projeto |
 |---|---|
-| **Algoritmos e Programação** | Máquina de estados, dígito verificador, Haversine, agregações e ordenações do painel |
+| **Algoritmos e Programação** | Máquina de estados, dígito verificador, Haversine, agregações e ordenações do painel; e o controle de acesso por papel, com as regras de integridade que dependem de ler e decidir dentro da mesma transação (seção 9.7) |
 | **Arquitetura de Computadores** | Duas contribuições, ambas viradas em código. (1) O **atestado de apagamento** (seção 9.6): a diferença entre disco magnético e memória flash — orientação magnética contra carga em célula, endereçamento estável contra *flash translation layer* com *wear leveling* — define quais métodos destroem o dado, e essa distinção virou uma regra que o servidor impõe. (2) A **tabela de composição material** sai da arquitetura real do hardware: ouro nos contatos e no encapsulamento dos circuitos integrados, cobre nas trilhas da placa e nos enrolamentos, alumínio nos dissipadores e no chassi, terras raras nos ímãs de HDs e alto-falantes — é o que permite estimar o que se recupera de cada aparelho |
-| **Redes de Computadores** | Arquitetura cliente-servidor sobre HTTP; API REST com verbos e códigos de status; cookie de sessão; mesma origem para evitar CORS; e o QR transportando o identificador **sem depender de rede** no ponto de coleta |
-| **Sistemas Operacionais** | Processo servidor escutando numa porta; navegador como ambiente de execução com sandbox e **modelo de permissões** para câmera e geolocalização (o app nunca fala direto com o dispositivo); service worker como processo em segundo plano; concorrência, bloqueio de arquivo e journaling (WAL) no SQLite |
+| **Redes de Computadores** | Arquitetura cliente-servidor sobre HTTP; API REST com verbos e códigos de status, incluindo a distinção entre **401** (falta autenticar) e **403** (autenticado sem permissão); autenticação por cookie de sessão assinado, `HttpOnly` e `SameSite=Lax`; mesma origem para evitar CORS; e o QR transportando o identificador **sem depender de rede** no ponto de coleta |
+| **Sistemas Operacionais** | Processo servidor escutando numa porta; navegador como ambiente de execução com sandbox e **modelo de permissões** para câmera e geolocalização (o app nunca fala direto com o dispositivo); service worker como processo em segundo plano; concorrência, bloqueio de arquivo e journaling (WAL) no SQLite. O controle de papéis é a mesma ideia de permissão do sistema operacional aplicada à aplicação: um sujeito autenticado, uma operação e uma decisão tomada por quem detém o recurso — não por quem pede |
 
 ---
 
@@ -487,6 +585,21 @@ Marcos previstos no cronograma da DAC:
 | 20 | Declarar ATA Secure Erase em memória flash | Aceito; atestado aparece no rastreio público |
 | 21 | Avançar um monitor (sem mídia) para a triagem | Aceito sem exigir atestado |
 | 22 | Tentar `UPDATE` ou `DELETE` na tabela `apagamentos` | Recusado pelos gatilhos |
+| 23 | Abrir `scanner.html` sem estar logado | Câmera e formulário não aparecem; a tela explica e leva ao login |
+| 24 | Gravar um evento por `curl`, sem sessão | HTTP 401 |
+| 25 | Gravar um evento logado como visitante | HTTP 403 |
+| 26 | Gravar um evento como operador, mandando outro nome e outro ponto no JSON | Aceito, mas gravado com o nome da conta e o ponto vinculado a ela |
+| 27 | Revogar o papel de um operador com a sessão dele aberta | A gravação seguinte é recusada com 403, sem esperar a sessão expirar |
+| 28 | Clicar em "Registrar" e conferir a tela de confirmação | Mostra código, categoria, etapa de origem e destino, assinatura, local e o atestado |
+| 29 | Cancelar na confirmação | Nada é gravado; a etapa continua a mesma |
+| 30 | Confirmar | Evento gravado, assinado pela conta e no ponto dela |
+| 31 | Abrir `admin.html` como operador | Tela recusada, com a explicação do papel |
+| 32 | Promover um visitante a operador pela tela de administração | Papel alterado e alteração registrada na trilha |
+| 33 | Rebaixar o único administrador | Recusado: o sistema não pode ficar sem administrador |
+| 34 | Rebaixar a si mesmo | Recusado |
+| 35 | Redefinir a senha de uma conta | Senha antiga deixa de valer; a trilha registra o fato, não o valor |
+| 36 | Tentar `UPDATE` ou `DELETE` em `alteracoes_conta` | Recusado pelos gatilhos |
+| 37 | Procurar `senha_hash` na resposta da API de administração | Ausente |
 
 ### 11.2 Resultados obtidos
 
@@ -528,6 +641,73 @@ PASSOU  DELETE em eventos bloqueado -> O histórico de eventos é somente de acr
 `COLETADO`; um navegador com perfil limpo, sem nenhum cookie da primeira sessão,
 abriu `rastrear.html` com o código e exibiu a trilha completa, incluindo o
 responsável registrado pela outra sessão.
+
+**Autorização** (cenários 23 a 27), chamando a API por fora da tela e depois
+conferindo o que ficou gravado:
+
+```
+POST /api/itens/MS-0PRT-9CXE/eventos          sem sessão
+  HTTP 401  Esta ação exige uma conta de operador. Entre para continuar.
+
+POST /api/itens/MS-0PRT-9CXE/eventos          logado como visitante
+  HTTP 403  Sua conta não tem permissão para esta ação.
+
+POST /api/itens/MS-0PRT-9CXE/eventos          logado como operador
+      {"responsavel":"Fulano Falso","pontoId":"pt-cg-shopping", ...}
+  HTTP 201
+  gravado ->  responsavel: Operador do Ecoponto Região Norte
+              pontoId:     pt-cg-eco-norte
+```
+
+O nome e o ponto enviados no JSON foram descartados: o servidor gravou a conta
+autenticada e o ponto vinculado a ela. Em seguida, com a sessão do operador
+ainda aberta, o administrador rebaixou a conta a visitante — e a gravação
+seguinte, feita pelo mesmo cookie, foi recusada com HTTP 403.
+
+**Confirmação antes de gravar** (cenários 28 a 30), dirigindo a tela do scanner
+por script, dentro do próprio navegador:
+
+```
+ETAPA no início: COLETADO
+diálogo aberto (modal): true
+mostra o código do aparelho: true
+mostra a etapa de origem e destino: true
+mostra quem assina: true
+mostra o método de apagamento: true
+avisa que é definitivo: true
+foco inicial está em: "Voltar e corrigir"
+ETAPA com o diálogo aberto: COLETADO
+ETAPA após cancelar:        COLETADO
+ETAPA após confirmar:       EM_TRIAGEM
+assinatura gravada: Operador do Ecoponto Região Norte
+local gravado:      pt-cg-eco-norte
+atestado gravado:   {"midia":"flash","metodo":"SECURE_ERASE", ...}
+```
+
+**Administração de contas** (cenários 31 a 37):
+
+```
+Maria antes:  papel=visitante  ponto=null
+select de ponto começa desabilitado (visitante): true
+ao escolher operador, o ponto libera: true
+papel durante o diálogo de confirmação: visitante
+papel após cancelar:                    visitante
+Maria depois: papel=operador   ponto=pt-do-eco
+trilha: ponto ->pt-do-eco | papel visitante->operador  (por Administração e-Trilha MS)
+select do próprio admin desabilitado: true
+
+PATCH /api/admin/usuarios/<o único admin>  {"papel":"operador"}
+  HTTP 400  Você não pode rebaixar a si mesmo. Peça a outro administrador.
+
+login com a senha antiga, após redefinição:  HTTP 401
+login com a senha nova:                      HTTP 200
+
+UPDATE em alteracoes_conta  ->  recusado: a trilha é somente de acréscimo
+DELETE em alteracoes_conta  ->  recusado: a trilha é somente de acréscimo
+```
+
+Nenhuma resposta de `/api/admin/*` contém `senha_hash` — a redefinição grava um
+hash novo, e a leitura da senha não existe em nenhuma rota.
 
 > **[PREENCHER]** Anexar as evidências em imagem: capturas de tela de cada
 > cenário, especialmente as mensagens de recusa dos cenários 4, 5, 7 e 14.
@@ -591,32 +771,39 @@ não um formulário.
 
 ## 14. Limitações
 
-1. **Sem controle de perfis.** Esta é a limitação mais séria. Qualquer pessoa
-   com o código pode registrar qualquer etapa. Num sistema real, só um operador
-   credenciado da etapa correspondente poderia fazê-lo — o ponto de coleta
-   registra `COLETADO`, a recicladora registra `PROCESSADO`, e ninguém registra
-   pelo outro. A infraestrutura de sessão já existe; falta o vínculo entre
-   usuário, organização e etapa permitida.
-2. **Sem HTTPS.** A senha e o cookie de sessão trafegam em texto claro. Em
+1. **O papel não distingue as etapas.** Escrever na cadeia já exige conta de
+   operador, o servidor carimba a assinatura e o ponto a partir da sessão, e a
+   concessão do papel fica registrada. Mas um operador vinculado a um ponto de
+   coleta ainda consegue registrar `EM_RECICLAGEM`. O desenho correto é o ponto
+   de coleta registrar `COLETADO`, a recicladora registrar `PROCESSADO` e
+   ninguém registrar pelo outro — o vínculo entre papel, organização e etapa
+   permitida é o que falta.
+2. **O credenciamento depende da confiança no administrador.** Não há
+   verificação de pessoa física, contrato com a cooperativa nem segundo fator:
+   quem tem o papel de admin concede operador a quem quiser. A trilha de
+   administração registra quem concedeu o quê, o que permite auditar depois,
+   mas não impede antes. Num sistema real o credenciamento passaria pelo
+   cadastro do órgão ambiental.
+3. **Sem HTTPS.** A senha e o cookie de sessão trafegam em texto claro. Em
    `localhost` isso não é problema, porque nada sai da máquina; numa rede real,
    é inaceitável. Em produção, o servidor entraria atrás de um proxy com TLS e o
    cookie ganharia o atributo `Secure`.
-3. **Gravação exige conexão.** A consulta funciona sem internet, com os últimos
+4. **Gravação exige conexão.** A consulta funciona sem internet, com os últimos
    dados que passaram pelo navegador, mas registrar um aparelho ou avançar uma
    etapa precisa do servidor — que é quem valida a transição e grava a cadeia.
    A tela mostra um erro claro em vez de fingir sucesso.
-4. **Servidor de desenvolvimento.** O `app.run` do Flask atende um pedido por
+5. **Servidor de desenvolvimento.** O `app.run` do Flask atende um pedido por
    vez e não é feito para produção; em uso real, entraria atrás de Gunicorn ou
    equivalente.
-5. **Pontos de coleta fictícios**, posicionados sobre coordenadas reais dos
+6. **Pontos de coleta fictícios**, posicionados sobre coordenadas reais dos
    municípios. Precisam ser levantados e validados em campo.
-6. **Composição material e fatores de CO₂e são médias de referência**, não
+7. **Composição material e fatores de CO₂e são médias de referência**, não
    medições. Servem para ordem de grandeza, não para contabilidade ambiental oficial.
-7. **Mapa esquemático**, com contorno simplificado do estado — é um recurso de
+8. **Mapa esquemático**, com contorno simplificado do estado — é um recurso de
    orientação, não uma base cartográfica.
-8. **Câmera exige contexto seguro** (`localhost` ou HTTPS). Pelo celular na rede
+9. **Câmera exige contexto seguro** (`localhost` ou HTTPS). Pelo celular na rede
    local via HTTP puro, só a digitação manual funciona.
-9. **A cadeia depende de confiança nos operadores.** O sistema garante que o
+10. **A cadeia depende de confiança nos operadores.** O sistema garante que o
    histórico não seja reescrito, mas não prova que a leitura corresponde a um
    movimento físico real.
 
@@ -624,22 +811,26 @@ não um formulário.
 
 ## 15. Melhorias futuras
 
-1. **Perfis e credenciamento** (prioridade): vincular cada operador a uma
-   organização e a uma etapa, de modo que só o ponto de coleta registre
+1. **Competência por etapa** (prioridade): o papel de operador já existe e já é
+   verificado no servidor, com vínculo a um ponto de coleta. Falta amarrar a
+   etapa ao tipo de organização, de modo que só o ponto de coleta registre
    `COLETADO` e só a recicladora registre `PROCESSADO`. É o que fecha a
    limitação nº 1.
-2. **HTTPS**, com o cookie de sessão marcado como `Secure`. Também é o que
+2. **Credenciamento verificado**: ligar a conta de operador ao cadastro da
+   organização no órgão ambiental, com segundo fator para quem escreve na
+   cadeia. Fecha a limitação nº 2.
+3. **HTTPS**, com o cookie de sessão marcado como `Secure`. Também é o que
    libera a leitura por câmera no celular, hoje bloqueada em HTTP puro.
-3. **Fila de gravações offline**: registrar leituras sem conexão e sincronizar
+4. **Fila de gravações offline**: registrar leituras sem conexão e sincronizar
    quando a rede voltar, tratando os conflitos de transição na volta. É a
    funcionalidade que mais mudaria o uso em galpões de triagem.
-4. **Assinatura digital do certificado** de destinação, para valer como documento.
-5. **Pesagem real na triagem**, substituindo a estimativa por categoria.
-6. **Integração com o SINIR/MTR**, aproveitando o registro já existente de
+5. **Assinatura digital do certificado** de destinação, para valer como documento.
+6. **Pesagem real na triagem**, substituindo a estimativa por categoria.
+7. **Integração com o SINIR/MTR**, aproveitando o registro já existente de
    transporte de resíduos.
-7. **Notificação ao dono** a cada avanço de etapa.
-8. **Base cartográfica real** com rotas até o ponto de coleta mais próximo.
-9. **Levantamento em campo** dos pontos de coleta reais de MS, em parceria com as
+8. **Notificação ao dono** a cada avanço de etapa.
+9. **Base cartográfica real** com rotas até o ponto de coleta mais próximo.
+10. **Levantamento em campo** dos pontos de coleta reais de MS, em parceria com as
    prefeituras e a Green Eletron.
 
 ---

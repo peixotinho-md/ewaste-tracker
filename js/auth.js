@@ -45,3 +45,34 @@ export async function sair() {
 }
 
 export const atual = store.usuarioAtual;
+
+/* ------------------------------------------------------------------ *
+ * Papéis
+ *
+ * Estas funções servem para a TELA decidir o que mostrar — esconder um botão
+ * que não vai funcionar é gentileza com o usuário, não segurança. Quem impede
+ * de fato é o servidor, que confere o papel a cada requisição e responde 401
+ * ou 403. Por isso nada aqui guarda o papel: ele vem do servidor a cada
+ * consulta, e uma revogação passa a valer na hora.
+ * ------------------------------------------------------------------ */
+
+export const PAPEIS = {
+  visitante: { rotulo: 'Visitante', descricao: 'Registra e consulta os próprios aparelhos.' },
+  operador: { rotulo: 'Operador', descricao: 'Registra a passagem dos aparelhos pelas etapas.' },
+  admin: { rotulo: 'Administrador', descricao: 'Gerencia as contas e os papéis.' },
+};
+
+/** Pode gravar na cadeia de custódia (ler QR e avançar etapa)? */
+export const podeOperar = (usuario) =>
+  usuario?.papel === 'operador' || usuario?.papel === 'admin';
+
+export const ehAdmin = (usuario) => usuario?.papel === 'admin';
+
+/**
+ * Guarda de página: devolve o usuário quando ele tem um dos papéis pedidos, ou
+ * `null` quando não tem — cabe à página desenhar o convite para entrar.
+ */
+export async function exigirPapel(...papeis) {
+  const usuario = await atual();
+  return usuario && papeis.includes(usuario.papel) ? usuario : null;
+}

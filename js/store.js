@@ -45,7 +45,11 @@ async function api(caminho, { metodo = 'GET', corpo = null, nuloEm404 = false } 
 
   if (!resposta.ok) {
     if (nuloEm404 && resposta.status === 404) return null;
-    throw new Error(dados?.erro ?? `O servidor respondeu com erro ${resposta.status}.`);
+    const erro = new Error(dados?.erro ?? `O servidor respondeu com erro ${resposta.status}.`);
+    // 401 (falta entrar) e 403 (entrou, mas a conta não tem o papel) pedem
+    // respostas diferentes da tela, então o status sobe junto com a mensagem.
+    erro.status = resposta.status;
+    throw erro;
   }
   return dados;
 }
@@ -112,21 +116,25 @@ export async function criarItem({ categoria, marca, pesoKg, pontoOrigemId, respo
 }
 
 /**
- * Registra o avanço do item para a próxima etapa.
+ * Registra o avanço do item para a próxima etapa. Exige conta de operador.
  *
  * A validação da transição roda NO SERVIDOR, dentro da transação e sobre a
  * etapa lida do banco. Se for recusada, a mensagem do servidor sobe como erro
  * e a tela apenas a exibe.
+ *
+ * O responsável NÃO é enviado daqui: quem assina o evento é a conta
+ * autenticada, e quem preenche esse campo é o servidor. Um nome digitado na
+ * tela não provaria nada sobre quem realmente registrou a passagem.
  */
 export async function registrarEvento(
   codigo,
-  { etapa, pontoId, responsavel, observacao, apagamento = null }
+  { etapa, pontoId, observacao, apagamento = null }
 ) {
   return api(`/itens/${encodeURIComponent(codigo)}/eventos`, {
     metodo: 'POST',
     // `apagamento` só é usado ao concluir a triagem de um aparelho com mídia
     // de dados; nas demais etapas o servidor ignora o campo.
-    corpo: { etapa, pontoId, responsavel, observacao, apagamento },
+    corpo: { etapa, pontoId, observacao, apagamento },
   });
 }
 
@@ -162,6 +170,35 @@ export async function abrirSessao({ email, senha }) {
 
 export async function encerrarSessao() {
   return api('/sessao', { metodo: 'DELETE' });
+}
+
+/* ------------------------------------------------------------------ *
+ * Administração de contas
+ *
+ * Todas estas chamadas exigem papel `admin`, e quem verifica isso é o
+ * servidor. A tela de administração some do menu para quem não é admin, mas é
+ * o 403 do servidor que de fato fecha a porta.
+ * ------------------------------------------------------------------ */
+
+export async function listarUsuarios() {
+  return api('/admin/usuarios');
+}
+
+/**
+ * Altera papel, ponto vinculado ou senha de uma conta.
+ *
+ * Só vão no corpo os campos realmente informados: mandar `pontoId: null` sem
+ * querer desvincularia o operador do posto dele.
+ */
+export async function atualizarUsuario(id, mudancas) {
+  return api(`/admin/usuarios/${encodeURIComponent(id)}`, {
+    metodo: 'PATCH',
+    corpo: mudancas,
+  });
+}
+
+export async function listarAlteracoes() {
+  return api('/admin/alteracoes');
 }
 
 /* ------------------------------------------------------------------ *

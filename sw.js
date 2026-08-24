@@ -21,7 +21,7 @@
  *              no Relatório Técnico.
  */
 
-const CACHE = 'etrilhams-v2';
+const CACHE = 'etrilhams-v3';
 
 const ARQUIVOS = [
   './',
@@ -33,6 +33,7 @@ const ARQUIVOS = [
   './pontos.html',
   './painel.html',
   './conta.html',
+  './admin.html',
   './css/app.css',
   './js/model.js',
   './js/geo-ms.js',
@@ -53,6 +54,9 @@ const ARQUIVOS = [
  * `/api/sessao` e `/api/meus-itens` dependem de quem está logado: guardá-las
  * faria uma resposta antiga aparecer para outra pessoa no mesmo navegador.
  * `/api/saude` é diagnóstico e precisa dizer a verdade sobre o servidor agora.
+ * `/api/admin/*` nunca entra: é a lista de contas do sistema, e uma cópia
+ * guardada no navegador continuaria legível depois que o papel de quem a
+ * carregou fosse revogado.
  */
 const API_CACHEAVEL = [
   /^\/api\/pontos$/,

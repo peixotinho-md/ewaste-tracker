@@ -16,6 +16,8 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from werkzeug.security import generate_password_hash
+
 import modelo
 
 PASTA_BACKEND = Path(__file__).resolve().parent
@@ -23,6 +25,28 @@ RAIZ = PASTA_BACKEND.parent
 CAMINHO_BANCO = PASTA_BACKEND / "etrilha.db"
 CAMINHO_SCHEMA = PASTA_BACKEND / "schema.sql"
 PASTA_DADOS = RAIZ / "dados"
+
+# Contas criadas junto com os dados de exemplo, para que a demonstração tenha
+# de saída um administrador e um operador. São CREDENCIAIS PÚBLICAS, impressas
+# no terminal ao subir o servidor: servem para a banca e para o grupo testarem,
+# e num uso real seriam substituídas por um cadastro inicial fora da tela.
+CONTAS_DEMO = [
+    {
+        "nome": "Administração e-Trilha MS",
+        "email": "admin@etrilha.ms",
+        "senha": "etrilha-admin",
+        "papel": "admin",
+        "ponto_id": None,
+    },
+    {
+        "nome": "Operador do Ecoponto Região Norte",
+        "email": "operador@etrilha.ms",
+        "senha": "etrilha-operador",
+        "papel": "operador",
+        # Preenchido na carga com o primeiro ponto de coleta cadastrado.
+        "ponto_id": None,
+    },
+]
 
 
 def agora_iso() -> str:
@@ -117,6 +141,9 @@ def preparar(recriar: bool = False) -> None:
                 DROP TRIGGER IF EXISTS eventos_sem_delete;
                 DROP TRIGGER IF EXISTS apagamentos_sem_update;
                 DROP TRIGGER IF EXISTS apagamentos_sem_delete;
+                DROP TRIGGER IF EXISTS alteracoes_sem_update;
+                DROP TRIGGER IF EXISTS alteracoes_sem_delete;
+                DROP TABLE IF EXISTS alteracoes_conta;
                 DROP TABLE IF EXISTS apagamentos;
                 DROP TABLE IF EXISTS eventos;
                 DROP TABLE IF EXISTS itens;
@@ -191,6 +218,35 @@ def _semear(conexao) -> None:
                      triagem[3], quando(triagem[1])),
                 )
 
+        _semear_contas(conexao, pontos[0]["id"] if pontos else None)
+
+
+def _semear_contas(conexao, ponto_do_operador: str | None) -> None:
+    """
+    Cria o administrador inicial e um operador de exemplo.
+
+    O primeiro admin precisa nascer FORA da tela: como só um admin promove
+    outro, não pode haver auto-promoção pela interface, ou o controle não valeria
+    nada. Aqui esse papel é do carregamento de demonstração; num sistema real
+    seria um comando de instalação executado por quem opera o servidor.
+
+    Já está dentro da transação de `_semear`.
+    """
+    for conta in CONTAS_DEMO:
+        conexao.execute(
+            """INSERT INTO usuarios (id, nome, email, senha_hash, criado_em, papel, ponto_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                novo_id("u"),
+                conta["nome"],
+                conta["email"],
+                generate_password_hash(conta["senha"]),
+                agora_iso(),
+                conta["papel"],
+                ponto_do_operador if conta["papel"] == "operador" else conta["ponto_id"],
+            ),
+        )
+
 
 # --------------------------------------------------------------------------- #
 # Conversão entre as linhas do banco (snake_case) e o JSON da API (camelCase)
@@ -226,6 +282,24 @@ def item_json(linha) -> dict:
         "atualizadoEm": linha["atualizado_em"],
         "etapaAtual": linha["etapa_atual"],
         "demo": bool(linha["demo"]),
+    }
+
+
+def usuario_json(linha) -> dict:
+    """
+    Usuário como a API o devolve.
+
+    `senha_hash` NUNCA entra aqui. Nem para o admin: o hash não tem utilidade
+    legítima na tela, e vazá-lo transformaria um XSS ou um log em material para
+    ataque de dicionário offline.
+    """
+    return {
+        "id": linha["id"],
+        "nome": linha["nome"],
+        "email": linha["email"],
+        "papel": linha["papel"],
+        "pontoId": linha["ponto_id"],
+        "criadoEm": linha["criado_em"],
     }
 
 
@@ -413,12 +487,17 @@ def registrar_evento(conexao, codigo, *, etapa, ponto_id, responsavel, observaca
 
 
 def criar_usuario(conexao, *, nome: str, email: str, senha_hash: str) -> dict:
+    """
+    Cadastro feito pela própria pessoa. Nasce sempre como `visitante`: o papel
+    é decisão de um admin, nunca do formulário — senão bastaria mandar
+    `"papel": "admin"` no JSON para tomar o sistema.
+    """
     usuario_id = novo_id("u")
     try:
         with transacao(conexao):
             conexao.execute(
-                """INSERT INTO usuarios (id, nome, email, senha_hash, criado_em)
-                   VALUES (?, ?, ?, ?, ?)""",
+                """INSERT INTO usuarios (id, nome, email, senha_hash, criado_em, papel)
+                   VALUES (?, ?, ?, ?, ?, 'visitante')""",
                 (usuario_id, nome, email.lower(), senha_hash, agora_iso()),
             )
     except sqlite3.IntegrityError:
@@ -426,7 +505,7 @@ def criar_usuario(conexao, *, nome: str, email: str, senha_hash: str) -> dict:
         # um SELECT deixaria uma janela para duas contas iguais serem criadas
         # ao mesmo tempo.
         raise modelo.RegraViolada("Já existe uma conta com esse e-mail.")
-    return {"id": usuario_id, "nome": nome, "email": email.lower()}
+    return obter_usuario(conexao, usuario_id)
 
 
 def buscar_usuario_por_email(conexao, email: str):
@@ -437,9 +516,9 @@ def buscar_usuario_por_email(conexao, email: str):
 
 def obter_usuario(conexao, usuario_id: str) -> dict | None:
     linha = conexao.execute(
-        "SELECT id, nome, email FROM usuarios WHERE id = ?", (usuario_id,)
+        "SELECT * FROM usuarios WHERE id = ?", (usuario_id,)
     ).fetchone()
-    return dict(linha) if linha else None
+    return usuario_json(linha) if linha else None
 
 
 def adotar_itens_do_visitante(conexao, usuario_id: str, visitante_id: str | None) -> int:
@@ -453,3 +532,141 @@ def adotar_itens_do_visitante(conexao, usuario_id: str, visitante_id: str | None
             (usuario_id, visitante_id),
         )
     return cursor.rowcount
+
+
+# --------------------------------------------------------------------------- #
+# Administração das contas
+#
+# Só um admin chega até aqui — quem verifica isso é `app.py`, antes de chamar
+# estas funções. O que este módulo garante são as regras que não podem depender
+# da tela: o sistema nunca fica sem administrador, e toda alteração deixa
+# rastro.
+# --------------------------------------------------------------------------- #
+
+def listar_usuarios(conexao) -> list[dict]:
+    linhas = conexao.execute(
+        """SELECT * FROM usuarios
+           ORDER BY CASE papel WHEN 'admin' THEN 0 WHEN 'operador' THEN 1 ELSE 2 END,
+                    nome COLLATE NOCASE"""
+    ).fetchall()
+    return [usuario_json(l) for l in linhas]
+
+
+def contar_itens_por_dono(conexao) -> dict[str, int]:
+    """Quantos aparelhos cada conta já registrou — contexto útil na tela do admin."""
+    linhas = conexao.execute(
+        "SELECT dono_id, COUNT(*) AS n FROM itens WHERE dono_id IS NOT NULL GROUP BY dono_id"
+    ).fetchall()
+    return {l["dono_id"]: l["n"] for l in linhas}
+
+
+def _registrar_alteracao(conexao, *, alvo_id, autor_id, acao, de="", para="") -> None:
+    """Grava um elo na trilha de administração. Sempre dentro da transação da mudança."""
+    conexao.execute(
+        """INSERT INTO alteracoes_conta (alvo_id, autor_id, acao, de, para, em)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (alvo_id, autor_id, acao, de or "", para or "", agora_iso()),
+    )
+
+
+def listar_alteracoes(conexao, limite: int = 50) -> list[dict]:
+    linhas = conexao.execute(
+        """SELECT a.*, alvo.nome AS alvo_nome, autor.nome AS autor_nome
+           FROM alteracoes_conta a
+           JOIN usuarios alvo  ON alvo.id  = a.alvo_id
+           JOIN usuarios autor ON autor.id = a.autor_id
+           ORDER BY a.em DESC, a.id DESC
+           LIMIT ?""",
+        (limite,),
+    ).fetchall()
+    return [
+        {
+            "id": l["id"],
+            "alvoNome": l["alvo_nome"],
+            "autorNome": l["autor_nome"],
+            "acao": l["acao"],
+            "de": l["de"],
+            "para": l["para"],
+            "em": l["em"],
+        }
+        for l in linhas
+    ]
+
+
+def atualizar_usuario(conexao, alvo_id: str, *, autor_id: str, papel=None,
+                      ponto_id=..., senha_hash=None) -> dict:
+    """
+    Aplica as mudanças que um admin pode fazer numa conta, todas na mesma
+    transação e cada uma com seu registro na trilha.
+
+    `ponto_id` usa `...` como "não mexer" porque `None` aqui é um valor legítimo:
+    significa desvincular o operador do ponto.
+    """
+    with transacao(conexao):
+        atual = conexao.execute(
+            "SELECT * FROM usuarios WHERE id = ?", (alvo_id,)
+        ).fetchone()
+        if atual is None:
+            raise modelo.RegraViolada("Conta não encontrada.")
+
+        if papel is not None and papel != atual["papel"]:
+            # Ler a contagem de admins DENTRO da transação é o que impede a
+            # corrida clássica: dois admins se rebaixando ao mesmo tempo, cada
+            # um vendo que "ainda existe outro", e o sistema terminando sem
+            # nenhum. O BEGIN IMMEDIATE de `transacao` serializa as duas.
+            if atual["papel"] == "admin":
+                restantes = conexao.execute(
+                    "SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'admin' AND id <> ?",
+                    (alvo_id,),
+                ).fetchone()["n"]
+                if restantes == 0:
+                    raise modelo.RegraViolada(
+                        "Esta é a única conta de administrador. Promova outra pessoa "
+                        "a administrador antes de rebaixar esta, ou o sistema ficaria "
+                        "sem quem gerencie as contas."
+                    )
+
+            conexao.execute(
+                "UPDATE usuarios SET papel = ? WHERE id = ?", (papel, alvo_id)
+            )
+            _registrar_alteracao(
+                conexao, alvo_id=alvo_id, autor_id=autor_id, acao="papel",
+                de=atual["papel"], para=papel,
+            )
+
+            # Papel sem escrita não guarda vínculo com ponto de coleta. O
+            # desligamento entra na trilha como qualquer outra alteração: quem
+            # for auditar precisa ver que o vínculo caiu, e por quê.
+            if papel == "visitante" and atual["ponto_id"]:
+                conexao.execute(
+                    "UPDATE usuarios SET ponto_id = NULL WHERE id = ?", (alvo_id,)
+                )
+                _registrar_alteracao(
+                    conexao, alvo_id=alvo_id, autor_id=autor_id, acao="ponto",
+                    de=atual["ponto_id"], para="",
+                )
+                ponto_id = ...
+
+        if ponto_id is not ... and ponto_id != atual["ponto_id"]:
+            if ponto_id and not conexao.execute(
+                "SELECT 1 FROM pontos WHERE id = ?", (ponto_id,)
+            ).fetchone():
+                raise modelo.RegraViolada("Ponto de coleta desconhecido.")
+            conexao.execute(
+                "UPDATE usuarios SET ponto_id = ? WHERE id = ?", (ponto_id, alvo_id)
+            )
+            _registrar_alteracao(
+                conexao, alvo_id=alvo_id, autor_id=autor_id, acao="ponto",
+                de=atual["ponto_id"] or "", para=ponto_id or "",
+            )
+
+        if senha_hash:
+            conexao.execute(
+                "UPDATE usuarios SET senha_hash = ? WHERE id = ?", (senha_hash, alvo_id)
+            )
+            # A trilha registra QUE houve redefinição, jamais o segredo.
+            _registrar_alteracao(
+                conexao, alvo_id=alvo_id, autor_id=autor_id, acao="senha",
+            )
+
+    return obter_usuario(conexao, alvo_id)

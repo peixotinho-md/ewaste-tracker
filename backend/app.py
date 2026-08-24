@@ -40,6 +40,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 PAGINAS = {
     "index.html", "rastrear.html", "registrar.html", "etiqueta.html",
     "scanner.html", "pontos.html", "painel.html", "conta.html",
+    "admin.html",
 }
 ARQUIVOS_RAIZ = {"sw.js", "manifest.webmanifest", "icon.svg"}
 PASTAS_PUBLICAS = {"css", "js", "vendor"}
@@ -118,6 +119,51 @@ def visitante_da_sessao(criar: bool = False) -> str | None:
         session["visitante_id"] = banco.novo_id("v")
         session.permanent = True
     return session.get("visitante_id")
+
+
+# --------------------------------------------------------------------------- #
+# Autorização
+#
+# Ler é público; ESCREVER na cadeia de custódia não. Quem lê a etiqueta é quem
+# declara que o aparelho passou por uma etapa, e essa declaração é o produto do
+# sistema — se qualquer um puder emiti-la, ela não vale nada.
+#
+# A verificação está AQUI, e não só na tela, porque é aqui que ela é efetiva:
+# esconder o botão não impede um POST feito com curl. O papel é lido do banco a
+# cada requisição, e não guardado no cookie — assim, revogar o papel de alguém
+# tem efeito imediato, sem esperar a sessão dele expirar.
+# --------------------------------------------------------------------------- #
+
+def conta_da_sessao(conexao) -> dict | None:
+    usuario_id = usuario_da_sessao()
+    return banco.obter_usuario(conexao, usuario_id) if usuario_id else None
+
+
+def exige(*papeis: str):
+    """
+    Fecha a rota para quem não tem um dos papéis exigidos.
+
+    Responde 401 a quem não está autenticado (falta entrar) e 403 a quem está
+    autenticado mas não tem o papel (entrar de novo não resolve). A distinção
+    importa para a tela saber se manda a pessoa fazer login ou explica que a
+    conta dela não tem permissão.
+    """
+    def decorador(rota):
+        @wraps(rota)
+        def envelope(conexao, *args, **kwargs):
+            conta = conta_da_sessao(conexao)
+            if conta is None:
+                return jsonify({
+                    "erro": "Esta ação exige uma conta de operador. Entre para continuar."
+                }), 401
+            if conta["papel"] not in papeis:
+                return jsonify({
+                    "erro": "Sua conta não tem permissão para esta ação. "
+                            "Peça a um administrador para ajustar o papel dela."
+                }), 403
+            return rota(conexao, *args, conta=conta, **kwargs)
+        return envelope
+    return decorador
 
 
 # --------------------------------------------------------------------------- #
@@ -200,13 +246,26 @@ def criar_item(conexao):
 
 @app.post("/api/itens/<codigo>/eventos")
 @com_banco
-def criar_evento(conexao, codigo):
+@exige("operador", "admin")
+def criar_evento(conexao, codigo, conta):
+    """
+    Acrescenta um elo à cadeia de custódia. Só operador e admin chegam aqui.
+
+    Duas informações do corpo da requisição são DESCARTADAS de propósito:
+
+      responsavel  vem do nome da conta autenticada. Se viesse do formulário,
+                   qualquer operador poderia assinar o evento com o nome de
+                   outra pessoa, e a assinatura não provaria nada.
+      pontoId      é o ponto ao qual o operador está vinculado, quando há um.
+                   Assim ele não registra passagem por um local onde não
+                   trabalha. Só o admin, que não tem ponto fixo, informa o local.
+    """
     canonico = modelo.normalizar_codigo(codigo)
     if not canonico:
         return jsonify({"erro": "Código de rastreio inválido."}), 400
 
     corpo = request.get_json(silent=True) or {}
-    ponto_id = corpo.get("pontoId") or None
+    ponto_id = conta["pontoId"] or (corpo.get("pontoId") or None)
 
     if ponto_id and not conexao.execute(
         "SELECT 1 FROM pontos WHERE id = ?", (ponto_id,)
@@ -218,7 +277,7 @@ def criar_evento(conexao, codigo):
         canonico,
         etapa=corpo.get("etapa"),
         ponto_id=ponto_id,
-        responsavel=modelo.texto(corpo.get("responsavel"), "responsavel"),
+        responsavel=modelo.texto(conta["nome"], "responsavel"),
         observacao=modelo.texto(corpo.get("observacao"), "observacao"),
         apagamento=corpo.get("apagamento"),
     )
@@ -276,7 +335,7 @@ def entrar(conexao):
         # Mensagem genérica de propósito: não revela se o e-mail está cadastrado.
         return jsonify({"erro": "E-mail ou senha incorretos."}), 401
 
-    usuario = {"id": linha["id"], "nome": linha["nome"], "email": linha["email"]}
+    usuario = banco.usuario_json(linha)
     adotados = banco.adotar_itens_do_visitante(conexao, usuario["id"], visitante_da_sessao())
     _abrir_sessao(usuario["id"])
     return jsonify({"usuario": usuario, "adotados": adotados})
@@ -306,6 +365,74 @@ def meus_itens(conexao):
     return jsonify(
         banco.itens_do_dono(conexao, usuario_da_sessao(), visitante_da_sessao())
     )
+
+
+# --------------------------------------------------------------------------- #
+# API — administração das contas
+#
+# Toda rota daqui exige papel `admin`, verificado no servidor. A tela
+# `admin.html` some do menu para quem não é admin, mas é este decorador que
+# realmente fecha a porta.
+# --------------------------------------------------------------------------- #
+
+@app.get("/api/admin/usuarios")
+@com_banco
+@exige("admin")
+def admin_usuarios(conexao, conta):
+    usuarios = banco.listar_usuarios(conexao)
+    itens_por_dono = banco.contar_itens_por_dono(conexao)
+    for usuario in usuarios:
+        usuario["itens"] = itens_por_dono.get(usuario["id"], 0)
+        # A tela usa isto para não oferecer ao admin ações sobre si mesmo que
+        # o servidor recusaria depois.
+        usuario["souEu"] = usuario["id"] == conta["id"]
+    return jsonify(usuarios)
+
+
+@app.patch("/api/admin/usuarios/<usuario_id>")
+@com_banco
+@exige("admin")
+def admin_atualizar_usuario(conexao, usuario_id, conta):
+    """
+    Altera papel, ponto vinculado e senha de uma conta.
+
+    Só estes três campos. Nome e e-mail são da pessoa, não do administrador —
+    quem os altera é o dono da conta.
+    """
+    corpo = request.get_json(silent=True) or {}
+
+    papel = modelo.validar_papel(corpo["papel"]) if "papel" in corpo else None
+    senha_hash = (
+        generate_password_hash(modelo.validar_senha(corpo["senha"]))
+        if corpo.get("senha")
+        else None
+    )
+    # Ausente = não mexer; presente e vazio = desvincular do ponto.
+    ponto_id = (corpo.get("pontoId") or None) if "pontoId" in corpo else ...
+
+    if papel is None and senha_hash is None and ponto_id is ...:
+        raise modelo.RegraViolada("Nada a alterar nesta conta.")
+
+    if usuario_id == conta["id"] and papel is not None and papel != "admin":
+        # A regra do "último admin" já está no banco; esta é uma proteção a
+        # mais contra o tiro no próprio pé, que é o caso mais comum.
+        raise modelo.RegraViolada(
+            "Você não pode rebaixar a si mesmo. Peça a outro administrador."
+        )
+
+    atualizado = banco.atualizar_usuario(
+        conexao, usuario_id, autor_id=conta["id"],
+        papel=papel, ponto_id=ponto_id, senha_hash=senha_hash,
+    )
+    return jsonify(atualizado)
+
+
+@app.get("/api/admin/alteracoes")
+@com_banco
+@exige("admin")
+def admin_alteracoes(conexao, conta):
+    """Trilha de quem alterou o quê nas contas — somente de acréscimo."""
+    return jsonify(banco.listar_alteracoes(conexao))
 
 
 # --------------------------------------------------------------------------- #
@@ -371,7 +498,10 @@ def main() -> None:
     porta = int(os.environ.get("PORTA", 8000))
     print(f"\n  e-Trilha MS em execução:  http://localhost:{porta}")
     print(f"  Banco de dados:           {banco.CAMINHO_BANCO}")
-    print("  Encerre com Ctrl+C\n")
+    print("\n  Contas de demonstração (públicas, só para a apresentação):")
+    for conta in banco.CONTAS_DEMO:
+        print(f"    {conta['papel']:<9} {conta['email']:<20} senha: {conta['senha']}")
+    print("\n  Encerre com Ctrl+C\n")
     app.run(host="127.0.0.1", port=porta, debug=False)
 
 
