@@ -451,6 +451,16 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   font-size: 1.05rem;
 }
 
+/* Detalhe de uma conta: mais largo que uma confirmação, e rolável, porque
+   reúne dados, permissões, senha e histórico numa tela só. */
+.painel-conta {
+  max-width: 720px;
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
+}
+
+.painel-conta h3 { font-size: 1rem; }
+
 /* ---------- Tabela de contas (administração) ---------- */
 
 .tabela-contas td { vertical-align: middle; }

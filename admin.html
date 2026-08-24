@@ -21,15 +21,27 @@
 <script type="module">
 import * as store from './js/store.js';
 import * as auth from './js/auth.js';
-import { iniciarPagina, aviso, confirmar, seloPapel, escapar, formatarData } from './js/ui.js';
+import { iniciarPagina, aviso, confirmar, confirmarComSenha, seloPapel, seloEtapa,
+         escapar, formatarData, formatarMassa } from './js/ui.js';
+import { ETAPAS, ETAPA_FINAL, categoria, estaPendente } from './js/model.js';
 
 await iniciarPagina();
 
 const conteudo = document.getElementById('conteudo');
 
-/* Nomes das ações na trilha. Declarado aqui, e não junto de quem o usa, porque
-   `const` não é içado: o `await` de topo executa antes das linhas de baixo. */
-const NOMES_DE_ACAO = { papel: 'Papel', ponto: 'Ponto de coleta', senha: 'Senha' };
+/* Constantes e estado antes de qualquer `await` de topo: `const` não é içado
+   como `function`, e o código abaixo já os usa na primeira execução. */
+const NOMES_DE_ACAO = {
+  papel: 'Papel', ponto: 'Ponto de coleta', senha: 'Senha', exclusao: 'Conta excluída',
+};
+
+/* Filtros da lista de aparelhos, fora de `desenhar()` para sobreviverem ao
+   redesenho que acontece depois de mexer numa conta. */
+const filtro = { texto: '', etapa: '', soAtrasados: false };
+
+let itens = [];
+let usuarios = [];
+let pontos = [];
 
 /* ------------------------------------------------------------------ *
  * Guarda de acesso
@@ -40,7 +52,6 @@ const NOMES_DE_ACAO = { papel: 'Papel', ponto: 'Ponto de coleta', senha: 'Senha'
  * ------------------------------------------------------------------ */
 
 const admin = await auth.exigirPapel('admin');
-let pontos = [];
 
 if (admin) {
   pontos = await store.listarPontos();
@@ -71,39 +82,49 @@ async function telaSemAcesso() {
  * ------------------------------------------------------------------ */
 
 async function desenhar() {
-  const [usuarios, alteracoes] = await Promise.all([
+  const [listaDeContas, alteracoes, listaDeItens] = await Promise.all([
     store.listarUsuarios(),
     store.listarAlteracoes(),
+    store.listarItensAdmin(),
   ]);
+  usuarios = listaDeContas;
+  itens = listaDeItens;
 
   const contagem = (papel) => usuarios.filter((u) => u.papel === papel).length;
 
   conteudo.innerHTML = `
-    <h1>Administração de contas</h1>
+    <h1>Administração</h1>
     <p class="sutil" style="margin-top:-.5rem">
-      Papéis, vínculo com ponto de coleta e redefinição de senha.
-      Nome e e-mail pertencem à pessoa: quem os altera é o dono da conta.
+      Aparelhos cadastrados, contas e papéis. Nome e e-mail pertencem à pessoa:
+      quem os altera é o dono da conta.
     </p>
 
     <section class="grade grade-3" style="margin-bottom:1.25rem">
       <div class="numero">
+        <div class="valor">${itens.length}</div>
+        <div class="rotulo">aparelhos cadastrados</div>
+        <div class="nota">${itens.filter((i) => i.etapaAtual === ETAPA_FINAL).length} com destinação comprovada</div>
+      </div>
+      <div class="numero${atrasados().length ? ' numero-alerta' : ''}">
+        <div class="valor">${atrasados().length}</div>
+        <div class="rotulo">parados além do prazo</div>
+        <div class="nota">a etapa atual passou do tempo previsto</div>
+      </div>
+      <div class="numero">
         <div class="valor">${usuarios.length}</div>
         <div class="rotulo">contas cadastradas</div>
-      </div>
-      <div class="numero">
-        <div class="valor">${contagem('operador')}</div>
-        <div class="rotulo">operadores</div>
-        <div class="nota">podem gravar etapas na cadeia de custódia</div>
-      </div>
-      <div class="numero">
-        <div class="valor">${contagem('admin')}</div>
-        <div class="rotulo">administradores</div>
-        <div class="nota">o sistema nunca fica sem nenhum</div>
+        <div class="nota">${contagem('operador')} operador(es), ${contagem('admin')} admin(s)</div>
       </div>
     </section>
 
+    ${secaoItens()}
+
     <section class="cartao">
       <h2>Contas</h2>
+      <p class="sutil">
+        Abra uma conta para ver os detalhes, mudar o papel, vincular um ponto de
+        coleta, redefinir a senha ou excluí-la.
+      </p>
       <div class="rolagem">
         <table class="tabela-contas">
           <thead>
@@ -112,7 +133,7 @@ async function desenhar() {
               <th>Papel</th>
               <th>Ponto de coleta</th>
               <th class="num">Aparelhos</th>
-              <th>Ações</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>${usuarios.map(linhaUsuario).join('')}</tbody>
@@ -131,7 +152,7 @@ async function desenhar() {
         Conceder o papel de operador é dar poder de escrever no histórico dos
         aparelhos. Por isso a concessão também deixa rastro — e este registro é
         somente de acréscimo, como o dos eventos: o banco recusa alterá-lo ou
-        apagá-lo.
+        apagá-lo. Contas excluídas continuam nomeadas aqui.
       </p>
       ${alteracoes.length ? `
         <div class="rolagem">
@@ -142,110 +163,326 @@ async function desenhar() {
         </div>` : '<p class="vazio">Nenhuma alteração registrada ainda.</p>'}
     </section>`;
 
-  ligarEventos(usuarios);
+  ligarEventos();
 }
 
+/* ------------------------------------------------------------------ *
+ * Aparelhos
+ *
+ * A mesma informação que qualquer pessoa vê consultando um código, só que
+ * reunida e filtrável: é a diferença entre acompanhar UM aparelho e enxergar a
+ * operação inteira — onde estão os aparelhos, quais travaram e onde.
+ * ------------------------------------------------------------------ */
+
+/* Declaração de função, e não `const`: o `await` de topo executa antes desta
+   linha, e uma arrow em `const` ainda não estaria inicializada ali. */
+function atrasados() {
+  return itens.filter((item) => estaPendente(item));
+}
+
+function secaoItens() {
+  return `
+    <section class="cartao">
+      <div class="secao-titulo">
+        <h2>Aparelhos cadastrados</h2>
+        <span class="sutil" id="contagem-itens"></span>
+      </div>
+
+      <div class="busca-codigo" style="margin-bottom:1rem">
+        <label class="oculto" for="f-texto">Buscar</label>
+        <input id="f-texto" placeholder="Código, marca, categoria, município ou dono"
+               autocomplete="off" value="${escapar(filtro.texto)}">
+        <label class="oculto" for="f-etapa">Etapa</label>
+        <select id="f-etapa">
+          <option value="">Todas as etapas</option>
+          ${ETAPAS.map((e) => `<option value="${e.id}"${e.id === filtro.etapa ? ' selected' : ''}>${escapar(e.rotulo)}</option>`).join('')}
+        </select>
+        <label class="chip" style="display:flex;align-items:center;gap:.4rem">
+          <input type="checkbox" id="f-atrasados"${filtro.soAtrasados ? ' checked' : ''}>
+          Só os atrasados
+        </label>
+      </div>
+
+      <div class="rolagem">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Aparelho</th>
+              <th>Etapa</th>
+              <th>Entrada</th>
+              <th>Dono</th>
+              <th class="num">Leituras</th>
+              <th>Dados</th>
+              <th>Atualizado</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-itens"></tbody>
+        </table>
+      </div>
+
+      <p class="dica" style="margin-top:.8rem">
+        O código leva à trilha pública do aparelho. "Dados" mostra se o atestado
+        de apagamento já foi emitido — ele nasce na triagem, e só para aparelhos
+        com memória não volátil.
+      </p>
+    </section>`;
+}
+
+/** Aplica os filtros e redesenha só o corpo da tabela. */
+function desenharItens() {
+  const termo = filtro.texto.trim().toLowerCase();
+
+  const visiveis = itens.filter((item) => {
+    if (filtro.etapa && item.etapaAtual !== filtro.etapa) return false;
+    if (filtro.soAtrasados && !estaPendente(item)) return false;
+    if (!termo) return true;
+    const cat = categoria(item.categoria);
+    return [item.codigo, item.marca, cat?.rotulo, item.pontoMunicipio,
+            item.pontoNome, item.donoNome]
+      .some((campo) => (campo ?? '').toLowerCase().includes(termo));
+  });
+
+  // Escreve dentro do <tbody>, que continua existindo mesmo sem resultado — se
+  // a tabela fosse substituída por uma mensagem, o filtro seguinte não teria
+  // onde desenhar.
+  document.getElementById('corpo-itens').innerHTML = visiveis.length
+    ? visiveis.map(linhaItem).join('')
+    : `<tr><td colspan="8" class="sutil">Nenhum aparelho corresponde ao filtro.</td></tr>`;
+
+  document.getElementById('contagem-itens').textContent =
+    visiveis.length === itens.length
+      ? `${itens.length} aparelho(s)`
+      : `${visiveis.length} de ${itens.length} aparelho(s)`;
+}
+
+function linhaItem(item) {
+  const cat = categoria(item.categoria);
+  const atrasado = estaPendente(item);
+
+  return `
+    <tr>
+      <td>
+        <a href="rastrear.html?c=${encodeURIComponent(item.codigo)}"><code>${escapar(item.codigo)}</code></a>
+        ${item.demo ? '<br><span class="etiqueta">exemplo</span>' : ''}
+      </td>
+      <td>
+        ${escapar(cat?.rotulo ?? item.categoria)}
+        ${item.marca ? `<br><span class="sutil">${escapar(item.marca)}</span>` : ''}
+        <br><span class="sutil">${formatarMassa(item.pesoKg)}</span>
+      </td>
+      <td>
+        ${seloEtapa(item.etapaAtual)}
+        ${atrasado ? '<br><span class="selo" style="background:var(--vermelho-100);color:var(--vermelho-600)">atrasado</span>' : ''}
+      </td>
+      <td class="sutil">
+        ${item.pontoNome ? `${escapar(item.pontoNome)}<br>${escapar(item.pontoMunicipio)}` : 'Não informado'}
+      </td>
+      <td class="sutil">${item.donoNome ? escapar(item.donoNome) : 'sem conta'}</td>
+      <td class="num">${item.leituras}</td>
+      <td>${item.temApagamento ? '✓' : '<span class="sutil">—</span>'}</td>
+      <td class="sutil">${formatarData(item.atualizadoEm)}</td>
+    </tr>`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Contas
+ * ------------------------------------------------------------------ */
+
 function linhaUsuario(usuario) {
-  const aceitaPonto = usuario.papel === 'operador';
+  const ponto = pontos.find((p) => p.id === usuario.pontoId);
   return `
     <tr data-id="${escapar(usuario.id)}">
       <td>
         <strong>${escapar(usuario.nome)}</strong>${usuario.souEu ? ' <span class="etiqueta">você</span>' : ''}
         <br><span class="sutil">${escapar(usuario.email)}</span>
-        <br><span class="sutil">desde ${formatarData(usuario.criadoEm)}</span>
       </td>
-      <td>
-        <select data-campo="papel"${usuario.souEu ? ' disabled' : ''}>
-          ${Object.entries(auth.PAPEIS).map(([id, def]) =>
-            `<option value="${id}"${id === usuario.papel ? ' selected' : ''}>${escapar(def.rotulo)}</option>`
-          ).join('')}
-        </select>
-        ${usuario.souEu ? '<p class="dica">Você não altera o próprio papel.</p>' : ''}
-      </td>
-      <td>
-        <select data-campo="ponto"${aceitaPonto ? '' : ' disabled'}>
-          <option value="">Sem ponto fixo</option>
-          ${pontos.map((p) =>
-            `<option value="${escapar(p.id)}"${p.id === usuario.pontoId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`
-          ).join('')}
-        </select>
-      </td>
+      <td>${seloPapel(usuario.papel)}</td>
+      <td class="sutil">${ponto ? `${escapar(ponto.nome)}<br>${escapar(ponto.municipio)}` : '—'}</td>
       <td class="num">${usuario.itens}</td>
-      <td>
-        <div class="acoes">
-          <button class="botao botao-secundario" data-acao="salvar" type="button">Aplicar</button>
-        </div>
-        <details style="margin-top:.5rem">
-          <summary class="sutil">Redefinir senha</summary>
-          <div class="busca-codigo" style="margin-top:.5rem">
-            <label class="oculto" for="senha-${escapar(usuario.id)}">Nova senha</label>
-            <input id="senha-${escapar(usuario.id)}" data-campo="senha" type="password"
-                   autocomplete="new-password" minlength="6" placeholder="Nova senha">
-            <button class="botao botao-secundario" data-acao="senha" type="button">Definir</button>
-          </div>
-          <p class="dica">
-            A senha antiga não é lida em lugar nenhum — nem por você. O servidor
-            guarda apenas o hash PBKDF2 da nova, e a trilha registra que houve
-            redefinição, nunca o valor.
-          </p>
-        </details>
-      </td>
+      <td><button class="botao botao-secundario" data-acao="abrir" type="button">Abrir</button></td>
     </tr>`;
 }
 
 function linhaAlteracao(a) {
-  const nomeDoPonto = (id) => pontos.find((p) => p.id === id)?.nome ?? id;
-  let mudanca;
-
-  if (a.acao === 'papel') {
-    mudanca = `${escapar(auth.PAPEIS[a.de]?.rotulo ?? a.de)} → <strong>${escapar(auth.PAPEIS[a.para]?.rotulo ?? a.para)}</strong>`;
-  } else if (a.acao === 'ponto') {
-    mudanca = `${a.de ? escapar(nomeDoPonto(a.de)) : 'sem ponto'} → <strong>${a.para ? escapar(nomeDoPonto(a.para)) : 'sem ponto'}</strong>`;
-  } else {
-    mudanca = 'senha redefinida';
-  }
-
   return `
     <tr>
       <td class="sutil">${formatarData(a.em)}</td>
       <td>${escapar(a.alvoNome)}</td>
-      <td>${escapar(NOMES_DE_ACAO[a.acao] ?? a.acao)}: ${mudanca}</td>
+      <td>${escapar(NOMES_DE_ACAO[a.acao] ?? a.acao)}: ${descreverMudanca(a)}</td>
       <td class="sutil">${escapar(a.autorNome)}</td>
     </tr>`;
 }
 
-/* ------------------------------------------------------------------ *
- * Ações
- * ------------------------------------------------------------------ */
+/** Texto do "de → para", conforme o tipo de alteração. */
+function descreverMudanca(a) {
+  const nomeDoPonto = (id) => pontos.find((p) => p.id === id)?.nome ?? id;
 
-function ligarEventos(usuarios) {
-  const porId = new Map(usuarios.map((u) => [u.id, u]));
-
-  // O papel escolhido muda o que faz sentido preencher: só operador tem ponto.
-  conteudo.querySelectorAll('select[data-campo="papel"]').forEach((sel) => {
-    sel.addEventListener('change', () => {
-      const selPonto = sel.closest('tr').querySelector('select[data-campo="ponto"]');
-      selPonto.disabled = sel.value !== 'operador';
-      if (selPonto.disabled) selPonto.value = '';
-    });
-  });
-
-  conteudo.querySelectorAll('button[data-acao="salvar"]').forEach((botao) => {
-    botao.addEventListener('click', () => salvar(botao, porId));
-  });
-
-  conteudo.querySelectorAll('button[data-acao="senha"]').forEach((botao) => {
-    botao.addEventListener('click', () => redefinirSenha(botao, porId));
-  });
+  if (a.acao === 'papel') {
+    return `${escapar(auth.PAPEIS[a.de]?.rotulo ?? a.de)} → <strong>${escapar(auth.PAPEIS[a.para]?.rotulo ?? a.para)}</strong>`;
+  }
+  if (a.acao === 'ponto') {
+    return `${a.de ? escapar(nomeDoPonto(a.de)) : 'sem ponto'} → <strong>${a.para ? escapar(nomeDoPonto(a.para)) : 'sem ponto'}</strong>`;
+  }
+  if (a.acao === 'exclusao') {
+    return `era ${escapar(auth.PAPEIS[a.de]?.rotulo ?? a.de)} (${escapar(a.para)})`;
+  }
+  return 'senha redefinida';
 }
 
-async function salvar(botao, porId) {
-  const linha = botao.closest('tr');
-  const usuario = porId.get(linha.dataset.id);
-  const papel = linha.querySelector('select[data-campo="papel"]').value;
-  const selPonto = linha.querySelector('select[data-campo="ponto"]');
-  const pontoId = selPonto.disabled ? '' : selPonto.value;
+/* ------------------------------------------------------------------ *
+ * Detalhe da conta
+ *
+ * Abre por cima da tela, que escurece atrás: as ações daqui são sobre UMA
+ * conta, e misturá-las com a lista tornava a tabela ilegível.
+ * ------------------------------------------------------------------ */
 
+async function abrirConta(usuario) {
+  // A trilha desta conta é buscada agora, e não junto da tela toda: não faz
+  // sentido carregar o histórico de todas as contas para mostrar o de uma.
+  const historico = await store.listarAlteracoes(usuario.id).catch(() => []);
+  const meusItens = itens.filter((i) => i.donoNome && i.donoNome === usuario.nome);
+
+  const dialogo = document.createElement('dialog');
+  dialogo.className = 'confirmacao painel-conta';
+  dialogo.innerHTML = `
+    <div class="secao-titulo">
+      <div>
+        <h2 style="margin:0">${escapar(usuario.nome)}</h2>
+        <p class="sutil" style="margin:.15rem 0 0">
+          ${escapar(usuario.email)} ${seloPapel(usuario.papel)}
+          ${usuario.souEu ? '<span class="etiqueta">você</span>' : ''}
+        </p>
+      </div>
+      <button class="botao botao-secundario" type="button" data-acao="fechar">Fechar</button>
+    </div>
+
+    <dl class="trilha-dados" style="margin:1rem 0">
+      <div><dt>Conta criada em</dt><dd>${formatarData(usuario.criadoEm)}</dd></div>
+      <div><dt>Aparelhos registrados</dt><dd>${usuario.itens}</dd></div>
+      <div><dt>Pode gravar etapas</dt><dd>${auth.podeOperar(usuario) ? 'sim' : 'não'}</dd></div>
+      <div><dt>Identificador</dt><dd><code>${escapar(usuario.id)}</code></dd></div>
+    </dl>
+
+    ${meusItens.length ? `
+      <div class="rolagem" style="margin-bottom:1rem">
+        <table>
+          <thead><tr><th>Aparelhos desta conta</th><th>Etapa</th></tr></thead>
+          <tbody>
+            ${meusItens.slice(0, 5).map((i) => `
+              <tr>
+                <td><a href="rastrear.html?c=${encodeURIComponent(i.codigo)}"><code>${escapar(i.codigo)}</code></a>
+                    <span class="sutil">${escapar(categoria(i.categoria)?.rotulo ?? i.categoria)}</span></td>
+                <td>${seloEtapa(i.etapaAtual)}</td>
+              </tr>`).join('')}
+            ${meusItens.length > 5 ? `<tr><td colspan="2" class="sutil">e mais ${meusItens.length - 5}…</td></tr>` : ''}
+          </tbody>
+        </table>
+      </div>` : ''}
+
+    <h3 style="margin-bottom:.5rem">Permissões</h3>
+    <div class="campo">
+      <label for="d-papel">Papel</label>
+      <select id="d-papel"${usuario.souEu ? ' disabled' : ''}>
+        ${Object.entries(auth.PAPEIS).map(([id, def]) =>
+          `<option value="${id}"${id === usuario.papel ? ' selected' : ''}>${escapar(def.rotulo)}</option>`
+        ).join('')}
+      </select>
+      ${usuario.souEu
+        ? '<p class="dica">Você não altera o próprio papel — nem exclui a própria conta.</p>'
+        : `<p class="dica">${escapar(auth.PAPEIS[usuario.papel]?.descricao ?? '')}</p>`}
+    </div>
+
+    <div class="campo">
+      <label for="d-ponto">Ponto de coleta vinculado</label>
+      <select id="d-ponto"${usuario.papel === 'operador' ? '' : ' disabled'}>
+        <option value="">Sem ponto fixo</option>
+        ${pontos.map((p) =>
+          `<option value="${escapar(p.id)}"${p.id === usuario.pontoId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`
+        ).join('')}
+      </select>
+      <p class="dica">Só operadores usam este vínculo: é dele que sai o local gravado no evento.</p>
+    </div>
+
+    <div class="botoes">
+      <button class="botao" type="button" data-acao="salvar">Salvar permissões</button>
+    </div>
+
+    <h3 style="margin:1.4rem 0 .5rem">Senha</h3>
+    <div class="busca-codigo">
+      <label class="oculto" for="d-senha">Nova senha</label>
+      <input id="d-senha" type="password" autocomplete="new-password" minlength="6" placeholder="Nova senha">
+      <button class="botao botao-secundario" type="button" data-acao="senha">Redefinir</button>
+    </div>
+    <p class="dica">
+      A senha atual não é lida em lugar nenhum — nem por você. O servidor guarda
+      apenas o hash PBKDF2 da nova, e a trilha registra que houve redefinição,
+      nunca o valor.
+    </p>
+
+    <h3 style="margin:1.4rem 0 .5rem">Histórico desta conta</h3>
+    ${historico.length ? `
+      <div class="rolagem">
+        <table>
+          <thead><tr><th>Quando</th><th>Mudança</th><th>Por</th></tr></thead>
+          <tbody>
+            ${historico.map((a) => `
+              <tr>
+                <td class="sutil">${formatarData(a.em)}</td>
+                <td>${escapar(NOMES_DE_ACAO[a.acao] ?? a.acao)}: ${descreverMudanca(a)}</td>
+                <td class="sutil">${escapar(a.autorNome)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : '<p class="sutil">Nenhuma alteração registrada nesta conta.</p>'}
+
+    <hr style="border:none;border-top:1px solid var(--borda);margin:1.4rem 0 1rem">
+
+    <h3 style="margin:0 0 .5rem">Excluir conta</h3>
+    <p class="sutil" style="margin-top:0">
+      Os aparelhos que ela registrou <strong>continuam no sistema</strong>, com
+      código e trilha intactos — apenas deixam de estar vinculados a uma conta.
+      As etapas que ela assinou permanecem no histórico, e a exclusão entra na
+      trilha de administração.
+    </p>
+    <div class="botoes">
+      <button class="botao botao-perigo" type="button" data-acao="excluir"${usuario.souEu ? ' disabled' : ''}>
+        Excluir esta conta
+      </button>
+    </div>`;
+
+  const fechar = () => { if (dialogo.open) dialogo.close(); dialogo.remove(); };
+
+  dialogo.querySelector('[data-acao="fechar"]').addEventListener('click', fechar);
+  dialogo.addEventListener('cancel', fechar);
+
+  // O ponto só faz sentido para operador — acompanha o papel escolhido.
+  const selPapel = dialogo.querySelector('#d-papel');
+  const selPonto = dialogo.querySelector('#d-ponto');
+  selPapel.addEventListener('change', () => {
+    selPonto.disabled = selPapel.value !== 'operador';
+    if (selPonto.disabled) selPonto.value = '';
+  });
+
+  dialogo.querySelector('[data-acao="salvar"]').addEventListener('click', (ev) =>
+    salvarPermissoes(ev.currentTarget, usuario, selPapel.value,
+                     selPonto.disabled ? '' : selPonto.value, fechar));
+
+  dialogo.querySelector('[data-acao="senha"]').addEventListener('click', (ev) =>
+    redefinirSenha(ev.currentTarget, usuario, dialogo.querySelector('#d-senha'), fechar));
+
+  dialogo.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) =>
+    excluirConta(ev.currentTarget, usuario, fechar));
+
+  document.body.append(dialogo);
+  dialogo.showModal();
+}
+
+/* ------------------------------------------------------------------ *
+ * Ações sobre a conta aberta
+ * ------------------------------------------------------------------ */
+
+async function salvarPermissoes(botao, usuario, papel, pontoId, fechar) {
   const mudancas = {};
   if (papel !== usuario.papel) mudancas.papel = papel;
   if ((pontoId || null) !== (usuario.pontoId || null)) mudancas.pontoId = pontoId;
@@ -259,7 +496,8 @@ async function salvar(botao, porId) {
   // alguém que talvez esteja no meio de um turno. Os dois merecem uma parada.
   if (mudancas.papel && !(await confirmarPapel(usuario, papel, pontoId))) return;
 
-  await aplicar(botao, usuario.id, mudancas, 'Conta atualizada.');
+  await aplicar(botao, () => store.atualizarUsuario(usuario.id, mudancas),
+                'Conta atualizada.', fechar);
 }
 
 function confirmarPapel(usuario, papel, pontoId) {
@@ -294,10 +532,7 @@ function confirmarPapel(usuario, papel, pontoId) {
   });
 }
 
-async function redefinirSenha(botao, porId) {
-  const linha = botao.closest('tr');
-  const usuario = porId.get(linha.dataset.id);
-  const campo = linha.querySelector('input[data-campo="senha"]');
+async function redefinirSenha(botao, usuario, campo, fechar) {
   const senha = campo.value;
 
   if (senha.length < 6) {
@@ -319,25 +554,97 @@ async function redefinirSenha(botao, porId) {
   });
   if (!ok) return;
 
-  await aplicar(botao, usuario.id, { senha }, 'Senha redefinida.');
+  await aplicar(botao, () => store.atualizarUsuario(usuario.id, { senha }),
+                'Senha redefinida.', fechar);
 }
 
-/** Chamada única ao servidor, com o botão travado enquanto ela acontece. */
-async function aplicar(botao, id, mudancas, mensagem) {
+/**
+ * Exclusão: a única ação da tela que não tem volta, e a única que pede a senha
+ * de quem está agindo. Saber quem está logado não basta — a sessão pode estar
+ * aberta numa máquina que ficou sozinha.
+ */
+async function excluirConta(botao, usuario, fechar) {
+  const senha = await confirmarComSenha({
+    titulo: `Excluir a conta de ${usuario.nome}?`,
+    corpo: `
+      <dl class="trilha-dados">
+        <div><dt>Conta</dt><dd>${escapar(usuario.email)}</dd></div>
+        <div><dt>Papel</dt><dd>${escapar(auth.PAPEIS[usuario.papel]?.rotulo ?? usuario.papel)}</dd></div>
+        <div><dt>Criada em</dt><dd>${formatarData(usuario.criadoEm)}</dd></div>
+        <div><dt>Aparelhos registrados</dt><dd>${usuario.itens}</dd></div>
+      </dl>
+      <p class="dica">
+        ${usuario.itens
+          ? `Os ${usuario.itens} aparelho(s) desta conta continuam cadastrados, com
+             código e trilha intactos — só ficam sem dono.`
+          : 'Esta conta não registrou nenhum aparelho.'}
+        As etapas que ela assinou permanecem no histórico, e a exclusão entra na
+        trilha de administração com o seu nome.
+      </p>`,
+    alerta: `<strong>Isto não pode ser desfeito.</strong> Digite sua senha de
+             administrador para confirmar que é você.`,
+    confirmar: 'Excluir conta',
+    rotuloSenha: 'Sua senha de administrador',
+  });
+  if (!senha) return;
+
+  await aplicar(botao, async () => {
+    const resposta = await store.excluirUsuario(usuario.id, senha);
+    return resposta.itensLiberados
+      ? `Conta excluída. ${resposta.itensLiberados} aparelho(s) ficaram sem dono.`
+      : 'Conta excluída.';
+  }, null, fechar);
+}
+
+/**
+ * Chamada única ao servidor, com o botão travado enquanto ela acontece.
+ * Usa `mensagem` fixa, ou o texto que a própria chamada devolver.
+ */
+async function aplicar(botao, acao, mensagem, fechar) {
   const texto = botao.textContent;
   botao.disabled = true;
   botao.textContent = 'Salvando…';
   try {
-    await store.atualizarUsuario(id, mudancas);
-    aviso(mensagem);
+    const resultado = await acao();
+    aviso(mensagem ?? resultado ?? 'Feito.');
+    fechar?.();
     await desenhar();
   } catch (erro) {
-    // Regras como "o sistema não fica sem administrador" são do servidor: a
-    // tela apenas mostra o motivo que ele deu.
+    // Regras como "o sistema não fica sem administrador" e a conferência da
+    // senha são do servidor: a tela apenas mostra o motivo que ele deu.
     aviso(erro.message, 'erro');
     botao.disabled = false;
     botao.textContent = texto;
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Ligações da tela
+ * ------------------------------------------------------------------ */
+
+function ligarEventos() {
+  const porId = new Map(usuarios.map((u) => [u.id, u]));
+
+  conteudo.querySelectorAll('button[data-acao="abrir"]').forEach((botao) => {
+    botao.addEventListener('click', () =>
+      abrirConta(porId.get(botao.closest('tr').dataset.id)));
+  });
+
+  const campoTexto = document.getElementById('f-texto');
+  campoTexto.addEventListener('input', () => {
+    filtro.texto = campoTexto.value;
+    desenharItens();
+  });
+  document.getElementById('f-etapa').addEventListener('change', (ev) => {
+    filtro.etapa = ev.target.value;
+    desenharItens();
+  });
+  document.getElementById('f-atrasados').addEventListener('change', (ev) => {
+    filtro.soAtrasados = ev.target.checked;
+    desenharItens();
+  });
+
+  desenharItens();
 }
 </script>
 

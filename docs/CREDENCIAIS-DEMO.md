@@ -52,8 +52,15 @@ assinar uma declaração e leva ao login.
 **3. Como administrador** (`admin@etrilha.ms` / `etrilha-admin`):
 
 - o menu ganha **"Administração"**;
+- a tela abre com **todos os aparelhos cadastrados** — código, etapa, ponto de
+  entrada, dono e se o atestado de apagamento já saiu. Marque *"Só os
+  atrasados"* para mostrar, em um clique, onde a cadeia travou;
+- clique em **Abrir** numa conta: o painel dela sobe por cima da tela, que
+  escurece atrás — dados, aparelhos, histórico, permissões e exclusão;
 - promova uma conta visitante a operador, vincule-a a um ponto e veja a mudança
   aparecer na **trilha de administração** logo abaixo;
+- tente **excluir** uma conta: o sistema pede a *sua* senha de administrador
+  antes. Os aparelhos dela continuam cadastrados, e a exclusão fica na trilha;
 - tente rebaixar o próprio admin: é recusado, porque o sistema não pode ficar
   sem quem gerencie as contas.
 

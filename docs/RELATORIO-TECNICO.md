@@ -313,8 +313,10 @@ exibição e não para decidir se uma gravação é aceita.
 | `GET` / `POST` / `DELETE` | `/api/sessao` | Usuário atual, entrar, sair |
 | `POST` | `/api/usuarios` | Criar conta |
 | `GET` | `/api/meus-itens` | Itens do usuário logado ou do visitante |
+| `GET` | `/api/admin/itens` | Aparelhos com etapa, ponto de entrada, dono e nº de leituras — **exige admin** |
 | `GET` | `/api/admin/usuarios` | Lista as contas com papel, ponto e nº de aparelhos — **exige admin** |
 | `PATCH` | `/api/admin/usuarios/<id>` | Altera papel, ponto vinculado e senha — **exige admin** |
+| `DELETE` | `/api/admin/usuarios/<id>` | Exclui a conta — **exige admin e a senha dele no corpo** |
 | `GET` | `/api/admin/alteracoes` | Trilha de administração — **exige admin** |
 | `POST` | `/api/demo/reiniciar` | Recria o banco com os dados de exemplo |
 | `GET` | `/api/saude` | Diagnóstico do servidor e do banco |
@@ -340,7 +342,7 @@ distinção, salvar o papel de um operador apagaria o posto dele sem querer.
 | `itens` | `codigo` (PK), `categoria`, `marca`, `peso_kg`, `dono_id`, `visitante_id`, `ponto_origem_id`, `criado_em`, `atualizado_em`, `etapa_atual`, `demo` |
 | `eventos` | `id`, `item_codigo`, `etapa`, `ponto_id`, `responsavel`, `observacao`, `em` |
 | `apagamentos` | `item_codigo` (PK), `midia`, `metodo`, `responsavel`, `em` |
-| `alteracoes_conta` | `id`, `alvo_id`, `autor_id`, `acao`, `de`, `para`, `em` |
+| `alteracoes_conta` | `id`, `alvo_id`, `alvo_nome`, `autor_id`, `autor_nome`, `acao`, `de`, `para`, `em` |
 
 Um item pertence a um usuário (`dono_id`) **ou** a um visitante sem conta
 (`visitante_id`, guardado no cookie de sessão). Ao criar conta, os itens do
@@ -466,6 +468,34 @@ Duas regras de integridade completam:
   rebaixando ao mesmo tempo não deixem o sistema sem nenhum — é o mesmo motivo
   do `BEGIN IMMEDIATE` da seção 9.8;
 - **ninguém rebaixa a si mesmo**, que é o caso mais comum de tiro no pé.
+
+### Excluir uma conta sem apagar o que ela declarou
+
+A conta some; o que ela produziu, não. São três coisas distintas:
+
+- **os aparelhos** que ela registrou continuam cadastrados, com código e trilha
+  intactos — `dono_id` volta a `NULL`. Apagá-los junto seria destruir cadeia de
+  custódia por causa de um cadastro, invertendo a finalidade do sistema;
+- **os eventos** que ela assinou permanecem, porque `responsavel` sempre foi um
+  texto copiado no momento da leitura, e não uma referência à conta: quem
+  registrou a coleta continua nomeado no histórico depois de sair da equipe;
+- **a trilha de administração** continua legível, e a própria exclusão entra
+  nela.
+
+O terceiro ponto obrigou a mudar o esquema. Na primeira versão,
+`alteracoes_conta` tinha chave estrangeira para `usuarios`, e com
+`ON DELETE RESTRICT` o banco recusaria excluir qualquer conta que já tivesse
+sido promovida — enquanto `CASCADE` apagaria justamente o registro de que ela
+existiu. Nenhuma das duas serve: **uma trilha de auditoria não pode depender da
+existência da linha que ela descreve.** A solução foi copiar o nome de quem foi
+alterado e de quem alterou para dentro da própria linha e dispensar a chave
+estrangeira.
+
+A exclusão também é a única ação da tela que **pede a senha de quem está
+agindo**, mesmo com a sessão aberta. É o raciocínio do `sudo`: saber quem está
+logado não basta quando a máquina pode ter ficado sozinha no galpão e a ação não
+tem volta. Senha errada responde 403 com mensagem própria — a sessão continua
+válida, o que faltou foi a confirmação.
 
 O primeiro administrador nasce na carga inicial, fora da tela. Não poderia ser
 diferente: se a interface permitisse a auto-promoção, o controle não valeria
@@ -600,6 +630,13 @@ Marcos previstos no cronograma da DAC:
 | 35 | Redefinir a senha de uma conta | Senha antiga deixa de valer; a trilha registra o fato, não o valor |
 | 36 | Tentar `UPDATE` ou `DELETE` em `alteracoes_conta` | Recusado pelos gatilhos |
 | 37 | Procurar `senha_hash` na resposta da API de administração | Ausente |
+| 38 | Abrir o painel de uma conta na tela de administração | Dados, aparelhos, histórico e ações aparecem sobre a tela, que escurece atrás |
+| 39 | Excluir uma conta digitando a senha errada | HTTP 403; a conta continua existindo |
+| 40 | Excluir a própria conta | Recusado |
+| 41 | Excluir uma conta com a senha correta | Conta removida; a tela informa quantos aparelhos ficaram sem dono |
+| 42 | Consultar um aparelho da conta excluída | Item, trilha e responsável dos eventos intactos, apenas sem dono |
+| 43 | Ver a trilha depois da exclusão | A conta excluída continua nomeada no registro |
+| 44 | Listar todos os aparelhos como admin, com busca e filtro por etapa | Lista filtra por texto, etapa e "só os atrasados" |
 
 ### 11.2 Resultados obtidos
 
@@ -708,6 +745,30 @@ DELETE em alteracoes_conta  ->  recusado: a trilha é somente de acréscimo
 
 Nenhuma resposta de `/api/admin/*` contém `senha_hash` — a redefinição grava um
 hash novo, e a leitura da senha não existe em nenhuma rota.
+
+**Exclusão de conta** (cenários 38 a 43):
+
+```
+DELETE /api/admin/usuarios/<id>   {"senha":"chutando"}
+  HTTP 403  Senha incorreta. A conta não foi excluída.
+
+DELETE /api/admin/usuarios/<o próprio admin>   {"senha": correta}
+  HTTP 400  Você não pode excluir a própria conta. Peça a outro administrador.
+
+DELETE /api/admin/usuarios/<id>   {"senha": correta}
+  HTTP 200  {"excluido":"u-7b3af0cd9ddd","itensLiberados":1}
+
+GET /api/itens/MS-TBDJ-YM3Z/rastreio
+  item continua existindo, etapa REGISTRADO, donoId = null
+  1 evento preservado, responsável "Registro do próprio dono"
+
+GET /api/admin/alteracoes
+  exclusao  Marcos Teste  de=visitante  para=marcos@teste.ms  por Administração e-Trilha MS
+```
+
+Pela tela, com a senha errada o painel permanece aberto e a conta continua na
+lista; com a senha correta o painel fecha, a conta some e a trilha registra a
+exclusão nomeando quem foi excluído.
 
 > **[PREENCHER]** Anexar as evidências em imagem: capturas de tela de cada
 > cenário, especialmente as mensagens de recusa dos cenários 4, 5, 7 e 14.

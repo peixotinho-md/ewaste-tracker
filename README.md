@@ -104,7 +104,12 @@ próprios aparelhos, mas não grava etapas na cadeia de custódia de terceiros.
 5. **`pontos.html`** — filtre os pontos de coleta por município e por aparelho.
 6. **`painel.html`** — massa desviada do aterro, materiais recuperados, CO₂e
    evitado, gargalo da cadeia e lista de pendências.
-7. **`admin.html`** — entre como `admin@etrilha.ms` / `etrilha-admin`. Promova
+7. **`admin.html`** — entre como `admin@etrilha.ms` / `etrilha-admin`. A tela
+   abre com **todos os aparelhos cadastrados**: código, categoria, etapa, ponto
+   de entrada, dono, nº de leituras e se o atestado de apagamento já saiu — com
+   busca por texto, filtro por etapa e um atalho para ver só os atrasados.
+   Clique em **Abrir** numa conta para o painel dela — dados, aparelhos,
+   histórico, permissões e exclusão (que pede a senha do próprio admin). Promova
    uma conta a operador, vincule-a a um ponto de coleta e veja a alteração
    aparecer na **trilha de administração**. Tente rebaixar o único
    administrador: o servidor recusa, para o sistema não ficar sem quem
@@ -164,8 +169,10 @@ decide o que é gravado é o servidor.
 | `DELETE` | `/api/sessao` | Sair |
 | `POST` | `/api/usuarios` | Criar conta |
 | `GET` | `/api/meus-itens` | Itens do usuário logado ou do visitante |
+| `GET` | `/api/admin/itens` | Todos os aparelhos com etapa, origem, dono e nº de leituras — **exige admin** |
 | `GET` | `/api/admin/usuarios` | Lista as contas — **exige admin** |
 | `PATCH` | `/api/admin/usuarios/<id>` | Papel, ponto vinculado e senha — **exige admin** |
+| `DELETE` | `/api/admin/usuarios/<id>` | Exclui a conta — **exige admin e a senha dele** |
 | `GET` | `/api/admin/alteracoes` | Trilha de administração — **exige admin** |
 | `POST` | `/api/demo/reiniciar` | Recria o banco com os dados de exemplo |
 | `GET` | `/api/saude` | Diagnóstico: servidor e contagens do banco |
@@ -268,7 +275,7 @@ scanner.html      Leitura da etiqueta e registro da etapa (exige operador)
 pontos.html       Mapa SVG de MS + lista filtrável de pontos de coleta
 painel.html       Indicadores para gestores, cooperativas e empresas
 conta.html        Conta opcional e histórico do usuário
-admin.html        Contas, papéis e trilha de administração (exige admin)
+admin.html        Aparelhos, contas, papéis e trilha de administração (exige admin)
 
 backend/app.py      Flask: rotas da API + entrega das páginas
 backend/banco.py    Conexão SQLite, esquema, carga inicial, transações

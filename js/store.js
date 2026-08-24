@@ -197,8 +197,31 @@ export async function atualizarUsuario(id, mudancas) {
   });
 }
 
-export async function listarAlteracoes() {
-  return api('/admin/alteracoes');
+/**
+ * Todos os aparelhos com etapa, ponto de origem, dono e nº de leituras.
+ *
+ * `listarItens()` continua servindo o painel público; esta versão traz o
+ * cruzamento que só a administração usa.
+ */
+export async function listarItensAdmin() {
+  return api('/admin/itens');
+}
+
+/**
+ * Exclui uma conta. Exige a senha de quem está excluindo — é a única ação da
+ * tela de administração que não tem volta.
+ */
+export async function excluirUsuario(id, senha) {
+  return api(`/admin/usuarios/${encodeURIComponent(id)}`, {
+    metodo: 'DELETE',
+    corpo: { senha },
+  });
+}
+
+/** Trilha inteira, ou só a de uma conta quando `usuarioId` é informado. */
+export async function listarAlteracoes(usuarioId = null) {
+  const consulta = usuarioId ? `?usuario=${encodeURIComponent(usuarioId)}` : '';
+  return api(`/admin/alteracoes${consulta}`);
 }
 
 /* ------------------------------------------------------------------ *

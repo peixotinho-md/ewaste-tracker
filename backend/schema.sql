@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 3;
+PRAGMA user_version = 4;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
@@ -66,15 +66,25 @@ CREATE INDEX idx_usuarios_papel ON usuarios (papel);
 --
 -- `de` e `para` guardam o valor antigo e o novo. Numa troca de senha ficam
 -- vazios: o que importa registrar é que houve redefinição, nunca o segredo.
+--
+-- O NOME de quem foi alterado e de quem alterou é copiado para cá no momento
+-- do registro, e as colunas de id NÃO têm chave estrangeira. É deliberado: uma
+-- trilha de auditoria não pode depender da existência da linha que ela
+-- descreve. Com FK, excluir uma conta seria recusado pelo banco — ou, pior,
+-- apagaria em cascata justamente o registro de que ela existiu. Do jeito que
+-- está, a conta pode ser excluída e a trilha continua legível, dizendo quem
+-- era e o que foi feito.
 -- --------------------------------------------------------------------------
 CREATE TABLE alteracoes_conta (
-  id       INTEGER PRIMARY KEY AUTOINCREMENT,
-  alvo_id  TEXT NOT NULL REFERENCES usuarios (id) ON DELETE RESTRICT,
-  autor_id TEXT NOT NULL REFERENCES usuarios (id) ON DELETE RESTRICT,
-  acao     TEXT NOT NULL,
-  de       TEXT NOT NULL DEFAULT '',
-  para     TEXT NOT NULL DEFAULT '',
-  em       TEXT NOT NULL
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  alvo_id     TEXT,
+  alvo_nome   TEXT NOT NULL,
+  autor_id    TEXT,
+  autor_nome  TEXT NOT NULL,
+  acao        TEXT NOT NULL,
+  de          TEXT NOT NULL DEFAULT '',
+  para        TEXT NOT NULL DEFAULT '',
+  em          TEXT NOT NULL
 );
 
 CREATE INDEX idx_alteracoes_alvo ON alteracoes_conta (alvo_id, em);

@@ -183,6 +183,64 @@ export function confirmar({ titulo, corpo = '', alerta = '', confirmar: textoOk 
   });
 }
 
+/**
+ * Confirmação que exige a senha de quem está agindo.
+ *
+ * Existe para o caso em que saber QUEM está logado não basta: a sessão pode
+ * estar aberta numa máquina que ficou sozinha, e a ação não tem volta. É o
+ * mesmo raciocínio do `sudo`, que pergunta a senha mesmo já sabendo quem você é.
+ *
+ * Abre por cima do que estiver na tela — inclusive de outro diálogo —, e o que
+ * fica atrás escurece, deixando claro que a decisão é sobre aquilo.
+ *
+ * @returns {Promise<string|null>} a senha digitada, ou null se desistiu.
+ */
+export function confirmarComSenha({ titulo, corpo = '', alerta = '',
+                                    confirmar: textoOk = 'Confirmar',
+                                    rotuloSenha = 'Sua senha' }) {
+  return new Promise((resolver) => {
+    const dialogo = document.createElement('dialog');
+    dialogo.className = 'confirmacao';
+    dialogo.innerHTML = `
+      <h2>${escapar(titulo)}</h2>
+      ${corpo}
+      ${alerta ? `<div class="faixa faixa-alerta">${alerta}</div>` : ''}
+      <div class="campo">
+        <label for="senha-confirmacao">${escapar(rotuloSenha)}</label>
+        <input id="senha-confirmacao" type="password" autocomplete="current-password">
+      </div>
+      <div class="botoes confirmacao-botoes">
+        <button class="botao botao-secundario" type="button" data-resposta="nao">Cancelar</button>
+        <button class="botao botao-perigo" type="button" data-resposta="sim">${escapar(textoOk)}</button>
+      </div>`;
+
+    let respondido = false;
+    const responder = (senha) => {
+      if (respondido) return;
+      respondido = true;
+      if (dialogo.open) dialogo.close();
+      dialogo.remove();
+      resolver(senha);
+    };
+
+    const campo = dialogo.querySelector('#senha-confirmacao');
+    const confirmarAgora = () => responder(campo.value || null);
+
+    dialogo.querySelector('[data-resposta="sim"]').addEventListener('click', confirmarAgora);
+    dialogo.querySelector('[data-resposta="nao"]').addEventListener('click', () => responder(null));
+    // Enter no campo de senha confirma: é o gesto natural de quem acabou de digitar.
+    campo.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); confirmarAgora(); }
+    });
+    dialogo.addEventListener('cancel', () => responder(null));
+    dialogo.addEventListener('close', () => responder(null));
+
+    document.body.append(dialogo);
+    dialogo.showModal();
+    campo.focus();
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * Linha do tempo do rastreio
  * ------------------------------------------------------------------ */

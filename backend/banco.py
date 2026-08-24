@@ -560,25 +560,37 @@ def contar_itens_por_dono(conexao) -> dict[str, int]:
     return {l["dono_id"]: l["n"] for l in linhas}
 
 
-def _registrar_alteracao(conexao, *, alvo_id, autor_id, acao, de="", para="") -> None:
-    """Grava um elo na trilha de administração. Sempre dentro da transação da mudança."""
+def _registrar_alteracao(conexao, *, alvo, autor, acao, de="", para="") -> None:
+    """
+    Grava um elo na trilha de administração. Sempre dentro da transação da
+    mudança — ou as duas coisas acontecem, ou nenhuma.
+
+    `alvo` e `autor` são dicionários com `id` e `nome`. O nome é copiado para a
+    linha em vez de resolvido por JOIN na hora da leitura, para que a trilha
+    continue legível depois que a conta for excluída.
+    """
     conexao.execute(
-        """INSERT INTO alteracoes_conta (alvo_id, autor_id, acao, de, para, em)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (alvo_id, autor_id, acao, de or "", para or "", agora_iso()),
+        """INSERT INTO alteracoes_conta
+               (alvo_id, alvo_nome, autor_id, autor_nome, acao, de, para, em)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (alvo.get("id"), alvo["nome"], autor.get("id"), autor["nome"],
+         acao, de or "", para or "", agora_iso()),
     )
 
 
-def listar_alteracoes(conexao, limite: int = 50) -> list[dict]:
-    linhas = conexao.execute(
-        """SELECT a.*, alvo.nome AS alvo_nome, autor.nome AS autor_nome
-           FROM alteracoes_conta a
-           JOIN usuarios alvo  ON alvo.id  = a.alvo_id
-           JOIN usuarios autor ON autor.id = a.autor_id
-           ORDER BY a.em DESC, a.id DESC
-           LIMIT ?""",
-        (limite,),
-    ).fetchall()
+def listar_alteracoes(conexao, limite: int = 50, usuario_id: str | None = None) -> list[dict]:
+    """Trilha inteira, ou só a de uma conta quando `usuario_id` é informado."""
+    if usuario_id:
+        linhas = conexao.execute(
+            """SELECT * FROM alteracoes_conta WHERE alvo_id = ?
+               ORDER BY em DESC, id DESC LIMIT ?""",
+            (usuario_id, limite),
+        ).fetchall()
+    else:
+        linhas = conexao.execute(
+            "SELECT * FROM alteracoes_conta ORDER BY em DESC, id DESC LIMIT ?",
+            (limite,),
+        ).fetchall()
     return [
         {
             "id": l["id"],
@@ -593,7 +605,7 @@ def listar_alteracoes(conexao, limite: int = 50) -> list[dict]:
     ]
 
 
-def atualizar_usuario(conexao, alvo_id: str, *, autor_id: str, papel=None,
+def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
                       ponto_id=..., senha_hash=None) -> dict:
     """
     Aplica as mudanças que um admin pode fazer numa conta, todas na mesma
@@ -630,7 +642,7 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor_id: str, papel=None,
                 "UPDATE usuarios SET papel = ? WHERE id = ?", (papel, alvo_id)
             )
             _registrar_alteracao(
-                conexao, alvo_id=alvo_id, autor_id=autor_id, acao="papel",
+                conexao, alvo=dict(atual), autor=autor, acao="papel",
                 de=atual["papel"], para=papel,
             )
 
@@ -642,7 +654,7 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor_id: str, papel=None,
                     "UPDATE usuarios SET ponto_id = NULL WHERE id = ?", (alvo_id,)
                 )
                 _registrar_alteracao(
-                    conexao, alvo_id=alvo_id, autor_id=autor_id, acao="ponto",
+                    conexao, alvo=dict(atual), autor=autor, acao="ponto",
                     de=atual["ponto_id"], para="",
                 )
                 ponto_id = ...
@@ -656,7 +668,7 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor_id: str, papel=None,
                 "UPDATE usuarios SET ponto_id = ? WHERE id = ?", (ponto_id, alvo_id)
             )
             _registrar_alteracao(
-                conexao, alvo_id=alvo_id, autor_id=autor_id, acao="ponto",
+                conexao, alvo=dict(atual), autor=autor, acao="ponto",
                 de=atual["ponto_id"] or "", para=ponto_id or "",
             )
 
@@ -666,7 +678,102 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor_id: str, papel=None,
             )
             # A trilha registra QUE houve redefinição, jamais o segredo.
             _registrar_alteracao(
-                conexao, alvo_id=alvo_id, autor_id=autor_id, acao="senha",
+                conexao, alvo=dict(atual), autor=autor, acao="senha",
             )
 
     return obter_usuario(conexao, alvo_id)
+
+
+def listar_itens_detalhados(conexao) -> list[dict]:
+    """
+    Todos os aparelhos com o contexto que a tela de administração precisa:
+    onde entraram, de quem são, quantas leituras já tiveram e se o atestado de
+    apagamento foi emitido.
+
+    O `GET /api/itens` público já devolve os itens — o que muda aqui é o
+    cruzamento com `pontos`, `usuarios`, `eventos` e `apagamentos`, que exige
+    varrer tabelas e não faz sentido servir a quem só quer consultar um código.
+
+    Do dono vai apenas o NOME, nunca o e-mail: quem administra precisa saber a
+    quem pertence o aparelho para poder falar com a pessoa, e o contato já está
+    na tela de contas. Repetir o e-mail em cada linha só aumentaria a exposição
+    do dado sem acrescentar nada.
+    """
+    linhas = conexao.execute(
+        """SELECT i.*,
+                  p.nome        AS ponto_nome,
+                  p.municipio   AS ponto_municipio,
+                  u.nome        AS dono_nome,
+                  (SELECT COUNT(*) FROM eventos e WHERE e.item_codigo = i.codigo) AS leituras,
+                  (SELECT COUNT(*) FROM apagamentos a WHERE a.item_codigo = i.codigo) AS tem_apagamento
+           FROM itens i
+           LEFT JOIN pontos   p ON p.id = i.ponto_origem_id
+           LEFT JOIN usuarios u ON u.id = i.dono_id
+           ORDER BY i.atualizado_em DESC"""
+    ).fetchall()
+
+    itens = []
+    for linha in linhas:
+        item = item_json(linha)
+        item.update({
+            "pontoNome": linha["ponto_nome"],
+            "pontoMunicipio": linha["ponto_municipio"],
+            "donoNome": linha["dono_nome"],
+            "leituras": linha["leituras"],
+            "temApagamento": bool(linha["tem_apagamento"]),
+        })
+        itens.append(item)
+    return itens
+
+
+def excluir_usuario(conexao, alvo_id: str, *, autor: dict) -> dict:
+    """
+    Exclui uma conta, preservando tudo o que ela produziu.
+
+    A conta some; o que ela declarou, não. Isso vale para três coisas:
+
+      itens        `dono_id` volta a NULL (chave estrangeira ON DELETE SET NULL).
+                   O aparelho continua cadastrado, com código e trilha intactos —
+                   apenas deixa de estar vinculado a uma conta. Apagar os itens
+                   junto seria destruir cadeia de custódia por causa de um
+                   cadastro, o que inverteria a finalidade do sistema.
+      eventos      intactos. O nome de quem assinou já é texto copiado no momento
+                   da leitura, e não uma referência à conta: quem registrou a
+                   coleta continua nomeado no histórico depois de sair da equipe.
+      trilha       mantida, pelo mesmo motivo — `alteracoes_conta` guarda os
+                   nomes, não só os ids. A própria exclusão entra nela.
+
+    Devolve quantos aparelhos ficaram sem dono, para a tela poder avisar antes.
+    """
+    with transacao(conexao):
+        alvo = conexao.execute(
+            "SELECT * FROM usuarios WHERE id = ?", (alvo_id,)
+        ).fetchone()
+        if alvo is None:
+            raise modelo.RegraViolada("Conta não encontrada.")
+
+        if alvo["papel"] == "admin":
+            restantes = conexao.execute(
+                "SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'admin' AND id <> ?",
+                (alvo_id,),
+            ).fetchone()["n"]
+            if restantes == 0:
+                raise modelo.RegraViolada(
+                    "Esta é a única conta de administrador. Promova outra pessoa a "
+                    "administrador antes de excluir esta, ou o sistema ficaria sem "
+                    "quem gerencie as contas."
+                )
+
+        itens_liberados = conexao.execute(
+            "SELECT COUNT(*) AS n FROM itens WHERE dono_id = ?", (alvo_id,)
+        ).fetchone()["n"]
+
+        # A trilha é escrita ANTES do DELETE: depois dele, o nome já não estaria
+        # em lugar nenhum para ser copiado.
+        _registrar_alteracao(
+            conexao, alvo=dict(alvo), autor=autor, acao="exclusao",
+            de=alvo["papel"], para=alvo["email"],
+        )
+        conexao.execute("DELETE FROM usuarios WHERE id = ?", (alvo_id,))
+
+    return {"excluido": alvo_id, "itensLiberados": itens_liberados}

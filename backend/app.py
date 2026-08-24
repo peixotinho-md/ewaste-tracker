@@ -421,18 +421,71 @@ def admin_atualizar_usuario(conexao, usuario_id, conta):
         )
 
     atualizado = banco.atualizar_usuario(
-        conexao, usuario_id, autor_id=conta["id"],
+        conexao, usuario_id, autor=conta,
         papel=papel, ponto_id=ponto_id, senha_hash=senha_hash,
     )
     return jsonify(atualizado)
+
+
+@app.delete("/api/admin/usuarios/<usuario_id>")
+@com_banco
+@exige("admin")
+def admin_excluir_usuario(conexao, usuario_id, conta):
+    """
+    Exclui uma conta, exigindo a senha de quem está excluindo.
+
+    Pedir a senha de novo aqui não é redundância com o login: a sessão pode
+    estar aberta num computador que ficou sozinho no galpão, e esta é a única
+    ação da tela que não tem volta. É o mesmo raciocínio do `sudo`, que
+    pergunta a senha mesmo já sabendo quem você é.
+
+    A resposta a uma senha errada é 403 com mensagem própria, e não o 401 do
+    login: a sessão continua válida: o que faltou foi a confirmação.
+    """
+    corpo = request.get_json(silent=True) or {}
+    linha = conexao.execute(
+        "SELECT senha_hash FROM usuarios WHERE id = ?", (conta["id"],)
+    ).fetchone()
+
+    if linha is None or not check_password_hash(linha["senha_hash"], str(corpo.get("senha") or "")):
+        return jsonify({"erro": "Senha incorreta. A conta não foi excluída."}), 403
+
+    if usuario_id == conta["id"]:
+        raise modelo.RegraViolada(
+            "Você não pode excluir a própria conta. Peça a outro administrador."
+        )
+
+    return jsonify(banco.excluir_usuario(conexao, usuario_id, autor=conta))
+
+
+@app.get("/api/admin/itens")
+@com_banco
+@exige("admin")
+def admin_itens(conexao, conta):
+    """
+    Todos os aparelhos com etapa, origem, dono e nº de leituras.
+
+    A lista pública `/api/itens` continua existindo e continua aberta — é dela
+    que o painel tira os indicadores. Esta rota acrescenta o cruzamento com
+    pontos, contas e eventos, útil para quem administra e desnecessário para
+    quem só consulta um código.
+    """
+    return jsonify(banco.listar_itens_detalhados(conexao))
 
 
 @app.get("/api/admin/alteracoes")
 @com_banco
 @exige("admin")
 def admin_alteracoes(conexao, conta):
-    """Trilha de quem alterou o quê nas contas — somente de acréscimo."""
-    return jsonify(banco.listar_alteracoes(conexao))
+    """
+    Trilha de quem alterou o quê nas contas — somente de acréscimo.
+
+    Com `?usuario=<id>`, devolve só o histórico daquela conta, que é o que a
+    tela de detalhe mostra.
+    """
+    return jsonify(
+        banco.listar_alteracoes(conexao, usuario_id=request.args.get("usuario") or None)
+    )
 
 
 # --------------------------------------------------------------------------- #
