@@ -25,6 +25,39 @@
              spellcheck="false" maxlength="14" required>
       <button class="botao" type="submit">Consultar</button>
     </form>
+    <p class="dica" style="margin-top:.6rem">
+      Pode digitar com ou sem hífen, em maiúsculas ou minúsculas — o sistema corrige.
+    </p>
+
+    <details id="bloco-camera" style="margin-top:1rem">
+      <summary><strong>Ler o QR pela câmera</strong></summary>
+      <div class="camera" style="margin-top:.8rem">
+        <video id="video" muted playsinline></video>
+        <div class="mira"></div>
+        <div class="estado" id="estado-camera">Câmera desligada.</div>
+      </div>
+      <div class="botoes" style="margin-top:.8rem">
+        <button class="botao" id="btn-camera" type="button">Ligar câmera</button>
+      </div>
+      <p class="dica" style="margin-top:.6rem">
+        O navegador pede sua permissão antes de acessar a câmera — é o sistema
+        operacional que controla o dispositivo, não esta página. A câmera só é
+        liberada em páginas seguras: use <code>http://localhost</code> ou HTTPS.
+      </p>
+    </details>
+  </section>
+
+  <!-- Só aparece para quem não entrou: quem já tem sessão chegou aqui pelo menu. -->
+  <section class="cartao nao-imprimir oculto" id="convite-conta">
+    <h2>Quer mais do que consultar?</h2>
+    <p class="sutil">
+      Registrar um aparelho, imprimir etiquetas e acompanhar tudo o que você já
+      enviou exigem conta. Ler o QR e avançar etapas é permissão de operador,
+      concedida por um administrador.
+    </p>
+    <div class="botoes">
+      <a class="botao" href="/">Entrar ou criar conta</a>
+    </div>
   </section>
 
   <div id="resultado"></div>
@@ -42,7 +75,7 @@ import { iniciarPagina, aviso, linhaDoTempo, seloEtapa, formatarData,
 import { normalizarCodigo, categoria, materiaisRecuperaveis, co2eEvitado,
          MATERIAIS, ETAPA_FINAL, etapa as definicaoEtapa, estaPendente,
          exigeApagamento, MIDIAS, METODOS_APAGAMENTO } from './js/model.js';
-import { desenharQR } from './js/qr.js';
+import { desenharQR, LeitorQR } from './js/qr.js';
 
 await iniciarPagina();
 
@@ -53,7 +86,7 @@ document.getElementById('form-busca').addEventListener('submit', (ev) => {
   ev.preventDefault();
   const codigo = normalizarCodigo(entrada.value);
   if (!codigo) {
-    aviso('Código inválido. Confira os 8 caracteres da etiqueta.', 'erro');
+    aviso('Código inválido. Ele começa com MS e tem 8 caracteres — como em MS-0000-0000.', 'erro');
     return;
   }
   history.pushState({}, '', `?c=${encodeURIComponent(codigo)}`);
@@ -74,7 +107,8 @@ async function mostrar(codigo) {
           corresponde a nenhum aparelho registrado neste sistema.
         </div>
         <p>Verifique se digitou corretamente ou
-           <a href="registrar.html">registre este aparelho</a>.</p>
+           <a href="registrar">registre este aparelho</a>
+           <span class="sutil">(registrar exige conta)</span>.</p>
       </div>`;
     return;
   }
@@ -119,7 +153,7 @@ async function mostrar(codigo) {
           <strong>Este aparelho está parado além do prazo previsto.</strong>
           A etapa "${escapar(definicaoEtapa(item.etapaAtual).rotulo)}" deveria durar até
           ${definicaoEtapa(item.etapaAtual).slaHoras} h. O caso aparece na lista de
-          pendências do <a href="painel.html">painel público</a>.
+          pendências do painel de indicadores, à disposição de quem opera a cadeia.
         </div>` : ''}
 
       ${concluido ? `
@@ -153,7 +187,14 @@ async function mostrar(codigo) {
       </div>
       <p style="margin-top:1rem">
         <strong>${formatarNumero(co2e, 1)} kg de CO₂e</strong> deixam de ser emitidos ao
-        recuperar estes materiais em vez de produzi-los do minério.
+        recuperar estes materiais em vez de produzi-los do minério — é a emissão da
+        <strong>produção primária do metal</strong> (mineração e refino) que não
+        precisa acontecer, e não uma economia de transporte ou de aterro.
+      </p>
+      <p class="sutil">
+        Estimativa a partir do peso declarado e da composição média da categoria;
+        o protótipo não pesa material recuperado de verdade. A conta completa,
+        com os fatores de cada material, está no painel de indicadores.
       </p>
       ${cat?.contaminantes?.length ? `
         <p class="sutil">Contaminantes contidos, que o descarte comum liberaria no solo e na água:
@@ -269,6 +310,66 @@ function carregarDaUrl() {
 }
 
 carregarDaUrl();
+
+/* ------------------------------------------------------------------ *
+ * Câmera
+ *
+ * Esta página é a porta pública do sistema: entra por aqui quem tem a etiqueta
+ * na mão e nenhuma conta. Por isso ela aceita as três formas de chegar ao
+ * código — o QR lido pela câmera, a digitação e o link com `?c=` —, e todas
+ * terminam no mesmo lugar: a trilha renderizada logo abaixo, sem trocar de
+ * página.
+ *
+ * A câmera fica dentro de um `<details>` fechado: só quem for usá-la paga o
+ * custo de ligar o sensor, e quem chegou por link nem repara que ela existe.
+ * ------------------------------------------------------------------ */
+
+const estado = document.getElementById('estado-camera');
+const btnCamera = document.getElementById('btn-camera');
+
+const leitor = new LeitorQR(document.getElementById('video'), {
+  onLeitura: (texto, codigo) => {
+    if (codigo) {
+      // Vibra onde o hardware permite: confirma a leitura sem exigir olhar a tela.
+      navigator.vibrate?.(80);
+      estado.textContent = `Lido: ${codigo}`;
+      leitor.parar();
+      btnCamera.textContent = 'Ligar câmera';
+      entrada.value = codigo;
+      history.pushState({}, '', `?c=${encodeURIComponent(codigo)}`);
+      mostrar(codigo);
+    } else {
+      estado.textContent = 'QR lido, mas não é uma etiqueta do e-Trilha MS.';
+    }
+  },
+  onErro: (erro) => { estado.textContent = `Falha ao analisar o quadro: ${erro.message}`; },
+});
+
+btnCamera.addEventListener('click', async () => {
+  if (leitor.ativo) {
+    leitor.parar();
+    btnCamera.textContent = 'Ligar câmera';
+    estado.textContent = 'Câmera desligada.';
+    return;
+  }
+  estado.textContent = 'Solicitando permissão…';
+  try {
+    await leitor.iniciar();
+    btnCamera.textContent = 'Desligar câmera';
+    estado.textContent = `Procurando etiqueta… (${leitor.metodo})`;
+  } catch (erro) {
+    estado.textContent = erro.message;
+    aviso(erro.message, 'erro');
+  }
+});
+
+// Sair da página sem desligar a câmera deixaria o LED aceso e o sensor em uso.
+window.addEventListener('pagehide', () => leitor.parar());
+
+/* O convite para criar conta só faz sentido para quem não tem uma. */
+if (!(await store.usuarioAtual())) {
+  document.getElementById('convite-conta').classList.remove('oculto');
+}
 </script>
 
 </body>

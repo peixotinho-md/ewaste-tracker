@@ -20,7 +20,6 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import * as auth from './js/auth.js';
 import { iniciarPagina, aviso, cartaoItem, seloPapel, escapar, formatarMassa,
          formatarNumero } from './js/ui.js';
 import { ETAPA_FINAL, co2eEvitado } from './js/model.js';
@@ -28,117 +27,24 @@ import { ETAPA_FINAL, co2eEvitado } from './js/model.js';
 await iniciarPagina();
 const conteudo = document.getElementById('conteudo');
 
-/**
- * Para onde voltar depois de entrar.
- *
- * A lista de destinos é fechada de propósito: aceitar qualquer valor de `?destino=`
- * transformaria esta tela num trampolim para outro site — o visitante clicaria
- * num link do e-Trilha MS, faria login de verdade e cairia em página alheia.
- */
-const DESTINOS = { 'scanner.html': 'o leitor de QR', 'admin.html': 'a administração' };
-const destino = DESTINOS[new URLSearchParams(location.search).get('destino')]
-  ? new URLSearchParams(location.search).get('destino')
-  : null;
-
-function irParaDestino() {
-  if (destino) location.href = destino;
-}
-
 await desenhar();
 
 async function desenhar() {
-  const usuario = await auth.atual();
-  conteudo.innerHTML = usuario ? await telaLogado(usuario) : await telaVisitante();
-  ligarEventos(usuario);
+  const usuario = await store.usuarioAtual();
+  // O servidor não entrega esta página sem sessão; se mesmo assim não houver
+  // conta (sessão expirada com a página aberta), a porta de entrada resolve.
+  if (!usuario) { location.href = '/?destino=conta'; return; }
+
+  conteudo.innerHTML = await telaLogado(usuario);
+  document.getElementById('btn-sair').addEventListener('click', async () => {
+    await store.encerrarSessao();
+    aviso('Sessão encerrada. A consulta por código continua aberta.');
+    location.href = '/';
+  });
 }
 
 /* ------------------------------------------------------------------ *
- * Visitante — conta é opcional, não uma barreira
- * ------------------------------------------------------------------ */
-
-async function telaVisitante() {
-  const meusItens = await store.meusItens();
-
-  return `
-    ${destino ? `
-      <div class="faixa faixa-info">
-        <strong>Entre para continuar.</strong> Você tentou abrir ${escapar(DESTINOS[destino])},
-        que grava na cadeia de custódia e por isso exige uma conta com permissão.
-      </div>` : ''}
-
-    <section class="cartao">
-      <h1>Conta (opcional)</h1>
-      <p>
-        Você <strong>não precisa</strong> de conta para usar o e-Trilha MS:
-        registrar um aparelho, imprimir a etiqueta e consultar a trilha pelo código
-        funcionam sem cadastro. A conta serve só para reunir num lugar só tudo o
-        que você já enviou para reciclagem.
-      </p>
-      <div class="botoes">
-        <a class="botao botao-secundario" href="registrar.html">Registrar aparelho sem conta</a>
-        <a class="botao botao-secundario" href="rastrear.html">Consultar por código</a>
-      </div>
-    </section>
-
-    ${meusItens.length ? `
-      <section class="cartao">
-        <h2>Registrados nesta sessão</h2>
-        <p class="sutil">
-          ${meusItens.length} aparelho(s) registrado(s) por você sem conta. Se criar
-          uma conta ou entrar agora, eles passam a ficar vinculados a ela.
-        </p>
-        <div class="grade grade-2">${meusItens.map(cartaoItem).join('')}</div>
-      </section>` : ''}
-
-    <div class="grade grade-2" style="align-items:start">
-      <section class="cartao">
-        <h2>Entrar</h2>
-        <form id="form-entrar">
-          <div class="campo">
-            <label for="e-email">E-mail</label>
-            <input id="e-email" type="email" autocomplete="email" required>
-          </div>
-          <div class="campo">
-            <label for="e-senha">Senha</label>
-            <input id="e-senha" type="password" autocomplete="current-password" required>
-          </div>
-          <button class="botao" type="submit">Entrar</button>
-        </form>
-      </section>
-
-      <section class="cartao">
-        <h2>Criar conta</h2>
-        <form id="form-cadastrar">
-          <div class="campo">
-            <label for="c-nome">Nome</label>
-            <input id="c-nome" autocomplete="name" required maxlength="60">
-          </div>
-          <div class="campo">
-            <label for="c-email">E-mail</label>
-            <input id="c-email" type="email" autocomplete="email" required>
-          </div>
-          <div class="campo">
-            <label for="c-senha">Senha</label>
-            <input id="c-senha" type="password" autocomplete="new-password" required minlength="6">
-            <p class="dica">Mínimo de 6 caracteres.</p>
-          </div>
-          <button class="botao" type="submit">Criar conta</button>
-        </form>
-      </section>
-    </div>
-
-    <div class="faixa faixa-info">
-      <strong>Como a senha é tratada:</strong> ela vai para o servidor, que a guarda
-      com PBKDF2 (sal aleatório e milhares de iterações) — nunca em texto claro. A
-      sessão é um cookie assinado e HttpOnly, que o JavaScript da página não consegue ler.
-      Falta apenas HTTPS, necessário em uso real para a senha não trafegar em texto
-      claro na rede; na demonstração tudo acontece dentro da própria máquina.
-      <strong>Ainda assim, não use aqui uma senha que você usa em outro lugar.</strong>
-    </div>`;
-}
-
-/* ------------------------------------------------------------------ *
- * Usuário logado
+ * Minha conta
  * ------------------------------------------------------------------ */
 
 async function telaLogado(usuario) {
@@ -160,16 +66,16 @@ async function telaLogado(usuario) {
       </div>
 
       <p class="sutil" style="margin:.8rem 0 0">
-        ${escapar(auth.PAPEIS[usuario.papel]?.descricao ?? '')}
+        ${escapar(store.PAPEIS[usuario.papel]?.descricao ?? '')}
         ${usuario.papel === 'visitante' ? `
           Para registrar a passagem de aparelhos pelas etapas é preciso o papel de
           operador, concedido por um administrador.` : ''}
       </p>
 
-      ${auth.podeOperar(usuario) ? `
+      ${store.podeOperar(usuario) ? `
         <div class="botoes" style="margin-top:.9rem">
-          <a class="botao" href="scanner.html">Abrir o leitor de QR</a>
-          ${auth.ehAdmin(usuario) ? '<a class="botao botao-secundario" href="admin.html">Administrar contas</a>' : ''}
+          <a class="botao" href="scanner">Abrir o leitor de QR</a>
+          ${store.ehAdmin(usuario) ? '<a class="botao botao-secundario" href="admin">Administrar contas</a>' : ''}
         </div>` : ''}
     </section>
 
@@ -194,8 +100,8 @@ async function telaLogado(usuario) {
       <div class="secao-titulo">
         <h2>Meus aparelhos</h2>
         <div class="botoes">
-          <a class="botao" href="registrar.html">Registrar novo</a>
-          <a class="botao botao-secundario" href="etiqueta.html">Imprimir etiquetas</a>
+          <a class="botao" href="registrar">Registrar novo</a>
+          <a class="botao botao-secundario" href="registrar?imprimir">Imprimir etiquetas</a>
         </div>
       </div>
       ${itens.length
@@ -206,52 +112,6 @@ async function telaLogado(usuario) {
     </section>`;
 }
 
-/* ------------------------------------------------------------------ *
- * Eventos
- * ------------------------------------------------------------------ */
-
-function ligarEventos(usuario) {
-  if (usuario) {
-    document.getElementById('btn-sair').addEventListener('click', async () => {
-      await auth.sair();
-      aviso('Sessão encerrada. O rastreio por código continua funcionando.');
-      await desenhar();
-    });
-    return;
-  }
-
-  document.getElementById('form-entrar').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    try {
-      const { usuario: u, adotados } = await auth.entrar({
-        email: document.getElementById('e-email').value,
-        senha: document.getElementById('e-senha').value,
-      });
-      aviso(`Bem-vindo de volta, ${u.nome.split(' ')[0]}.` + (adotados ? ` ${adotados} aparelho(s) vinculado(s) à sua conta.` : ''));
-      if (destino) { irParaDestino(); return; }
-      await desenhar();
-    } catch (erro) {
-      aviso(erro.message, 'erro');
-    }
-  });
-
-  document.getElementById('form-cadastrar').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    try {
-      const { adotados } = await auth.cadastrar({
-        nome: document.getElementById('c-nome').value,
-        email: document.getElementById('c-email').value,
-        senha: document.getElementById('c-senha').value,
-      });
-      aviso(`Conta criada.` + (adotados ? ` ${adotados} aparelho(s) deste navegador foram vinculados a ela.` : ''));
-      // Conta nova nasce como visitante: mandar direto ao destino que exige
-      // operador só mostraria a mesma barreira de novo.
-      await desenhar();
-    } catch (erro) {
-      aviso(erro.message, 'erro');
-    }
-  });
-}
 </script>
 
 </body>

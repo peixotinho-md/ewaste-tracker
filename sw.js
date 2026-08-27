@@ -21,25 +21,18 @@
  *              no Relatório Técnico.
  */
 
-const CACHE = 'etrilhams-v3';
+const CACHE = 'etrilhams-v4';
 
+// Só as páginas que abrem sem conta entram na instalação. As demais o servidor
+// nem entrega sem sessão, e guardar a casca delas aqui só criaria uma tela que
+// abre offline para não conseguir carregar dado nenhum.
 const ARQUIVOS = [
   './',
-  './index.html',
-  './rastrear.html',
-  './registrar.html',
-  './etiqueta.html',
-  './scanner.html',
-  './pontos.html',
-  './painel.html',
-  './conta.html',
-  './admin.html',
+  './rastrear',
   './css/app.css',
   './js/model.js',
-  './js/geo-ms.js',
   './js/store.js',
   './js/indicadores.js',
-  './js/auth.js',
   './js/qr.js',
   './js/ui.js',
   './vendor/qrcode.js',
@@ -51,8 +44,10 @@ const ARQUIVOS = [
 /**
  * Só respostas de leitura PÚBLICA da API entram no cache.
  *
- * `/api/sessao` e `/api/meus-itens` dependem de quem está logado: guardá-las
- * faria uma resposta antiga aparecer para outra pessoa no mesmo navegador.
+ * `/api/sessao`, `/api/meus-itens` e `/api/painel` dependem de quem está
+ * logado — o painel inclusive muda de forma conforme o papel, vindo anônimo
+ * para conta comum e identificado para operador. Guardar qualquer uma delas
+ * faria a resposta de uma pessoa aparecer para outra no mesmo navegador.
  * `/api/saude` é diagnóstico e precisa dizer a verdade sobre o servidor agora.
  * `/api/admin/*` nunca entra: é a lista de contas do sistema, e uma cópia
  * guardada no navegador continuaria legível depois que o papel de quem a
@@ -60,9 +55,6 @@ const ARQUIVOS = [
  */
 const API_CACHEAVEL = [
   /^\/api\/pontos$/,
-  /^\/api\/itens$/,
-  /^\/api\/eventos$/,
-  /^\/api\/itens\/[^/]+$/,
   /^\/api\/itens\/[^/]+\/rastreio$/,
 ];
 
@@ -109,7 +101,7 @@ self.addEventListener('fetch', (evento) => {
         if (doCache) return doCache;
 
         // Navegação sem rede e sem cópia da rota: cai na home já armazenada.
-        if (req.mode === 'navigate') return caches.match('./index.html');
+        if (req.mode === 'navigate') return caches.match('./');
 
         // Chamada de API sem rede e sem cópia: devolve um erro que a camada
         // de dados sabe exibir, em vez de uma falha genérica de rede.

@@ -29,7 +29,7 @@ async function api(caminho, { metodo = 'GET', corpo = null, nuloEm404 = false } 
   try {
     resposta = await fetch(BASE + caminho, {
       method: metodo,
-      // Envia o cookie de sessão, que identifica o usuário logado ou o visitante.
+      // Envia o cookie de sessão, que é o que identifica o usuário logado.
       credentials: 'same-origin',
       headers: corpo ? { 'Content-Type': 'application/json' } : undefined,
       body: corpo ? JSON.stringify(corpo) : undefined,
@@ -83,17 +83,16 @@ export async function listarMunicipiosComPonto() {
  * Itens (dispositivos)
  * ------------------------------------------------------------------ */
 
-export async function listarItens() {
-  return api('/itens');
-}
-
-/** Todos os eventos — usado pelo painel de indicadores. */
-export async function listarTodosEventos() {
-  return api('/eventos');
-}
-
-export async function obterItem(codigo) {
-  return api(`/itens/${encodeURIComponent(codigo)}`, { nuloEm404: true });
+/**
+ * Conjunto que alimenta o painel de indicadores e os números da home.
+ *
+ * Não existe chamada que devolva "todos os itens": uma conta comum só enxerga
+ * os próprios aparelhos. O que vem daqui é o recorte que o servidor considera
+ * seguro mostrar — sem código e sem dono para quem não é operador —, junto de
+ * `detalhado`, que diz se os aparelhos vieram identificados.
+ */
+export async function painel() {
+  return api('/painel');
 }
 
 /**
@@ -139,11 +138,25 @@ export async function registrarEvento(
 }
 
 /* ------------------------------------------------------------------ *
- * Conta (opcional) e sessão
+ * Conta e sessão
  *
- * O cookie de sessão identifica tanto o usuário logado quanto o visitante sem
- * conta. Por isso `meusItens` serve aos dois casos: o servidor sabe de quem
- * são os itens sem que a tela precise informar.
+ * A conta é OBRIGATÓRIA para tudo o que lista ou grava: registrar um aparelho,
+ * imprimir etiquetas, ver "meus aparelhos", ler QR e administrar. Fica de fora
+ * uma coisa só, de propósito — CONSULTAR A TRILHA POR CÓDIGO. Quem entregou um
+ * celular no ecoponto tem a etiqueta na mão e não deve precisar de cadastro
+ * para ver onde o aparelho está: é exatamente o que o projeto promete.
+ *
+ * A autenticação acontece INTEIRA NO SERVIDOR. Daqui só sai o que o formulário
+ * preencheu; nada aqui vê ou guarda senha, nem decide quem está logado. A senha
+ * vai para o servidor, que a guarda com PBKDF2 (sal aleatório e milhares de
+ * iterações), e a sessão volta como cookie assinado e HttpOnly — que o
+ * JavaScript da página não consegue ler, o que limita o estrago de um XSS.
+ * Continua faltando HTTPS, necessário em uso real para a senha não trafegar em
+ * texto claro na rede.
+ *
+ * `meusItens` não recebe parâmetro de propósito: quem é o dono sai do cookie
+ * de sessão, no servidor. Se a tela informasse o id do dono, bastaria trocá-lo
+ * na chamada para ver os aparelhos de outra pessoa.
  * ------------------------------------------------------------------ */
 
 export async function usuarioAtual() {
@@ -161,11 +174,21 @@ export async function meusItens() {
 }
 
 export async function cadastrarUsuario({ nome, email, senha }) {
-  return api('/usuarios', { metodo: 'POST', corpo: { nome, email, senha } });
+  // As três verificações abaixo existem só para responder rápido a quem está
+  // digitando. As que valem são as do servidor, que roda as mesmas — a tela
+  // valida para ajudar, o servidor valida para valer.
+  if (!nome?.trim()) throw new Error('Informe seu nome.');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email ?? '')) throw new Error('E-mail inválido.');
+  if ((senha ?? '').length < 6) throw new Error('A senha precisa ter ao menos 6 caracteres.');
+
+  return api('/usuarios', {
+    metodo: 'POST',
+    corpo: { nome: nome.trim(), email: email.trim(), senha },
+  });
 }
 
 export async function abrirSessao({ email, senha }) {
-  return api('/sessao', { metodo: 'POST', corpo: { email, senha } });
+  return api('/sessao', { metodo: 'POST', corpo: { email: (email ?? '').trim(), senha } });
 }
 
 export async function encerrarSessao() {
@@ -200,8 +223,8 @@ export async function atualizarUsuario(id, mudancas) {
 /**
  * Todos os aparelhos com etapa, ponto de origem, dono e nº de leituras.
  *
- * `listarItens()` continua servindo o painel público; esta versão traz o
- * cruzamento que só a administração usa.
+ * `painel()` serve os indicadores com os dados anonimizados; esta versão traz
+ * o cruzamento identificado que só a administração usa.
  */
 export async function listarItensAdmin() {
   return api('/admin/itens');
@@ -228,7 +251,44 @@ export async function listarAlteracoes(usuarioId = null) {
  * Demonstração
  * ------------------------------------------------------------------ */
 
-/** Recria o banco do servidor com os dados de exemplo. */
+/**
+ * Recria o banco do servidor com os dados de exemplo. Exige conta de admin.
+ *
+ * A resposta NÃO traz as senhas novas: elas saem no terminal do servidor. Mandar
+ * senha pela rede contradiria o motivo de não gravá-la em arquivo, e aqui ainda
+ * não há HTTPS.
+ */
 export async function reiniciar() {
   return api('/demo/reiniciar', { metodo: 'POST' });
+}
+
+/* ------------------------------------------------------------------ *
+ * Papéis
+ *
+ * Estas funções servem para a TELA decidir o que mostrar — esconder um botão
+ * que não vai funcionar é gentileza com o usuário, não segurança. Quem impede
+ * de fato é o servidor, que confere o papel a cada requisição e responde 401
+ * ou 403. Por isso nada aqui guarda o papel: ele vem do servidor a cada
+ * consulta, e uma revogação passa a valer na hora.
+ * ------------------------------------------------------------------ */
+
+export const PAPEIS = {
+  visitante: { rotulo: 'Visitante', descricao: 'Registra e acompanha os próprios aparelhos, e mais nada.' },
+  operador: { rotulo: 'Operador', descricao: 'Registra a passagem dos aparelhos pelas etapas.' },
+  admin: { rotulo: 'Administrador', descricao: 'Gerencia as contas e os papéis.' },
+};
+
+/** Pode gravar na cadeia de custódia (ler QR e avançar etapa)? */
+export const podeOperar = (usuario) =>
+  usuario?.papel === 'operador' || usuario?.papel === 'admin';
+
+export const ehAdmin = (usuario) => usuario?.papel === 'admin';
+
+/**
+ * Guarda de página: devolve o usuário quando ele tem um dos papéis pedidos, ou
+ * `null` quando não tem — cabe à página desenhar o convite para entrar.
+ */
+export async function exigirPapel(...papeis) {
+  const usuario = await usuarioAtual();
+  return usuario && papeis.includes(usuario.papel) ? usuario : null;
 }

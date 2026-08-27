@@ -158,14 +158,24 @@ function agrupar(itens, chaveDe) {
 }
 
 /**
- * Equivalências para tornar o CO2e compreensível na apresentação.
- * Fatores de referência: um carro de passeio emite cerca de 0,12 kg CO2e/km e
- * uma árvore nativa absorve cerca de 22 kg de CO2 por ano.
+ * Fatores usados para traduzir o CO2e em algo imaginável.
+ *
+ * Ficam exportados para que a tela que exibe o número possa exibir também de
+ * onde ele saiu — um total sem a conta atrás dele é um número que ninguém
+ * consegue conferir.
  */
+export const EQUIVALENCIAS = {
+  //: kg de CO2e por km rodado por um carro de passeio a combustão.
+  kgPorKmDeCarro: 0.12,
+  //: kg de CO2 que uma árvore nativa absorve em um ano.
+  kgPorArvoreAno: 22,
+};
+
+/** Equivalências para tornar o CO2e compreensível na apresentação. */
 export function equivalencias(co2eKg) {
   return {
-    kmDeCarro: co2eKg / 0.12,
-    arvoresPorAno: co2eKg / 22,
+    kmDeCarro: co2eKg / EQUIVALENCIAS.kgPorKmDeCarro,
+    arvoresPorAno: co2eKg / EQUIVALENCIAS.kgPorArvoreAno,
   };
 }
 

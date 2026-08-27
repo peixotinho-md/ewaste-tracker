@@ -20,7 +20,6 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import * as auth from './js/auth.js';
 import { iniciarPagina, aviso, confirmar, confirmarComSenha, seloPapel, seloEtapa,
          escapar, formatarData, formatarMassa } from './js/ui.js';
 import { ETAPAS, ETAPA_FINAL, categoria, estaPendente } from './js/model.js';
@@ -51,7 +50,7 @@ let pontos = [];
  * que a chamada venha de fora daqui.
  * ------------------------------------------------------------------ */
 
-const admin = await auth.exigirPapel('admin');
+const admin = await store.exigirPapel('admin');
 
 if (admin) {
   pontos = await store.listarPontos();
@@ -61,7 +60,7 @@ if (admin) {
 }
 
 async function telaSemAcesso() {
-  const usuario = await auth.atual();
+  const usuario = await store.usuarioAtual();
   return `
     <section class="cartao" style="max-width:640px">
       <h2>Área restrita à administração</h2>
@@ -72,7 +71,7 @@ async function telaSemAcesso() {
       ${usuario
         ? `<p class="sutil">Você entrou como ${escapar(usuario.nome)} ${seloPapel(usuario.papel)}.</p>`
         : `<div class="botoes">
-             <a class="botao" href="conta.html?destino=admin.html">Entrar</a>
+             <a class="botao" href="index?destino=admin">Entrar</a>
            </div>`}
     </section>`;
 }
@@ -197,7 +196,7 @@ function secaoItens() {
           <option value="">Todas as etapas</option>
           ${ETAPAS.map((e) => `<option value="${e.id}"${e.id === filtro.etapa ? ' selected' : ''}>${escapar(e.rotulo)}</option>`).join('')}
         </select>
-        <label class="chip" style="display:flex;align-items:center;gap:.4rem">
+        <label class="chip interruptor">
           <input type="checkbox" id="f-atrasados"${filtro.soAtrasados ? ' checked' : ''}>
           Só os atrasados
         </label>
@@ -263,7 +262,7 @@ function linhaItem(item) {
   return `
     <tr>
       <td>
-        <a href="rastrear.html?c=${encodeURIComponent(item.codigo)}"><code>${escapar(item.codigo)}</code></a>
+        <a href="rastrear?c=${encodeURIComponent(item.codigo)}"><code>${escapar(item.codigo)}</code></a>
         ${item.demo ? '<br><span class="etiqueta">exemplo</span>' : ''}
       </td>
       <td>
@@ -319,13 +318,13 @@ function descreverMudanca(a) {
   const nomeDoPonto = (id) => pontos.find((p) => p.id === id)?.nome ?? id;
 
   if (a.acao === 'papel') {
-    return `${escapar(auth.PAPEIS[a.de]?.rotulo ?? a.de)} → <strong>${escapar(auth.PAPEIS[a.para]?.rotulo ?? a.para)}</strong>`;
+    return `${escapar(store.PAPEIS[a.de]?.rotulo ?? a.de)} → <strong>${escapar(store.PAPEIS[a.para]?.rotulo ?? a.para)}</strong>`;
   }
   if (a.acao === 'ponto') {
     return `${a.de ? escapar(nomeDoPonto(a.de)) : 'sem ponto'} → <strong>${a.para ? escapar(nomeDoPonto(a.para)) : 'sem ponto'}</strong>`;
   }
   if (a.acao === 'exclusao') {
-    return `era ${escapar(auth.PAPEIS[a.de]?.rotulo ?? a.de)} (${escapar(a.para)})`;
+    return `era ${escapar(store.PAPEIS[a.de]?.rotulo ?? a.de)} (${escapar(a.para)})`;
   }
   return 'senha redefinida';
 }
@@ -360,7 +359,7 @@ async function abrirConta(usuario) {
     <dl class="trilha-dados" style="margin:1rem 0">
       <div><dt>Conta criada em</dt><dd>${formatarData(usuario.criadoEm)}</dd></div>
       <div><dt>Aparelhos registrados</dt><dd>${usuario.itens}</dd></div>
-      <div><dt>Pode gravar etapas</dt><dd>${auth.podeOperar(usuario) ? 'sim' : 'não'}</dd></div>
+      <div><dt>Pode gravar etapas</dt><dd>${store.podeOperar(usuario) ? 'sim' : 'não'}</dd></div>
       <div><dt>Identificador</dt><dd><code>${escapar(usuario.id)}</code></dd></div>
     </dl>
 
@@ -371,7 +370,7 @@ async function abrirConta(usuario) {
           <tbody>
             ${meusItens.slice(0, 5).map((i) => `
               <tr>
-                <td><a href="rastrear.html?c=${encodeURIComponent(i.codigo)}"><code>${escapar(i.codigo)}</code></a>
+                <td><a href="rastrear?c=${encodeURIComponent(i.codigo)}"><code>${escapar(i.codigo)}</code></a>
                     <span class="sutil">${escapar(categoria(i.categoria)?.rotulo ?? i.categoria)}</span></td>
                 <td>${seloEtapa(i.etapaAtual)}</td>
               </tr>`).join('')}
@@ -384,13 +383,13 @@ async function abrirConta(usuario) {
     <div class="campo">
       <label for="d-papel">Papel</label>
       <select id="d-papel"${usuario.souEu ? ' disabled' : ''}>
-        ${Object.entries(auth.PAPEIS).map(([id, def]) =>
+        ${Object.entries(store.PAPEIS).map(([id, def]) =>
           `<option value="${id}"${id === usuario.papel ? ' selected' : ''}>${escapar(def.rotulo)}</option>`
         ).join('')}
       </select>
       ${usuario.souEu
         ? '<p class="dica">Você não altera o próprio papel — nem exclui a própria conta.</p>'
-        : `<p class="dica">${escapar(auth.PAPEIS[usuario.papel]?.descricao ?? '')}</p>`}
+        : `<p class="dica">${escapar(store.PAPEIS[usuario.papel]?.descricao ?? '')}</p>`}
     </div>
 
     <div class="campo">
@@ -569,7 +568,7 @@ async function excluirConta(botao, usuario, fechar) {
     corpo: `
       <dl class="trilha-dados">
         <div><dt>Conta</dt><dd>${escapar(usuario.email)}</dd></div>
-        <div><dt>Papel</dt><dd>${escapar(auth.PAPEIS[usuario.papel]?.rotulo ?? usuario.papel)}</dd></div>
+        <div><dt>Papel</dt><dd>${escapar(store.PAPEIS[usuario.papel]?.rotulo ?? usuario.papel)}</dd></div>
         <div><dt>Criada em</dt><dd>${formatarData(usuario.criadoEm)}</dd></div>
         <div><dt>Aparelhos registrados</dt><dd>${usuario.itens}</dd></div>
       </dl>

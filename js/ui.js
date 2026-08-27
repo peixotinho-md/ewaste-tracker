@@ -5,7 +5,6 @@
 
 import { ETAPAS, etapa as definicaoEtapa, indiceEtapa, categoria } from './model.js';
 import * as store from './store.js';
-import * as auth from './auth.js';
 
 /* ------------------------------------------------------------------ *
  * Formatação
@@ -55,26 +54,39 @@ export function escapar(texto) {
  * ------------------------------------------------------------------ */
 
 const PAGINAS = [
-  { href: 'index.html', rotulo: 'Início' },
-  { href: 'registrar.html', rotulo: 'Registrar aparelho' },
-  { href: 'scanner.html', rotulo: 'Ler QR' },
-  { href: 'rastrear.html', rotulo: 'Rastrear' },
-  { href: 'pontos.html', rotulo: 'Pontos de coleta' },
-  { href: 'painel.html', rotulo: 'Painel' },
+  { href: '/', rotulo: 'Início' },
+  { href: 'registrar', rotulo: 'Registrar aparelho' },
+  { href: 'scanner', rotulo: 'Ler QR' },
+  { href: 'rastrear', rotulo: 'Rastrear' },
+  { href: 'pontos', rotulo: 'Pontos de coleta' },
+  { href: 'painel', rotulo: 'Painel' },
 ];
 
 async function montarCabecalho() {
   const alvo = document.querySelector('[data-cabecalho]');
   if (!alvo) return;
 
-  const atualPath = location.pathname.split('/').pop() || 'index.html';
-  const usuario = await auth.atual();
+  const atualPath = location.pathname.split('/').pop() || '/';
+  const usuario = await store.usuarioAtual();
+
+  // Nas telas públicas — a porta de entrada, a consulta e a trilha — quem não
+  // entrou vê um cabeçalho sem menu: todo link dali levaria a uma página que o
+  // servidor não entrega sem sessão, e oferecer caminho fechado é ruído.
+  if (!usuario) {
+    alvo.innerHTML = `
+      <a class="marca" href="/">
+        <span class="marca-simbolo" aria-hidden="true">♻</span>
+        <span><strong>e-Trilha</strong> MS</span>
+      </a>
+      <a class="conta-link" href="/">Entrar ou criar conta</a>`;
+    return;
+  }
 
   // A administração só aparece para quem é admin. Esconder o link é
   // conveniência: a rota da API continua fechada por conta própria, no
   // servidor, para quem tentar abrir a página direto pela URL.
-  const paginas = auth.ehAdmin(usuario)
-    ? [...PAGINAS, { href: 'admin.html', rotulo: 'Administração' }]
+  const paginas = store.ehAdmin(usuario)
+    ? [...PAGINAS, { href: 'admin', rotulo: 'Administração' }]
     : PAGINAS;
 
   const links = paginas.map(
@@ -83,16 +95,15 @@ async function montarCabecalho() {
   ).join('');
 
   alvo.innerHTML = `
-    <a class="marca" href="index.html">
+    <a class="marca" href="/">
       <span class="marca-simbolo" aria-hidden="true">♻</span>
       <span><strong>e-Trilha</strong> MS</span>
     </a>
     <nav aria-label="Navegação principal">${links}</nav>
-    <a class="conta-link" href="conta.html">
-      ${usuario ? `<span class="avatar" aria-hidden="true">${escapar(usuario.nome[0].toUpperCase())}</span>
-                   ${escapar(usuario.nome.split(' ')[0])}
-                   ${usuario.papel !== 'visitante' ? seloPapel(usuario.papel) : ''}`
-                : 'Entrar <span class="opcional">(opcional)</span>'}
+    <a class="conta-link" href="conta">
+      <span class="avatar" aria-hidden="true">${escapar(usuario.nome[0].toUpperCase())}</span>
+      ${escapar(usuario.nome.split(' ')[0])}
+      ${usuario.papel !== 'visitante' ? seloPapel(usuario.papel) : ''}
     </a>`;
 }
 
@@ -119,7 +130,7 @@ export function aviso(mensagem, tipo = 'ok') {
 
 /** Selo com o papel da conta. Visitante não recebe selo: é o normal. */
 export function seloPapel(papel) {
-  const def = auth.PAPEIS[papel];
+  const def = store.PAPEIS[papel];
   if (!def) return '';
   return `<span class="selo selo-papel selo-${papel}">${escapar(def.rotulo)}</span>`;
 }
@@ -291,7 +302,7 @@ export function seloEtapa(etapaId) {
 export function cartaoItem(item) {
   const cat = categoria(item.categoria);
   return `
-    <a class="cartao-item" href="rastrear.html?c=${encodeURIComponent(item.codigo)}">
+    <a class="cartao-item" href="rastrear?c=${encodeURIComponent(item.codigo)}">
       <div class="cartao-item-topo">
         <code>${escapar(item.codigo)}</code>
         ${seloEtapa(item.etapaAtual)}

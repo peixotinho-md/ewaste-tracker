@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>e-Trilha MS — rastreamento de lixo eletrônico</title>
+<title>e-Trilha MS — rastreamento de resíduos eletrônicos</title>
 <meta name="description" content="Acompanhe, etapa por etapa, o caminho do seu aparelho eletrônico até a reciclagem correta em Mato Grosso do Sul.">
 <meta name="theme-color" content="#22773f">
 <link rel="manifest" href="manifest.webmanifest">
@@ -13,158 +13,387 @@
 
 <header class="cabecalho"><div data-cabecalho></div></header>
 
-<main>
-
-  <section class="cartao">
-    <h1>Onde está o seu aparelho?</h1>
-    <p>Digite o código impresso na etiqueta para ver em que etapa da reciclagem
-       o dispositivo está. <strong>Não é preciso ter conta.</strong></p>
-
-    <form class="busca-codigo" id="form-busca">
-      <label class="oculto" for="codigo">Código de rastreio</label>
-      <input id="codigo" name="codigo" placeholder="MS-0000-0000" autocomplete="off"
-             spellcheck="false" inputmode="latin" maxlength="14" required>
-      <button class="botao botao-grande" type="submit">Rastrear</button>
-    </form>
-    <p class="sutil" style="margin-top:.6rem">
-      Pode digitar com ou sem hífen, em maiúsculas ou minúsculas — o sistema corrige.
-      Sem a etiqueta em mãos? <a href="conta.html">Entre na sua conta</a> para ver seus aparelhos.
-    </p>
-  </section>
-
-  <section class="grade grade-4" id="numeros" aria-label="Números do estado"></section>
-
-  <section class="cartao">
-    <div class="secao-titulo">
-      <h2>Como funciona</h2>
-      <a class="botao botao-secundario" href="registrar.html">Registrar um aparelho</a>
-    </div>
-    <ol class="grade grade-3" style="list-style:none;padding:0;margin:0;counter-reset:passo">
-      <li class="numero">
-        <div class="valor">1</div>
-        <div class="rotulo"><strong>Registre o aparelho</strong></div>
-        <p class="nota">Informe o tipo de dispositivo e o ponto onde vai entregar.
-           O sistema gera um código único e um QR Code.</p>
-      </li>
-      <li class="numero">
-        <div class="valor">2</div>
-        <div class="rotulo"><strong>Imprima e cole a etiqueta</strong></div>
-        <p class="nota">O QR fica colado no aparelho e vai com ele por toda a cadeia,
-           mesmo onde não há internet.</p>
-      </li>
-      <li class="numero">
-        <div class="valor">3</div>
-        <div class="rotulo"><strong>Cada etapa lê o QR</strong></div>
-        <p class="nota">Ponto de coleta, cooperativa, transporte e recicladora registram
-           a passagem lendo a mesma etiqueta.</p>
-      </li>
-      <li class="numero">
-        <div class="valor">4</div>
-        <div class="rotulo"><strong>Você acompanha</strong></div>
-        <p class="nota">A cada leitura, a trilha do aparelho é atualizada e fica
-           consultável pelo código.</p>
-      </li>
-      <li class="numero">
-        <div class="valor">5</div>
-        <div class="rotulo"><strong>Certificado no fim</strong></div>
-        <p class="nota">Quando a recicladora conclui, é emitido o comprovante de
-           destinação final do aparelho.</p>
-      </li>
-      <li class="numero">
-        <div class="valor">6</div>
-        <div class="rotulo"><strong>O estado enxerga o todo</strong></div>
-        <p class="nota">O <a href="painel.html">painel público</a> mostra volumes,
-           materiais recuperados e onde a logística reversa está travando.</p>
-      </li>
-    </ol>
-  </section>
-
-  <section class="grade grade-2">
-    <div class="cartao">
-      <h2>O problema</h2>
-      <p>Celulares, computadores, baterias e cabos costumam ir para o lixo comum ou
-         ficar parados em casas e empresas. O resultado é contaminação do solo e da
-         água por chumbo, mercúrio e cádmio, e o desperdício de cobre, alumínio,
-         ouro e terras raras que voltariam à cadeia produtiva.</p>
-      <p>A Lei 12.305/2010 obriga a logística reversa de eletroeletrônicos, mas
-         quem entrega o aparelho <strong>não tem como saber se ele realmente foi
-         reciclado</strong>. É essa lacuna de confiança que o e-Trilha MS fecha.</p>
-    </div>
-    <div class="cartao">
-      <h2>Encontre onde entregar</h2>
-      <p>São <strong id="qtd-pontos">—</strong> pontos de coleta mapeados em
-         <strong id="qtd-municipios">—</strong> municípios de Mato Grosso do Sul,
-         com filtro por cidade e por tipo de resíduo aceito.</p>
-      <div class="botoes">
-        <a class="botao" href="pontos.html">Ver pontos de coleta</a>
-        <a class="botao botao-secundario" href="scanner.html">Sou operador: ler QR
-           <span class="opcional">(exige login)</span></a>
-      </div>
-    </div>
-  </section>
-
+<main class="estreito">
+  <div id="conteudo"></div>
 </main>
 
 <footer class="rodape">
-  e-Trilha MS · Protótipo acadêmico — DAC 262, Tecnologia em Análise e Desenvolvimento de Sistemas.<br>
-  Dados de demonstração armazenados apenas neste navegador.
+  e-Trilha MS · Protótipo acadêmico — DAC 262, Tecnologia em Análise e Desenvolvimento de Sistemas.
 </footer>
 
 <script type="module">
 import * as store from './js/store.js';
 import { calcularIndicadores, equivalencias } from './js/indicadores.js';
-import { iniciarPagina, aviso, formatarMassa, formatarNumero } from './js/ui.js';
+import { iniciarPagina, aviso, escapar, formatarMassa, formatarNumero } from './js/ui.js';
 import { normalizarCodigo } from './js/model.js';
+
+/* ------------------------------------------------------------------ *
+ * A raiz do site tem dois rostos, e é a sessão que decide qual aparece:
+ *
+ *   sem conta  a porta de entrada — entrar, criar conta ou consultar um código;
+ *   com conta  a home: busca por código, números do estado e como funciona.
+ *
+ * Duas telas no mesmo endereço porque são o mesmo momento da visita — "cheguei
+ * ao e-Trilha MS" —, e quem já entrou não tem o que fazer numa tela que só
+ * oferece entrar. Nada aqui é conteúdo protegido: os números da home vêm de
+ * `/api/painel`, que exige sessão no servidor. Forçar esta tela sem conta
+ * mostra a moldura e nenhum dado.
+ * ------------------------------------------------------------------ */
 
 await iniciarPagina();
 
-/* --- busca por código, sem exigir conta --- */
-document.getElementById('form-busca').addEventListener('submit', (ev) => {
-  ev.preventDefault();
-  const bruto = document.getElementById('codigo').value;
-  const codigo = normalizarCodigo(bruto);
-  if (!codigo) {
-    aviso('Código inválido. Confira os 8 caracteres da etiqueta.', 'erro');
-    return;
-  }
-  location.href = `rastrear.html?c=${encodeURIComponent(codigo)}`;
-});
+const principal = document.querySelector('main');
+const conteudo = document.getElementById('conteudo');
 
-/* --- números do estado --- */
-const [itens, eventos, pontos] = await Promise.all([
-  store.listarItens(), store.listarTodosEventos(), store.listarPontos(),
-]);
-const ind = calcularIndicadores(itens, eventos, pontos);
-const eq = equivalencias(ind.co2eKg);
+/* ------------------------------------------------------------------ *
+ * Para onde ir depois de entrar
+ *
+ * A lista de destinos é fechada de propósito: aceitar qualquer valor de
+ * `?destino=` transformaria esta tela num trampolim para outro site — a pessoa
+ * clicaria num link do e-Trilha MS, faria login de verdade e cairia em página
+ * alheia, tendo digitado a senha aqui.
+ * ------------------------------------------------------------------ */
 
-document.getElementById('numeros').innerHTML = `
-  <div class="numero">
-    <div class="valor">${formatarMassa(ind.massaDesviadaKg)}</div>
-    <div class="rotulo">desviados do aterro</div>
-    <div class="nota">${ind.totalProcessados} aparelhos com destinação comprovada</div>
-  </div>
-  <div class="numero">
-    <div class="valor">${ind.totalEmCurso}</div>
-    <div class="rotulo">aparelhos em trânsito</div>
-    <div class="nota">${formatarMassa(ind.massaEmCursoKg)} sendo rastreados agora</div>
-  </div>
-  <div class="numero">
-    <div class="valor">${formatarNumero(ind.co2eKg, 0)} kg</div>
-    <div class="rotulo">de CO₂e evitados</div>
-    <div class="nota">equivale a ${formatarNumero(eq.kmDeCarro, 0)} km de carro</div>
-  </div>
-  <div class="numero">
-    <div class="valor">${formatarNumero(ind.taxaConclusao * 100, 0)}%</div>
-    <div class="rotulo">chegaram ao fim da cadeia</div>
-    <div class="nota">${ind.pendentes.length} parado(s) além do prazo</div>
-  </div>`;
+const DESTINOS = {
+  'registrar': 'o registro de aparelho',
+  'scanner': 'o leitor de QR',
+  'admin': 'a administração',
+  'conta': 'a sua conta',
+  'painel': 'o painel de indicadores',
+  'pontos': 'os pontos de coleta',
+};
 
-document.getElementById('qtd-pontos').textContent = ind.totalPontos;
-document.getElementById('qtd-municipios').textContent = ind.municipiosAtendidos;
+const pedido = new URLSearchParams(location.search).get('destino');
+const destino = DESTINOS[pedido] ? pedido : null;
 
-/* --- se veio um código na URL (por exemplo de um QR lido pela câmera do celular) --- */
-const daUrl = normalizarCodigo(new URLSearchParams(location.search).get('c'));
-if (daUrl) location.replace(`rastrear.html?c=${encodeURIComponent(daUrl)}`);
+/* ================================================================== *
+ * Home de quem entrou
+ * ================================================================== */
+
+function desenharHome() {
+  // A porta de entrada é uma coluna estreita; a home é um painel largo.
+  principal.classList.remove('estreito');
+  conteudo.innerHTML = `
+    <section class="cartao">
+      <h1>Onde está o seu aparelho?</h1>
+      <p>Digite o código impresso na etiqueta para ver em que etapa da reciclagem
+         o dispositivo está. Vale para qualquer código, não só para os seus.</p>
+
+      <form class="busca-codigo" id="form-busca">
+        <label class="oculto" for="codigo">Código de rastreio</label>
+        <input id="codigo" placeholder="MS-0000-0000" autocomplete="off"
+               spellcheck="false" inputmode="latin" maxlength="14" required>
+        <button class="botao botao-grande" type="submit">Rastrear</button>
+      </form>
+      <p class="sutil" style="margin-top:.6rem">
+        Pode digitar com ou sem hífen, em maiúsculas ou minúsculas — o sistema corrige.
+        Sem a etiqueta em mãos? <a href="conta">Abra a sua conta</a> para ver os seus aparelhos.
+      </p>
+    </section>
+
+    <section class="grade grade-4" id="numeros" aria-label="Números do estado"></section>
+
+    <section class="cartao">
+      <div class="secao-titulo">
+        <h2>Como funciona</h2>
+        <a class="botao botao-secundario" href="registrar">Registrar um aparelho</a>
+      </div>
+      <ol class="grade grade-3" style="list-style:none;padding:0;margin:0">
+        <li class="numero">
+          <div class="valor">1</div>
+          <div class="rotulo"><strong>Registre o aparelho</strong></div>
+          <p class="nota">Informe o tipo de dispositivo e o ponto onde vai entregar.
+             O sistema gera um código único e um QR Code.</p>
+        </li>
+        <li class="numero">
+          <div class="valor">2</div>
+          <div class="rotulo"><strong>Imprima e cole a etiqueta</strong></div>
+          <p class="nota">O QR fica colado no aparelho e vai com ele por toda a cadeia,
+             mesmo onde não há internet.</p>
+        </li>
+        <li class="numero">
+          <div class="valor">3</div>
+          <div class="rotulo"><strong>Cada etapa lê o QR</strong></div>
+          <p class="nota">Ponto de coleta, cooperativa, transporte e recicladora registram
+             a passagem lendo a mesma etiqueta.</p>
+        </li>
+        <li class="numero">
+          <div class="valor">4</div>
+          <div class="rotulo"><strong>Você acompanha</strong></div>
+          <p class="nota">A cada leitura, a trilha do aparelho é atualizada e fica
+             consultável pelo código.</p>
+        </li>
+        <li class="numero">
+          <div class="valor">5</div>
+          <div class="rotulo"><strong>Certificado no fim</strong></div>
+          <p class="nota">Quando a recicladora conclui, é emitido o comprovante de
+             destinação final do aparelho.</p>
+        </li>
+        <li class="numero">
+          <div class="valor">6</div>
+          <div class="rotulo"><strong>O estado enxerga o todo</strong></div>
+          <p class="nota">O <a href="painel">painel de indicadores</a> mostra volumes,
+             materiais recuperados e onde a logística reversa está travando.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="grade grade-2">
+      <div class="cartao">
+        <h2>O problema</h2>
+        <p>Celulares, computadores, baterias e cabos costumam ir para o lixo comum ou
+           ficar parados em casas e empresas. O resultado é contaminação do solo e da
+           água por chumbo, mercúrio e cádmio, e o desperdício de cobre, alumínio,
+           ouro e terras raras que voltariam à cadeia produtiva.</p>
+        <p>A Lei 12.305/2010 obriga a logística reversa de eletroeletrônicos, mas
+           quem entrega o aparelho <strong>não tem como saber se ele realmente foi
+           reciclado</strong>. É essa lacuna de confiança que o e-Trilha MS fecha.</p>
+      </div>
+      <div class="cartao">
+        <h2>Encontre onde entregar</h2>
+        <p>São <strong id="qtd-pontos">—</strong> pontos de coleta mapeados em
+           <strong id="qtd-municipios">—</strong> municípios de Mato Grosso do Sul,
+           com filtro por cidade e por tipo de resíduo aceito.</p>
+        <div class="botoes">
+          <a class="botao" href="pontos">Ver pontos de coleta</a>
+          <a class="botao botao-secundario" href="scanner">Sou operador: ler QR</a>
+        </div>
+      </div>
+    </section>`;
+
+  document.getElementById('form-busca').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const codigo = normalizarCodigo(document.getElementById('codigo').value);
+    if (!codigo) {
+      aviso('Código inválido. Ele começa com MS e tem 8 caracteres — como em MS-0000-0000.', 'erro');
+      return;
+    }
+    location.href = `rastrear?c=${encodeURIComponent(codigo)}`;
+  });
+
+  preencherNumeros();
+}
+
+async function preencherNumeros() {
+  const [dados, pontos] = await Promise.all([store.painel(), store.listarPontos()]);
+  const ind = calcularIndicadores(dados.itens, dados.eventos, pontos);
+  const eq = equivalencias(ind.co2eKg);
+
+  document.getElementById('numeros').innerHTML = `
+    <div class="numero">
+      <div class="valor">${formatarMassa(ind.massaDesviadaKg)}</div>
+      <div class="rotulo">desviados do aterro</div>
+      <div class="nota">${ind.totalProcessados} aparelhos com destinação comprovada</div>
+    </div>
+    <div class="numero">
+      <div class="valor">${ind.totalEmCurso}</div>
+      <div class="rotulo">aparelhos em trânsito</div>
+      <div class="nota">${formatarMassa(ind.massaEmCursoKg)} sendo rastreados agora</div>
+    </div>
+    <div class="numero">
+      <div class="valor">${formatarNumero(ind.co2eKg, 0)} kg</div>
+      <div class="rotulo">de CO₂e evitados</div>
+      <div class="nota">equivale a ${formatarNumero(eq.kmDeCarro, 0)} km de carro</div>
+    </div>
+    <div class="numero">
+      <div class="valor">${formatarNumero(ind.taxaConclusao * 100, 0)}%</div>
+      <div class="rotulo">chegaram ao fim da cadeia</div>
+      <div class="nota">${ind.pendentes.length} parado(s) além do prazo</div>
+    </div>`;
+
+  document.getElementById('qtd-pontos').textContent = ind.totalPontos;
+  document.getElementById('qtd-municipios').textContent = ind.municipiosAtendidos;
+}
+
+/* ================================================================== *
+ * Porta de entrada de quem não entrou
+ *
+ * Três caminhos, e não um formulário de login direto, porque são três intenções
+ * diferentes que chegam nesta tela: quem já tem conta, quem vai criar a primeira
+ * e quem só tem um código na mão e quer saber onde o aparelho está. O terceiro
+ * caso é o mais comum de todos — a pessoa que entregou um celular no ecoponto —
+ * e obrigá-la a criar conta para ver a própria trilha seria pedir cadastro para
+ * entregar aquilo que o sistema promete de graça.
+ * ================================================================== */
+
+function telaEscolha() {
+  return `
+    ${destino ? `
+      <div class="faixa faixa-info">
+        <strong>Entre para continuar.</strong> Você tentou abrir
+        ${escapar(DESTINOS[destino])}, que exige uma conta.
+      </div>` : ''}
+
+    <section class="cartao">
+      <h1>e-Trilha MS</h1>
+      <p>
+        Rastreamento de resíduos eletrônicos por QR Code em Mato Grosso do Sul.
+        Cada leitura da etiqueta acrescenta um elo à cadeia de custódia do
+        aparelho, até o certificado de destinação final.
+      </p>
+
+      <div class="botoes" style="margin-top:1.2rem">
+        <button class="botao botao-grande" id="btn-entrar" type="button">Entrar</button>
+        <button class="botao botao-secundario botao-grande" id="btn-criar" type="button">Criar conta</button>
+      </div>
+
+      <hr style="margin:1.5rem 0;border:0;border-top:1px solid var(--borda)">
+
+      <h2 style="margin-top:0">Só quero consultar um código</h2>
+      <p class="sutil">
+        Se você tem a etiqueta em mãos, não precisa de conta: a trilha e o
+        certificado do aparelho são públicos para quem tem o código. Dá para
+        digitar o código ou apontar a câmera para o QR da etiqueta.
+      </p>
+      <div class="botoes">
+        <a class="botao botao-secundario" href="rastrear">Consultar um código de rastreio</a>
+      </div>
+    </section>`;
+}
+
+function telaEntrar() {
+  return `
+    <section class="cartao">
+      <div class="secao-titulo">
+        <h1 style="margin:0">Entrar</h1>
+        <button class="botao botao-secundario" data-voltar type="button">Voltar</button>
+      </div>
+
+      <form id="form-entrar">
+        <div class="campo">
+          <label for="e-email">E-mail</label>
+          <input id="e-email" type="email" autocomplete="email" required>
+        </div>
+        <div class="campo">
+          <label for="e-senha">Senha</label>
+          <input id="e-senha" type="password" autocomplete="current-password" required>
+        </div>
+        <div class="botoes">
+          <button class="botao botao-grande" type="submit">Entrar</button>
+          <button class="botao botao-secundario" data-ir="criar" type="button">Não tenho conta</button>
+        </div>
+      </form>
+    </section>
+
+    ${avisoSenha()}`;
+}
+
+function telaCriar() {
+  return `
+    <section class="cartao">
+      <div class="secao-titulo">
+        <h1 style="margin:0">Criar conta</h1>
+        <button class="botao botao-secundario" data-voltar type="button">Voltar</button>
+      </div>
+
+      <p class="sutil">
+        A conta nasce como <strong>visitante</strong>: registra e acompanha os
+        próprios aparelhos. Ler QR e avançar etapas é permissão de operador,
+        concedida por um administrador — porque cada leitura escreve na cadeia
+        de custódia de um aparelho que é de outra pessoa.
+      </p>
+
+      <form id="form-criar">
+        <div class="campo">
+          <label for="c-nome">Nome</label>
+          <input id="c-nome" autocomplete="name" required maxlength="60">
+        </div>
+        <div class="campo">
+          <label for="c-email">E-mail</label>
+          <input id="c-email" type="email" autocomplete="email" required>
+        </div>
+        <div class="campo">
+          <label for="c-senha">Senha</label>
+          <input id="c-senha" type="password" autocomplete="new-password" required minlength="6">
+          <p class="dica">Mínimo de 6 caracteres.</p>
+        </div>
+        <div class="botoes">
+          <button class="botao botao-grande" type="submit">Criar conta</button>
+          <button class="botao botao-secundario" data-ir="entrar" type="button">Já tenho conta</button>
+        </div>
+      </form>
+    </section>
+
+    ${avisoSenha()}`;
+}
+
+function avisoSenha() {
+  return `
+    <div class="faixa faixa-info">
+      <strong>Como a senha é tratada:</strong> ela vai para o servidor, que a guarda
+      com PBKDF2 (sal aleatório e milhares de iterações) — nunca em texto claro. A
+      sessão é um cookie assinado e HttpOnly, que o JavaScript da página não consegue ler.
+      Falta apenas HTTPS, necessário em uso real para a senha não trafegar em texto
+      claro na rede.
+      <strong>Não use aqui uma senha que você usa em outro lugar.</strong>
+    </div>`;
+}
+
+const TELAS = { escolha: telaEscolha, entrar: telaEntrar, criar: telaCriar };
+
+function mostrar(nome) {
+  conteudo.innerHTML = TELAS[nome]();
+
+  conteudo.querySelectorAll('[data-voltar]').forEach((b) =>
+    b.addEventListener('click', () => mostrar('escolha'))
+  );
+  conteudo.querySelectorAll('[data-ir]').forEach((b) =>
+    b.addEventListener('click', () => mostrar(b.dataset.ir))
+  );
+
+  document.getElementById('btn-entrar')?.addEventListener('click', () => mostrar('entrar'));
+  document.getElementById('btn-criar')?.addEventListener('click', () => mostrar('criar'));
+
+  document.getElementById('form-entrar')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    try {
+      const { usuario } = await store.abrirSessao({
+        email: document.getElementById('e-email').value,
+        senha: document.getElementById('e-senha').value,
+      });
+      aviso(`Bem-vindo de volta, ${usuario.nome.split(' ')[0]}.`);
+      location.href = destino ?? '/';
+    } catch (erro) {
+      aviso(erro.message, 'erro');
+    }
+  });
+
+  document.getElementById('form-criar')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    try {
+      await store.cadastrarUsuario({
+        nome: document.getElementById('c-nome').value,
+        email: document.getElementById('c-email').value,
+        senha: document.getElementById('c-senha').value,
+      });
+      aviso('Conta criada. Você já está dentro.');
+      // Conta nova nasce como visitante: mandar direto a um destino que exige
+      // operador só mostraria a mesma barreira de novo.
+      location.href = '/';
+    } catch (erro) {
+      aviso(erro.message, 'erro');
+    }
+  });
+
+  // O primeiro campo da tela recebe o foco: quem chegou aqui veio para digitar.
+  conteudo.querySelector('input')?.focus();
+}
+
+/* ------------------------------------------------------------------ *
+ * Só aqui, no fim do módulo.
+ *
+ * `mostrar()` lê o mapa `TELAS`, declarado logo acima com `const`. Uma `const`
+ * é içada para o topo do escopo mas fica sem valor até a linha que a
+ * inicializa: chamar `mostrar()` antes disso levanta ReferenceError, o módulo
+ * inteiro morre e a página fica em branco — sem nada na tela e sem nada no
+ * lugar do erro, porque quem falhou foi o script que desenharia tudo.
+ * ------------------------------------------------------------------ */
+
+if (await store.usuarioAtual()) {
+  desenharHome();
+} else {
+  mostrar(destino ? 'entrar' : 'escolha');
+}
 </script>
 
 </body>

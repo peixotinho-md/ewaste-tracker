@@ -60,7 +60,6 @@ export const ETAPAS = [
   },
 ];
 
-export const PRIMEIRA_ETAPA = ETAPAS[0].id;
 export const ETAPA_FINAL = ETAPAS[ETAPAS.length - 1].id;
 
 export function etapa(id) {
@@ -76,36 +75,6 @@ export function proximaEtapa(id) {
   const i = indiceEtapa(id);
   if (i < 0 || i >= ETAPAS.length - 1) return null;
   return ETAPAS[i + 1];
-}
-
-/**
- * Valida a transição. Retorna { ok: true } ou { ok: false, motivo }.
- * Só o passo imediatamente seguinte é aceito: pular etapa quebraria a cadeia
- * de custódia (não haveria prova de que o item passou pela triagem) e voltar
- * permitiria mascarar um extravio.
- */
-export function validarTransicao(etapaAtual, etapaDestino) {
-  const atual = indiceEtapa(etapaAtual);
-  const destino = indiceEtapa(etapaDestino);
-
-  if (destino < 0) return { ok: false, motivo: 'Etapa desconhecida.' };
-  if (atual < 0) return { ok: false, motivo: 'Item sem etapa atual válida.' };
-  if (destino === atual) {
-    return { ok: false, motivo: `O item já está em "${etapa(etapaAtual).rotulo}".` };
-  }
-  if (destino < atual) {
-    return {
-      ok: false,
-      motivo: `Não é possível retroceder de "${etapa(etapaAtual).rotulo}" para "${etapa(etapaDestino).rotulo}". O histórico é somente de acréscimo.`,
-    };
-  }
-  if (destino > atual + 1) {
-    return {
-      ok: false,
-      motivo: `Não é possível pular etapas: depois de "${etapa(etapaAtual).rotulo}" vem "${ETAPAS[atual + 1].rotulo}".`,
-    };
-  }
-  return { ok: true };
 }
 
 /**
@@ -363,7 +332,7 @@ const CORRECOES = { O: '0', I: '1', L: '1', U: 'V' };
  * Dígito verificador por soma ponderada módulo 32 (mesma ideia do CPF e do
  * ISBN). Detecta todos os erros de um caractere e a maioria das transposições.
  */
-export function digitoVerificador(corpo) {
+function digitoVerificador(corpo) {
   let soma = 0;
   for (let i = 0; i < corpo.length; i++) {
     const valor = ALFABETO.indexOf(corpo[i]);
@@ -373,34 +342,64 @@ export function digitoVerificador(corpo) {
   return ALFABETO[soma % ALFABETO.length];
 }
 
-/** Gera um código novo no formato MS-XXXX-XXXX (7 aleatórios + 1 verificador). */
-export function gerarCodigo() {
-  const bytes = new Uint8Array(7);
-  crypto.getRandomValues(bytes);
-  const corpo = Array.from(bytes, (b) => ALFABETO[b % ALFABETO.length]).join('');
-  return formatarCodigo(corpo + digitoVerificador(corpo));
-}
-
-/** MS7K3F2QX9 -> MS-7K3F-2QX9 */
-export function formatarCodigo(corpo) {
+/**
+ * MS7K3F2QX9 -> MS-7K3F-2QX9
+ *
+ * Só formata. A EMISSÃO do código é do servidor, dentro da mesma transação que
+ * cria o item: gerar no navegador arriscaria dois aparelhos com o mesmo código,
+ * e a unicidade é o que o rastreio inteiro assume.
+ */
+function formatarCodigo(corpo) {
   const limpo = corpo.replace(/^MS/, '');
   return `MS-${limpo.slice(0, 4)}-${limpo.slice(4, 8)}`;
 }
 
 /**
+ * Prefixo obrigatório do código de rastreio.
+ *
+ * Todo código emitido aqui começa com MS — é a marca do estado no identificador,
+ * e é o que separa uma etiqueta do e-Trilha MS de qualquer outra sequência de 8
+ * caracteres que apareça num QR.
+ */
+export const PREFIXO_CODIGO = 'MS';
+
+/**
  * Aceita o que o usuário digitar (minúsculas, sem hífen, com O no lugar de 0)
  * e devolve o código canônico, ou null se for inválido.
+ *
+ * Exige o prefixo MS: `MS-XXXX-XXXX`. O prefixo diz de qual sistema é a
+ * etiqueta; o dígito verificador, se ela foi lida direito. Mesma regra em
+ * `backend/modelo.py`, que é quem decide de fato.
  */
 export function normalizarCodigo(entrada) {
   if (!entrada) return null;
-  let bruto = String(entrada).toUpperCase().replace(/[^0-9A-Z]/g, '');
-  if (bruto.startsWith('MS')) bruto = bruto.slice(2);
-  bruto = Array.from(bruto, (c) => CORRECOES[c] ?? c).join('');
+  const bruto0 = String(entrada).toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (!bruto0.startsWith(PREFIXO_CODIGO)) return null;
+  const bruto = Array.from(bruto0.slice(PREFIXO_CODIGO.length), (c) => CORRECOES[c] ?? c).join('');
   if (bruto.length !== 8) return null;
   const corpo = bruto.slice(0, 7);
   if (digitoVerificador(corpo) !== bruto[7]) return null;
   return formatarCodigo(bruto);
 }
+
+/**
+ * Contorno do mapa esquemático de Mato Grosso do Sul.
+ *
+ * Geometria de desenho, não dado de negócio: pontos de coleta e itens vivem em
+ * `dados/*.json` e chegam pela API. Ficava num arquivo só para ele; com uma
+ * constante e um consumidor (`pontos`), morava melhor aqui, junto de
+ * `distanciaKm`, que é a outra função geográfica do sistema.
+ */
+export const CONTORNO_MS = [
+  [-58.17, -19.85], [-57.95, -19.3], [-57.9, -18.9], [-58.02, -18.2],
+  [-57.6, -17.55], [-57.0, -17.75], [-56.0, -17.95], [-54.9, -17.9],
+  [-53.7, -17.9], [-52.9, -18.35], [-52.05, -18.4], [-51.5, -18.9],
+  [-51.0, -19.7], [-50.92, -20.5], [-51.4, -21.2], [-51.95, -22.0],
+  [-52.45, -22.5], [-53.1, -22.95], [-53.7, -23.5], [-54.05, -24.05],
+  [-54.35, -24.05], [-54.6, -23.75], [-55.0, -23.6], [-55.45, -23.2],
+  [-55.6, -22.6], [-56.05, -22.3], [-56.6, -22.15], [-57.15, -22.05],
+  [-57.7, -22.1], [-57.85, -21.6], [-57.75, -20.9], [-57.9, -20.3],
+];
 
 /* ------------------------------------------------------------------ *
  * 5. Geolocalização

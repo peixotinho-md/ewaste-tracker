@@ -29,7 +29,6 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import * as auth from './js/auth.js';
 import { iniciarPagina, aviso, seloEtapa, seloPapel, confirmar, formatarData,
          formatarMassa, escapar } from './js/ui.js';
 import { normalizarCodigo, categoria, proximaEtapa, ETAPAS, ETAPA_FINAL,
@@ -56,7 +55,7 @@ const area = document.getElementById('area');
  * que a chamada venha de fora da tela.
  * ------------------------------------------------------------------ */
 
-const operador = await auth.exigirPapel('operador', 'admin');
+const operador = await store.exigirPapel('operador', 'admin');
 const pontos = await store.listarPontos();
 
 /* Guardado aqui porque a câmera precisa ser desligada se o papel for revogado
@@ -82,7 +81,7 @@ if (operador) {
  * furaria a cadeia de custódia.
  */
 async function telaSemAcesso() {
-  const usuario = await auth.atual();
+  const usuario = await store.usuarioAtual();
 
   if (!usuario) {
     return `
@@ -94,8 +93,8 @@ async function telaSemAcesso() {
           conta de <strong>operador</strong> antes de abrir o leitor.
         </p>
         <div class="botoes">
-          <a class="botao" href="conta.html?destino=scanner.html">Entrar como operador</a>
-          <a class="botao botao-secundario" href="rastrear.html">Só quero consultar um código</a>
+          <a class="botao" href="index?destino=scanner">Entrar como operador</a>
+          <a class="botao botao-secundario" href="rastrear">Só quero consultar um código</a>
         </div>
         <p class="dica" style="margin-top:1rem">
           Se o servidor estiver fora do ar, esta tela também não abre: a gravação
@@ -119,8 +118,8 @@ async function telaSemAcesso() {
         registrada na trilha de administração.
       </p>
       <div class="botoes">
-        <a class="botao botao-secundario" href="conta.html">Ver minha conta</a>
-        <a class="botao botao-secundario" href="rastrear.html">Consultar por código</a>
+        <a class="botao botao-secundario" href="conta">Ver minha conta</a>
+        <a class="botao botao-secundario" href="rastrear">Consultar por código</a>
       </div>
     </section>`;
 }
@@ -228,7 +227,7 @@ function ligarEntradaManual() {
     ev.preventDefault();
     const codigo = normalizarCodigo(document.getElementById('manual').value);
     if (!codigo) {
-      aviso('Código inválido. O dígito verificador não confere.', 'erro');
+      aviso('Código inválido. Confira o prefixo MS e o dígito verificador.', 'erro');
       return;
     }
     abrir(codigo);
@@ -250,7 +249,7 @@ async function abrir(codigo) {
           <strong>Código ${escapar(codigo)} não encontrado.</strong>
           Nenhum aparelho registrado com este código.
         </div>
-        <a class="botao" href="registrar.html">Registrar este aparelho</a>
+        <a class="botao" href="registrar">Registrar este aparelho</a>
       </div>`;
     return;
   }
@@ -284,7 +283,7 @@ async function abrir(codigo) {
         </div>`}
 
       <p style="margin-top:1rem">
-        <a href="rastrear.html?c=${encodeURIComponent(item.codigo)}">Ver a trilha completa deste aparelho →</a>
+        <a href="rastrear?c=${encodeURIComponent(item.codigo)}">Ver a trilha completa deste aparelho →</a>
       </p>
 
       <details class="nao-imprimir" style="margin-top:1rem">

@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<header class="cabecalho"><div data-cabecalho></div></header>
+<header class="cabecalho nao-imprimir"><div data-cabecalho></div></header>
 
 <main class="estreito">
 
@@ -19,8 +19,8 @@
     <h1>Registrar aparelho para descarte</h1>
     <p class="sutil">
       O registro gera um código único e um QR Code para colar no aparelho.
-      <strong>Não é preciso ter conta</strong> — se você criar uma depois, os
-      aparelhos registrados neste navegador passam a aparecer nela.
+      Ele fica vinculado à sua conta: é por aí que o aparelho aparece em
+      <a href="conta">Meus aparelhos</a>.
     </p>
 
     <form id="form">
@@ -37,22 +37,18 @@
 
       <div class="campo">
         <label for="peso">Peso aproximado (kg)</label>
-        <input id="peso" type="number" step="0.01" min="0.01" max="500" required>
+        <input id="peso" type="number" step="0.01" min="0.01" max="500"
+               inputmode="decimal" required>
         <p class="dica">Preenchido com o peso médio da categoria. Ajuste se souber o valor real —
-           é o peso que alimenta os indicadores de material recuperado.</p>
+           é o peso que alimenta os indicadores de material recuperado.
+           Máximo de 500 kg, com até 3 dígitos antes da vírgula.</p>
       </div>
 
       <div class="campo">
         <label for="ponto">Onde você vai entregar</label>
         <select id="ponto" required></select>
         <p class="dica">A lista mostra apenas pontos que aceitam este tipo de aparelho.
-           <a href="pontos.html">Ver todos os pontos no mapa</a>.</p>
-      </div>
-
-      <div class="campo">
-        <label for="responsavel">Seu nome <span class="sutil">(opcional)</span></label>
-        <input id="responsavel" maxlength="60" autocomplete="name"
-               placeholder="Aparece no histórico como quem registrou">
+           <a href="pontos">Ver todos os pontos no mapa</a>.</p>
       </div>
 
       <div class="botoes">
@@ -74,8 +70,8 @@
         <p class="sutil">Guarde este código: com ele, qualquer pessoa consulta o
            andamento sem precisar de conta.</p>
         <div class="botoes">
-          <a class="botao" id="link-etiqueta" href="etiqueta.html">Imprimir etiqueta</a>
-          <a class="botao botao-secundario" href="scanner.html">Abrir o leitor de QR</a>
+          <a class="botao" id="link-etiqueta" href="registrar?imprimir">Imprimir etiqueta</a>
+          <a class="botao botao-secundario" href="scanner">Abrir o leitor de QR</a>
           <a class="botao botao-secundario" id="link-rastreio" href="#">Ver a trilha</a>
           <button class="botao botao-secundario" id="btn-outro" type="button">Registrar outro</button>
         </div>
@@ -91,18 +87,82 @@
     </div>
   </section>
 
+  <!-- Modo impressão: `?imprimir` na URL troca o cadastro pela folha de
+       etiquetas. É a mesma tarefa vista de outro ângulo — o cadastro produz a
+       etiqueta, e a folha imprime as que já existem. -->
+  <section class="cartao nao-imprimir oculto" id="painel-etiquetas">
+    <div class="secao-titulo">
+      <div>
+        <h1>Etiquetas QR para impressão</h1>
+        <p class="sutil" style="margin:0">
+          Imprima em folha adesiva A4 e cole no aparelho. A etiqueta é o elo físico
+          da solução: ela acompanha o dispositivo por toda a cadeia, inclusive onde
+          não há internet.
+        </p>
+      </div>
+      <button class="botao botao-grande" id="btn-imprimir" type="button">Imprimir</button>
+    </div>
+
+    <div class="grade grade-2" style="margin-top:1rem">
+      <div class="campo" style="margin:0">
+        <label for="copias">Cópias de cada etiqueta</label>
+        <input id="copias" type="number" min="1" max="6" value="1">
+        <p class="dica">Uma cópia extra pode ir na embalagem ou no romaneio do lote.</p>
+      </div>
+      <div class="campo" style="margin:0">
+        <label>Selecionar</label>
+        <div class="botoes">
+          <button class="botao botao-secundario" id="btn-todos" type="button">Todos</button>
+          <button class="botao botao-secundario" id="btn-nenhum" type="button">Nenhum</button>
+          <a class="botao botao-secundario" href="registrar">Registrar outro aparelho</a>
+        </div>
+      </div>
+    </div>
+
+    <fieldset style="border:1px solid var(--borda);border-radius:var(--raio-sm);margin-top:1rem;padding:.8rem">
+      <legend class="sutil">Aparelhos</legend>
+      <div class="grade grade-3" id="selecao"></div>
+    </fieldset>
+  </section>
+
+  <section class="folha-etiquetas" id="folha"></section>
+  <p class="vazio oculto" id="vazio">Selecione ao menos um aparelho para gerar as etiquetas.</p>
+
 </main>
 
-<footer class="rodape">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+<footer class="rodape nao-imprimir">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
 
 <script type="module">
 import * as store from './js/store.js';
-import { iniciarPagina, aviso, escapar } from './js/ui.js';
-import { CATEGORIAS, categoria } from './js/model.js';
-import { desenharQR } from './js/qr.js';
+import { iniciarPagina, aviso, escapar, formatarMassa } from './js/ui.js';
+import { CATEGORIAS, categoria, normalizarCodigo } from './js/model.js';
+import { desenharQR, svgQR, urlDeRastreio } from './js/qr.js';
 
 await iniciarPagina();
 
+/* ------------------------------------------------------------------ *
+ * Esta tela faz duas metades da mesma tarefa, escolhidas pela URL:
+ *
+ *   /registrar            cadastra o aparelho e emite o código + QR;
+ *   /registrar?imprimir   monta a folha de etiquetas dos aparelhos da conta.
+ *
+ * O cadastro é o que PRODUZ a etiqueta, e a folha é onde ela vira papel:
+ * separar as duas em páginas diferentes obrigava a atravessar o menu no meio de
+ * um fluxo só. Quem chega com `?imprimir&c=CÓDIGO` já encontra aquele aparelho
+ * marcado, que é o caminho de quem acabou de cadastrar.
+ * ------------------------------------------------------------------ */
+
+if (new URLSearchParams(location.search).has('imprimir')) {
+  await modoEtiquetas();
+} else {
+  await modoCadastro();
+}
+
+/* ================================================================== *
+ * Cadastro
+ * ================================================================== */
+
+async function modoCadastro() {
 const selCategoria = document.getElementById('categoria');
 const selPonto = document.getElementById('ponto');
 const inputPeso = document.getElementById('peso');
@@ -143,6 +203,24 @@ function aoTrocarCategoria() {
 selCategoria.addEventListener('change', aoTrocarCategoria);
 aoTrocarCategoria();
 
+/**
+ * Corta a parte inteira do peso em 3 dígitos enquanto a pessoa digita.
+ *
+ * `maxlength` não vale em `<input type="number">` — o atributo conta caracteres
+ * de texto, e o navegador não trata este campo como texto. Sem isto, dá para
+ * digitar "11111111111": o `max="500"` só reclamaria no envio, depois de todo o
+ * trabalho preenchido, e nada impediria a chamada feita por fora da tela. Quem
+ * recusa de verdade é o servidor (`normalizar_peso`); aqui é para não deixar a
+ * pessoa digitar um número que já se sabe que será recusado.
+ */
+const DIGITOS_PESO = 3;
+
+inputPeso.addEventListener('input', () => {
+  const [inteiro, ...resto] = inputPeso.value.split('.');
+  if (inteiro.length <= DIGITOS_PESO) return;
+  inputPeso.value = [inteiro.slice(0, DIGITOS_PESO), ...resto].join('.');
+});
+
 /* --- envio --- */
 document.getElementById('form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
@@ -152,13 +230,12 @@ document.getElementById('form').addEventListener('submit', async (ev) => {
       marca: document.getElementById('marca').value,
       pesoKg: inputPeso.value,
       pontoOrigemId: selPonto.value,
-      responsavel: document.getElementById('responsavel').value.trim() || null,
     });
 
     document.getElementById('codigo-novo').textContent = item.codigo;
     desenharQR(document.getElementById('qr-novo'), item.codigo, { cellSize: 5, margin: 2 });
-    document.getElementById('link-rastreio').href = `rastrear.html?c=${encodeURIComponent(item.codigo)}`;
-    document.getElementById('link-etiqueta').href = `etiqueta.html?c=${encodeURIComponent(item.codigo)}`;
+    document.getElementById('link-rastreio').href = `rastrear?c=${encodeURIComponent(item.codigo)}`;
+    document.getElementById('link-etiqueta').href = `registrar?imprimir&c=${encodeURIComponent(item.codigo)}`;
 
     document.getElementById('painel-form').classList.add('oculto');
     document.getElementById('painel-ok').classList.remove('oculto');
@@ -207,6 +284,77 @@ document.getElementById('btn-outro').addEventListener('click', () => {
   document.getElementById('painel-ok').classList.add('oculto');
   document.getElementById('painel-form').classList.remove('oculto');
 });
+}
+
+/* ================================================================== *
+ * Folha de etiquetas
+ * ================================================================== */
+
+async function modoEtiquetas() {
+  // A folha ocupa a largura toda; o formulário é uma coluna estreita.
+  document.querySelector('main').classList.remove('estreito');
+  document.getElementById('painel-form').classList.add('oculto');
+  document.getElementById('painel-etiquetas').classList.remove('oculto');
+
+  // Só os aparelhos da própria conta: a etiqueta é o que autoriza a leitura de
+  // um QR na cadeia, e imprimir a etiqueta de um aparelho alheio não faria
+  // sentido. Quem responde quais são "os meus" é o servidor, pelo cookie.
+  const itens = await store.meusItens();
+
+  // Um código na URL — quem acabou de cadastrar — já vem marcado sozinho.
+  const daUrl = normalizarCodigo(new URLSearchParams(location.search).get('c'));
+  const marcados = daUrl ? new Set([daUrl]) : new Set(itens.map((i) => i.codigo));
+
+  const selecao = document.getElementById('selecao');
+  selecao.innerHTML = itens
+    .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm))
+    .map((i) => {
+      const cat = categoria(i.categoria);
+      return `
+        <label style="font-weight:400;display:flex;gap:.5rem;align-items:flex-start">
+          <input type="checkbox" value="${escapar(i.codigo)}" style="margin-top:.25rem"
+                 ${marcados.has(i.codigo) ? 'checked' : ''}>
+          <span>
+            <code>${escapar(i.codigo)}</code><br>
+            <span class="sutil">${escapar(cat?.rotulo ?? i.categoria)} · ${formatarMassa(i.pesoKg)}</span>
+          </span>
+        </label>`;
+    }).join('') || '<p class="vazio">Você ainda não registrou nenhum aparelho.</p>';
+
+  const caixas = () => [...selecao.querySelectorAll('input[type=checkbox]')];
+
+  function desenhar() {
+    const copias = Math.min(6, Math.max(1, Number(document.getElementById('copias').value) || 1));
+    const escolhidos = caixas().filter((c) => c.checked).map((c) => c.value);
+    const folha = document.getElementById('folha');
+
+    document.getElementById('vazio').classList.toggle('oculto', escolhidos.length > 0);
+
+    folha.innerHTML = escolhidos.flatMap((codigo) => {
+      const item = itens.find((i) => i.codigo === codigo);
+      const cat = categoria(item.categoria);
+      // O QR carrega a URL de rastreio: apontar a câmera do celular já abre a
+      // página do aparelho, mesmo para quem nunca usou o sistema.
+      const svg = svgQR(urlDeRastreio(codigo), { cellSize: 4, margin: 1 });
+      const etiqueta = `
+        <div class="etiqueta-qr">
+          <span class="marca-etq">♻ e-Trilha MS</span>
+          ${svg}
+          <span class="cod">${escapar(codigo)}</span>
+          <span class="desc">${escapar(cat?.rotulo ?? item.categoria)}</span>
+          <span class="desc">Rastreie em: ${escapar(location.host || 'e-trilha.ms.gov.br')}</span>
+        </div>`;
+      return Array(copias).fill(etiqueta);
+    }).join('');
+  }
+
+  selecao.addEventListener('change', desenhar);
+  document.getElementById('copias').addEventListener('input', desenhar);
+  document.getElementById('btn-imprimir').addEventListener('click', () => window.print());
+  document.getElementById('btn-todos').addEventListener('click', () => { caixas().forEach((c) => (c.checked = true)); desenhar(); });
+  document.getElementById('btn-nenhum').addEventListener('click', () => { caixas().forEach((c) => (c.checked = false)); desenhar(); });
+  desenhar();
+}
 </script>
 
 </body>

@@ -23,7 +23,7 @@ import { normalizarCodigo } from './model.js';
  * QR para digitação manual quando a etiqueta estiver danificada.
  */
 export function urlDeRastreio(codigo) {
-  const base = new URL('rastrear.html', location.href);
+  const base = new URL('rastrear', location.href);
   base.searchParams.set('c', codigo);
   return base.toString();
 }

@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 4;
+PRAGMA user_version = 5;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
@@ -104,9 +104,13 @@ END;
 -- --------------------------------------------------------------------------
 -- Itens (dispositivos descartados)
 --
--- Um item pertence a um usuário (dono_id) OU a um visitante sem conta
--- (visitante_id, guardado no cookie de sessão). Ao criar conta, os itens do
--- visitante são adotados pelo usuário.
+-- Todo item tem dono: registrar exige conta. `dono_id` é o que separa "meus
+-- aparelhos" dos aparelhos de outra pessoa — a consulta pública pelo código
+-- continua aberta, mas a LISTAGEM é sempre a do dono.
+--
+-- ON DELETE SET NULL: excluir a conta não apaga o aparelho. O histórico da
+-- cadeia de custódia é somente de acréscimo e vale por si; o que se perde é o
+-- vínculo com a pessoa, que é justamente o dado pessoal.
 -- --------------------------------------------------------------------------
 CREATE TABLE itens (
   codigo          TEXT PRIMARY KEY,
@@ -114,7 +118,6 @@ CREATE TABLE itens (
   marca           TEXT NOT NULL DEFAULT '',
   peso_kg         REAL NOT NULL CHECK (peso_kg > 0),
   dono_id         TEXT REFERENCES usuarios (id) ON DELETE SET NULL,
-  visitante_id    TEXT,
   ponto_origem_id TEXT REFERENCES pontos (id),
   criado_em       TEXT NOT NULL,
   atualizado_em   TEXT NOT NULL,
@@ -123,7 +126,6 @@ CREATE TABLE itens (
 );
 
 CREATE INDEX idx_itens_dono      ON itens (dono_id);
-CREATE INDEX idx_itens_visitante ON itens (visitante_id);
 CREATE INDEX idx_itens_etapa     ON itens (etapa_atual);
 
 -- --------------------------------------------------------------------------

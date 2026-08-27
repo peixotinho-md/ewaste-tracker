@@ -10,6 +10,7 @@ garante que o histórico de eventos não seja reescrito.
 
 import json
 import re
+import secrets
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -26,27 +27,39 @@ CAMINHO_BANCO = PASTA_BACKEND / "etrilha.db"
 CAMINHO_SCHEMA = PASTA_BACKEND / "schema.sql"
 PASTA_DADOS = RAIZ / "dados"
 
-# Contas criadas junto com os dados de exemplo, para que a demonstração tenha
-# de saída um administrador e um operador. São CREDENCIAIS PÚBLICAS, impressas
-# no terminal ao subir o servidor: servem para a banca e para o grupo testarem,
-# e num uso real seriam substituídas por um cadastro inicial fora da tela.
-CONTAS_DEMO = [
+# Contas criadas na carga inicial: um administrador e um operador de exemplo.
+#
+# A SENHA NÃO ESTÁ AQUI, nem em lugar nenhum. Ela é sorteada a cada carga
+# (`_semear_contas`), impressa UMA vez no terminal de quem subiu o servidor e
+# descartada: o banco guarda apenas o hash PBKDF2, e não há arquivo com o valor.
+#
+# Senha fixa escrita no código vaza pelo histórico do Git e continua valendo em
+# toda instalação que copiar o projeto. Senha gravada num arquivo ao lado do
+# banco vaza junto com a pasta, e ainda dá a falsa impressão de que está guardada
+# em segurança. Sorteada e só exibida, ela existe enquanto alguém a estiver
+# lendo.
+#
+# O primeiro admin precisa nascer fora da tela porque só um admin promove
+# outro: se a interface permitisse a auto-promoção, o controle não valeria nada.
+CONTAS_INICIAIS = [
     {
         "nome": "Administração e-Trilha MS",
         "email": "admin@etrilha.ms",
-        "senha": "etrilha-admin",
         "papel": "admin",
         "ponto_id": None,
     },
     {
         "nome": "Operador do Ecoponto Região Norte",
         "email": "operador@etrilha.ms",
-        "senha": "etrilha-operador",
         "papel": "operador",
         # Preenchido na carga com o primeiro ponto de coleta cadastrado.
         "ponto_id": None,
     },
 ]
+
+def _sortear_senha() -> str:
+    """Senha aleatória de ~16 caracteres, do gerador criptográfico do sistema."""
+    return secrets.token_urlsafe(12)
 
 
 def agora_iso() -> str:
@@ -114,9 +127,14 @@ def _versao_do_schema() -> int:
     return int(achado.group(1)) if achado else 1
 
 
-def preparar(recriar: bool = False) -> None:
+def preparar(recriar: bool = False) -> list[dict] | None:
     """
     Garante que o banco exista e esteja na versão atual do esquema.
+
+    Devolve as credenciais iniciais quando a carga acontece — é a ÚNICA vez em
+    que as senhas são legíveis, porque no banco só fica o hash e elas não são
+    gravadas em lugar nenhum. Devolve None quando o banco já estava pronto e
+    nada foi criado.
 
     Quando a versão gravada no arquivo é diferente da de `schema.sql`, o banco é
     recriado. Num sistema em produção isso seria uma migração; aqui os dados são
@@ -154,12 +172,13 @@ def preparar(recriar: bool = False) -> None:
 
         if recriar or desatualizado or not _tabelas_existem(conexao):
             conexao.executescript(CAMINHO_SCHEMA.read_text(encoding="utf-8"))
-            _semear(conexao)
+            return _semear(conexao)
+        return None
     finally:
         conexao.close()
 
 
-def _semear(conexao) -> None:
+def _semear(conexao) -> list[dict]:
     """
     Carrega os pontos de coleta e os itens de demonstração a partir de
     `dados/*.json` — os mesmos arquivos, sem duplicar dados no código.
@@ -190,9 +209,9 @@ def _semear(conexao) -> None:
             trilha = item["trilha"]
             conexao.execute(
                 """INSERT INTO itens (codigo, categoria, marca, peso_kg, dono_id,
-                                      visitante_id, ponto_origem_id, criado_em,
-                                      atualizado_em, etapa_atual, demo)
-                   VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, 1)""",
+                                      ponto_origem_id, criado_em, atualizado_em,
+                                      etapa_atual, demo)
+                   VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, 1)""",
                 (
                     item["codigo"], item["categoria"], item["marca"], item["pesoKg"],
                     item["pontoOrigemId"], quando(trilha[0][1]), quando(trilha[-1][1]),
@@ -218,21 +237,19 @@ def _semear(conexao) -> None:
                      triagem[3], quando(triagem[1])),
                 )
 
-        _semear_contas(conexao, pontos[0]["id"] if pontos else None)
+        return _semear_contas(conexao, pontos[0]["id"] if pontos else None)
 
 
-def _semear_contas(conexao, ponto_do_operador: str | None) -> None:
+def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
     """
-    Cria o administrador inicial e um operador de exemplo.
-
-    O primeiro admin precisa nascer FORA da tela: como só um admin promove
-    outro, não pode haver auto-promoção pela interface, ou o controle não valeria
-    nada. Aqui esse papel é do carregamento de demonstração; num sistema real
-    seria um comando de instalação executado por quem opera o servidor.
+    Cria o administrador inicial e um operador de exemplo, cada um com uma senha
+    sorteada, e devolve as credenciais para quem subiu o servidor ver.
 
     Já está dentro da transação de `_semear`.
     """
-    for conta in CONTAS_DEMO:
+    criadas = []
+    for conta in CONTAS_INICIAIS:
+        senha = _sortear_senha()
         conexao.execute(
             """INSERT INTO usuarios (id, nome, email, senha_hash, criado_em, papel, ponto_id)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -240,12 +257,14 @@ def _semear_contas(conexao, ponto_do_operador: str | None) -> None:
                 novo_id("u"),
                 conta["nome"],
                 conta["email"],
-                generate_password_hash(conta["senha"]),
+                generate_password_hash(senha),
                 agora_iso(),
                 conta["papel"],
                 ponto_do_operador if conta["papel"] == "operador" else conta["ponto_id"],
             ),
         )
+        criadas.append({"papel": conta["papel"], "email": conta["email"], "senha": senha})
+    return criadas
 
 
 # --------------------------------------------------------------------------- #
@@ -271,12 +290,19 @@ def ponto_json(linha) -> dict:
 
 
 def item_json(linha) -> dict:
+    """
+    Item como a API o devolve.
+
+    `dono_id` fica de fora: nenhuma tela precisa saber a quem o aparelho
+    pertence — "meus aparelhos" já vem filtrado pela sessão, e a trilha pública
+    fala do aparelho, não da pessoa. A administração, que precisa do vínculo,
+    usa `listar_itens_detalhados()`.
+    """
     return {
         "codigo": linha["codigo"],
         "categoria": linha["categoria"],
         "marca": linha["marca"],
         "pesoKg": linha["peso_kg"],
-        "donoId": linha["dono_id"],
         "pontoOrigemId": linha["ponto_origem_id"],
         "criadoEm": linha["criado_em"],
         "atualizadoEm": linha["atualizado_em"],
@@ -324,14 +350,57 @@ def listar_pontos(conexao) -> list[dict]:
     return [ponto_json(l) for l in linhas]
 
 
-def listar_itens(conexao) -> list[dict]:
-    linhas = conexao.execute("SELECT * FROM itens ORDER BY atualizado_em DESC").fetchall()
-    return [item_json(l) for l in linhas]
+def listar_para_painel(conexao, detalhado: bool) -> dict:
+    """
+    Conjunto que alimenta o painel de indicadores e os números da home.
 
+    Os indicadores precisam de categoria, peso, etapa e datas. Não precisam
+    saber DE QUEM é cada aparelho nem qual é o código dele — e é por isso que,
+    para uma conta comum (`detalhado=False`), o código real é substituído por
+    uma referência sequencial válida só dentro desta resposta. Ela serve para
+    juntar cada evento ao seu item e calcular tempos; não serve para abrir a
+    trilha de ninguém, porque não é um código de rastreio.
 
-def listar_eventos(conexao) -> list[dict]:
-    linhas = conexao.execute("SELECT * FROM eventos ORDER BY em").fetchall()
-    return [evento_json(l) for l in linhas]
+    Operador e administrador recebem os dados identificados: a lista de
+    aparelhos parados além do prazo só vira ação se disser QUAL aparelho parou.
+    """
+    itens = conexao.execute("SELECT * FROM itens ORDER BY atualizado_em DESC").fetchall()
+    eventos = conexao.execute("SELECT * FROM eventos ORDER BY em").fetchall()
+
+    if detalhado:
+        return {
+            "detalhado": True,
+            "itens": [item_json(l) for l in itens],
+            "eventos": [evento_json(l) for l in eventos],
+        }
+
+    referencia = {linha["codigo"]: f"#{i + 1:04d}" for i, linha in enumerate(itens)}
+    return {
+        "detalhado": False,
+        "itens": [
+            {
+                "codigo": referencia[l["codigo"]],
+                "categoria": l["categoria"],
+                "pesoKg": l["peso_kg"],
+                "pontoOrigemId": l["ponto_origem_id"],
+                "criadoEm": l["criado_em"],
+                "atualizadoEm": l["atualizado_em"],
+                "etapaAtual": l["etapa_atual"],
+            }
+            for l in itens
+        ],
+        # `responsavel` e `observacao` ficam de fora: são texto escrito por
+        # pessoas, e o painel só conta etapas e mede tempo.
+        "eventos": [
+            {
+                "itemCodigo": referencia[l["item_codigo"]],
+                "etapa": l["etapa"],
+                "pontoId": l["ponto_id"],
+                "em": l["em"],
+            }
+            for l in eventos
+        ],
+    }
 
 
 def obter_item(conexao, codigo: str) -> dict | None:
@@ -373,22 +442,20 @@ def obter_apagamento(conexao, codigo: str) -> dict | None:
     }
 
 
-def itens_do_dono(conexao, usuario_id: str | None, visitante_id: str | None) -> list[dict]:
-    """Itens de um usuário logado ou, na ausência de conta, do visitante atual."""
-    if usuario_id:
-        linhas = conexao.execute(
-            "SELECT * FROM itens WHERE dono_id = ? ORDER BY atualizado_em DESC",
-            (usuario_id,),
-        ).fetchall()
-    elif visitante_id:
-        linhas = conexao.execute(
-            """SELECT * FROM itens
-               WHERE visitante_id = ? AND dono_id IS NULL
-               ORDER BY atualizado_em DESC""",
-            (visitante_id,),
-        ).fetchall()
-    else:
+def itens_do_dono(conexao, usuario_id: str | None) -> list[dict]:
+    """
+    Aparelhos de uma conta. É a única listagem que uma conta comum enxerga.
+
+    O filtro é por `dono_id` e não por nada que venha do cliente: pedir a lista
+    "do usuário X" não é uma opção da API, então não há como um visitante
+    montar a chamada que devolveria os aparelhos de outra pessoa.
+    """
+    if not usuario_id:
         return []
+    linhas = conexao.execute(
+        "SELECT * FROM itens WHERE dono_id = ? ORDER BY atualizado_em DESC",
+        (usuario_id,),
+    ).fetchall()
     return [item_json(l) for l in linhas]
 
 
@@ -397,7 +464,7 @@ def itens_do_dono(conexao, usuario_id: str | None, visitante_id: str | None) -> 
 # --------------------------------------------------------------------------- #
 
 def criar_item(conexao, *, categoria, marca, peso_kg, ponto_origem_id,
-               responsavel, usuario_id, visitante_id) -> dict:
+               responsavel, usuario_id) -> dict:
     """Cadastra o dispositivo e já grava o evento REGISTRADO, na mesma transação."""
     agora = agora_iso()
 
@@ -415,11 +482,10 @@ def criar_item(conexao, *, categoria, marca, peso_kg, ponto_origem_id,
 
         conexao.execute(
             """INSERT INTO itens (codigo, categoria, marca, peso_kg, dono_id,
-                                  visitante_id, ponto_origem_id, criado_em,
-                                  atualizado_em, etapa_atual, demo)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
-            (codigo, categoria, marca, peso_kg, usuario_id,
-             None if usuario_id else visitante_id, ponto_origem_id,
+                                  ponto_origem_id, criado_em, atualizado_em,
+                                  etapa_atual, demo)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+            (codigo, categoria, marca, peso_kg, usuario_id, ponto_origem_id,
              agora, agora, modelo.PRIMEIRA_ETAPA),
         )
         conexao.execute(
@@ -519,19 +585,6 @@ def obter_usuario(conexao, usuario_id: str) -> dict | None:
         "SELECT * FROM usuarios WHERE id = ?", (usuario_id,)
     ).fetchone()
     return usuario_json(linha) if linha else None
-
-
-def adotar_itens_do_visitante(conexao, usuario_id: str, visitante_id: str | None) -> int:
-    """Vincula ao usuário os itens registrados neste navegador antes do cadastro."""
-    if not visitante_id:
-        return 0
-    with transacao(conexao):
-        cursor = conexao.execute(
-            """UPDATE itens SET dono_id = ?, visitante_id = NULL
-               WHERE visitante_id = ? AND dono_id IS NULL""",
-            (usuario_id, visitante_id),
-        )
-    return cursor.rowcount
 
 
 # --------------------------------------------------------------------------- #
@@ -690,9 +743,10 @@ def listar_itens_detalhados(conexao) -> list[dict]:
     onde entraram, de quem são, quantas leituras já tiveram e se o atestado de
     apagamento foi emitido.
 
-    O `GET /api/itens` público já devolve os itens — o que muda aqui é o
-    cruzamento com `pontos`, `usuarios`, `eventos` e `apagamentos`, que exige
-    varrer tabelas e não faz sentido servir a quem só quer consultar um código.
+    `listar_para_painel()` devolve o conjunto sem identificação, que é o que uma
+    conta comum pode ver. O que muda aqui é o cruzamento com `pontos`,
+    `usuarios`, `eventos` e `apagamentos` — varre tabelas, expõe o dono e só faz
+    sentido para quem administra.
 
     Do dono vai apenas o NOME, nunca o e-mail: quem administra precisa saber a
     quem pertence o aparelho para poder falar com a pessoa, e o contato já está

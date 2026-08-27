@@ -22,7 +22,7 @@
         do aterro, o que foi recuperado e onde a logística reversa está travando.
       </p>
     </div>
-    <button class="botao botao-secundario" id="btn-reiniciar" type="button">Reiniciar demonstração</button>
+    <button class="botao botao-secundario oculto" id="btn-reiniciar" type="button">Reiniciar demonstração</button>
   </div>
 
   <section class="grade grade-4" id="numeros" style="margin-bottom:1.25rem"></section>
@@ -50,16 +50,23 @@
     <p class="sutil">Aparelhos parados além do prazo da etapa em que estão. Estes são
        os casos que exigem cobrança do responsável.</p>
     <div class="rolagem" id="pendencias-corpo"></div>
+    <p class="dica" id="nota-pendencias" style="margin-top:.8rem"></p>
   </section>
 
   <section class="cartao">
     <h2>Materiais devolvidos à cadeia produtiva</h2>
     <p class="sutil">
       Contabilizados apenas nos aparelhos com reciclagem concluída. A estimativa
-      vem da composição média de cada categoria aplicada ao peso registrado.
+      vem da composição média de cada categoria aplicada ao peso registrado — a
+      conta inteira está aberta em "De onde vem o número de CO₂e", logo abaixo.
     </p>
     <div class="rolagem"><table id="tab-materiais"></table></div>
     <div class="faixa" style="margin:1rem 0 0;border-color:var(--verde-500)" id="co2"></div>
+
+    <details style="margin-top:1rem">
+      <summary><strong>De onde vem o número de CO₂e</strong></summary>
+      <div id="origem-co2"></div>
+    </details>
   </section>
 
   <div class="grade grade-2" style="align-items:start">
@@ -79,18 +86,22 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import { calcularIndicadores, equivalencias } from './js/indicadores.js';
-import { iniciarPagina, aviso, seloEtapa, formatarData, formatarMassa,
+import { calcularIndicadores, equivalencias, EQUIVALENCIAS } from './js/indicadores.js';
+import { iniciarPagina, aviso, confirmar, seloEtapa, formatarData, formatarMassa,
          formatarNumero, formatarOuro, formatarDuracao, escapar } from './js/ui.js';
 import { MATERIAIS, categoria } from './js/model.js';
 
 await iniciarPagina();
 
+// O botão que apaga o banco só aparece para quem pode usá-lo. Esconder é
+// gentileza: quem fecha a porta é o 403 do servidor na rota do reinício.
+if (store.ehAdmin(await store.usuarioAtual())) {
+  document.getElementById('btn-reiniciar').classList.remove('oculto');
+}
+
 async function desenhar() {
-  const [itens, eventos, pontos] = await Promise.all([
-    store.listarItens(), store.listarTodosEventos(), store.listarPontos(),
-  ]);
-  const ind = calcularIndicadores(itens, eventos, pontos);
+  const [dados, pontos] = await Promise.all([store.painel(), store.listarPontos()]);
+  const ind = calcularIndicadores(dados.itens, dados.eventos, pontos);
   const eq = equivalencias(ind.co2eKg);
 
   /* --- números principais --- */
@@ -161,7 +172,9 @@ async function desenhar() {
          <thead><tr><th>Código</th><th>Aparelho</th><th>Parado em</th><th class="num">Há quanto tempo</th><th class="num">Prazo</th></tr></thead>
          <tbody>${ind.pendentes.map((i) => `
            <tr>
-             <td><a href="rastrear.html?c=${encodeURIComponent(i.codigo)}"><code>${escapar(i.codigo)}</code></a></td>
+             <td>${dados.detalhado
+                    ? `<a href="rastrear?c=${encodeURIComponent(i.codigo)}"><code>${escapar(i.codigo)}</code></a>`
+                    : `<code class="sutil">${escapar(i.codigo)}</code>`}</td>
              <td>${escapar(categoria(i.categoria)?.rotulo ?? i.categoria)}</td>
              <td>${seloEtapa(i.etapaAtual)}<br><span class="sutil">desde ${formatarData(i.atualizadoEm)}</span></td>
              <td class="num" style="color:var(--vermelho-600);font-weight:600">${formatarDuracao(i.horasParado)}</td>
@@ -169,6 +182,14 @@ async function desenhar() {
            </tr>`).join('')}</tbody>
        </table>`
     : '<p class="vazio">Nenhum aparelho atrasado. Toda a cadeia está dentro do prazo.</p>';
+
+  // Uma conta comum vê quantos aparelhos travaram e onde, mas não QUAIS: os
+  // aparelhos são de outras pessoas. Identificar cada um é ferramenta de
+  // trabalho de quem opera a cadeia, e é a esses que o servidor manda o código.
+  document.getElementById('nota-pendencias').textContent = dados.detalhado
+    ? ''
+    : 'Os códigos aparecem substituídos por uma referência: só operadores e '
+      + 'administradores enxergam qual aparelho é qual.';
 
   /* --- materiais --- */
   const materiais = Object.entries(ind.materiais).sort((a, b) => b[1] - a[1]);
@@ -182,6 +203,7 @@ async function desenhar() {
          </tr>`).join('')}</tbody>`
     : '<tbody><tr><td class="vazio">Nenhum aparelho concluiu a reciclagem ainda.</td></tr></tbody>';
 
+  document.getElementById('origem-co2').innerHTML = origemDoCo2();
   document.getElementById('co2').innerHTML = `
     <strong>${formatarNumero(ind.co2eKg, 1)} kg de CO₂e</strong> deixaram de ser emitidos —
     o equivalente a ${formatarNumero(eq.kmDeCarro, 0)} km rodados de carro, ou ao que
@@ -190,6 +212,70 @@ async function desenhar() {
   /* --- recortes --- */
   document.getElementById('tab-municipios').innerHTML = tabelaGrupo(ind.porMunicipio, 'Município');
   document.getElementById('tab-categorias').innerHTML = tabelaGrupo(ind.porCategoria, 'Tipo');
+}
+
+/**
+ * Explica a conta do CO₂e na própria tela.
+ *
+ * O número respondia mal à pergunta mais óbvia da banca — "evitado em relação a
+ * quê?". Ele não é emissão poupada no transporte nem no aterro: é a emissão da
+ * PRODUÇÃO PRIMÁRIA DO METAL, ou seja, a mineração e o refino que deixam de ser
+ * necessários porque o material voltou pela reciclagem. Reciclar alumínio gasta
+ * uma fração da energia de reduzir bauxita; o ouro tem fator altíssimo porque
+ * extrair 1 kg primário move toneladas de minério.
+ *
+ * Os fatores são lidos de `MATERIAIS` (js/model.js), e não repetidos aqui: um
+ * número na explicação divergindo do usado no cálculo seria pior que não
+ * explicar nada.
+ */
+function origemDoCo2() {
+  const linhas = Object.entries(MATERIAIS)
+    .sort((a, b) => b[1].co2ePorKg - a[1].co2ePorKg)
+    .map(([, m]) => `
+      <tr>
+        <td>${escapar(m.rotulo)}</td>
+        <td class="num">${formatarNumero(m.co2ePorKg, m.co2ePorKg >= 100 ? 0 : 1)}</td>
+      </tr>`).join('');
+
+  return `
+    <p>O total <strong>não</strong> é emissão poupada no transporte nem no aterro.
+       É o que deixaria de ser emitido na <strong>produção primária do metal</strong>:
+       a mineração e o refino que não precisam acontecer porque o material voltou
+       pela reciclagem. Reciclar alumínio consome uma fração da energia de reduzir
+       bauxita, e daí o fator alto.</p>
+
+    <p>A conta, por aparelho que <em>concluiu</em> a reciclagem:</p>
+    <ol>
+      <li>o <strong>peso registrado</strong> no cadastro é multiplicado pela
+          <strong>composição média da categoria</strong> (quanto de cobre, alumínio,
+          aço, plástico, vidro e terras raras há num notebook típico) — as frações
+          estão em <code>CATEGORIAS</code>, em <code>js/model.js</code>;</li>
+      <li>a massa de cada material é multiplicada pelo <strong>fator de CO₂e
+          evitado</strong> da tabela abaixo;</li>
+      <li>os materiais são somados, e depois os aparelhos.</li>
+    </ol>
+
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Material</th><th class="num">kg de CO₂e evitado por kg recuperado</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>
+
+    <p class="sutil" style="margin-top:.8rem">
+      As equivalências usam ${formatarNumero(EQUIVALENCIAS.kgPorKmDeCarro, 2)} kg de CO₂e por km
+      de carro de passeio e ${EQUIVALENCIAS.kgPorArvoreAno} kg de CO₂ absorvidos por uma
+      árvore nativa em um ano.
+    </p>
+
+    <div class="faixa faixa-info" style="margin-top:.8rem">
+      <strong>É estimativa, não medição.</strong> O protótipo não pesa material
+      recuperado de verdade: parte do peso declarado no cadastro e de uma composição
+      média por categoria. Os fatores são ordens de grandeza usuais em estudos de
+      ciclo de vida comparando produção primária e secundária, escolhidas para o
+      trabalho — em uso real viriam de uma base de inventário auditada, e a massa
+      viria da balança da recicladora.
+    </div>`;
 }
 
 function tabelaGrupo(grupos, titulo) {
@@ -205,12 +291,59 @@ function tabelaGrupo(grupos, titulo) {
       </tr>`).join('')}</tbody>`;
 }
 
+/**
+ * Reinício da demonstração.
+ *
+ * Recria o banco inteiro: some tudo o que foi cadastrado durante os testes,
+ * contas incluídas. Por isso é ação de administrador — antes qualquer visitante
+ * podia zerar o sistema no meio da apresentação.
+ *
+ * As contas iniciais renascem com senhas sorteadas, e a sessão de quem pediu o
+ * reinício morre junto com o banco. As novas credenciais aparecem UMA vez, aqui:
+ * o banco guarda apenas o hash, e sem anotá-las ninguém entra de volta.
+ */
 document.getElementById('btn-reiniciar').addEventListener('click', async () => {
-  if (!confirm('Apagar todos os dados deste navegador e recarregar os dados de demonstração?')) return;
-  await store.reiniciar();
-  aviso('Demonstração reiniciada.');
-  await desenhar();
+  const ok = await confirmar({
+    titulo: 'Reiniciar a demonstração?',
+    corpo: `<p>Isto recria o banco do zero:</p>
+            <ul>
+              <li>os pontos de coleta e os aparelhos de exemplo voltam ao estado inicial;</li>
+              <li><strong>todas as contas são apagadas</strong>, junto com os aparelhos que registraram;</li>
+              <li>as contas iniciais renascem com <strong>senhas novas, sorteadas</strong>.</li>
+            </ul>`,
+    alerta: 'Você será desconectado, e as senhas novas saem no TERMINAL do servidor — tenha a janela dele à vista antes de confirmar.',
+    confirmar: 'Reiniciar e sair',
+  });
+  if (!ok) return;
+
+  try {
+    await store.reiniciar();
+    avisarReinicio();
+  } catch (erro) {
+    aviso(erro.message, 'erro');
+  }
 });
+
+function avisarReinicio() {
+  document.querySelector('main').innerHTML = `
+    <section class="cartao">
+      <h1>Demonstração reiniciada</h1>
+      <div class="faixa faixa-alerta">
+        <strong>As senhas novas estão no terminal do servidor</strong>, na janela
+        onde <code>python backend/app.py</code> está rodando. Elas aparecem uma
+        única vez e não ficam salvas em lugar nenhum — o banco guarda apenas o
+        hash PBKDF2.
+      </div>
+      <p class="sutil">
+        Não são enviadas para esta tela de propósito: mandá-las pela rede
+        contradiria o motivo de não gravá-las em arquivo, e aqui ainda não há
+        HTTPS.
+      </p>
+      <div class="botoes" style="margin-top:1rem">
+        <a class="botao" href="/">Entrar de novo</a>
+      </div>
+    </section>`;
+}
 
 await desenhar();
 </script>

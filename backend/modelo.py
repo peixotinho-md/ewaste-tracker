@@ -92,7 +92,13 @@ CATEGORIAS = {
     "eletrodomestico": 12.0,
 }
 
+#: Teto de peso aceito. 500 kg cobre com folga qualquer eletroeletrônico que
+#: chegue a um ponto de coleta — geladeira industrial, rack de servidores — e
+#: ainda deixa claro que "11111111111" é erro de digitação, não um caminhão.
 PESO_MAXIMO_KG = 500.0
+
+#: Casas inteiras aceitas no peso: 3 dígitos bastam para chegar a 500.
+DIGITOS_PESO = 3
 
 # Categorias que carregam memória não volátil e, portanto, podem sair da casa
 # ou da empresa com dados dentro. Multifuncionais entram na lista porque as
@@ -107,13 +113,31 @@ def validar_categoria(categoria: str) -> str:
 
 
 def normalizar_peso(peso, categoria: str) -> float:
-    """Peso ausente ou inválido cai no peso médio da categoria."""
+    """
+    Confere o peso informado e devolve o valor em kg.
+
+    Peso AUSENTE cai no peso médio da categoria — é o caso de quem não tem
+    balança e deixa a sugestão da tela. Peso PRESENTE e inválido é recusado, e
+    não substituído em silêncio: trocar "11111111111" pela média da categoria
+    daria por bom um número que a pessoa digitou errado, e o peso é o que
+    alimenta todo o cálculo de material recuperado e de CO2e evitado.
+    """
+    if peso is None or (isinstance(peso, str) and not peso.strip()):
+        return CATEGORIAS[categoria]
+
     try:
         valor = float(peso)
     except (TypeError, ValueError):
-        return CATEGORIAS[categoria]
-    if not (0 < valor <= PESO_MAXIMO_KG):
-        return CATEGORIAS[categoria]
+        raise RegraViolada("Peso inválido: informe um número em quilos.") from None
+
+    if valor != valor or valor in (float("inf"), float("-inf")):
+        raise RegraViolada("Peso inválido: informe um número em quilos.")
+    if valor <= 0:
+        raise RegraViolada("O peso precisa ser maior que zero.")
+    if valor > PESO_MAXIMO_KG:
+        raise RegraViolada(
+            f"Peso acima do limite: o máximo aceito é {PESO_MAXIMO_KG:.0f} kg."
+        )
     return round(valor, 3)
 
 
@@ -257,17 +281,30 @@ def gerar_codigo() -> str:
     return formatar_codigo(corpo + digito_verificador(corpo))
 
 
+#: Prefixo obrigatório do código de rastreio.
+#:
+#: Todo código emitido aqui começa com MS — é a marca do estado no identificador,
+#: e é o que separa uma etiqueta do e-Trilha MS de qualquer outra sequência de 8
+#: caracteres que apareça num QR. Exigi-lo faz a validação recusar de cara o que
+#: nem é uma etiqueta nossa, em vez de gastar o dígito verificador nisso.
+PREFIXO = "MS"
+
+
 def normalizar_codigo(entrada) -> str | None:
     """
     Aceita o código como o usuário digitar (minúsculas, sem hífen, com O no
     lugar de 0) e devolve a forma canônica, ou None se for inválido.
+
+    Exige o prefixo MS: `MS-XXXX-XXXX`. Os 8 caracteres seguintes ainda passam
+    pelo dígito verificador — o prefixo diz de qual sistema é a etiqueta, o
+    dígito diz se ela foi lida direito.
     """
     if not entrada:
         return None
     bruto = re.sub(r"[^0-9A-Z]", "", str(entrada).upper())
-    if bruto.startswith("MS"):
-        bruto = bruto[2:]
-    bruto = "".join(CORRECOES.get(c, c) for c in bruto)
+    if not bruto.startswith(PREFIXO):
+        return None
+    bruto = "".join(CORRECOES.get(c, c) for c in bruto[len(PREFIXO):])
     if len(bruto) != 8:
         return None
     if digito_verificador(bruto[:7]) != bruto[7]:

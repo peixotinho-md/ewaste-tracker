@@ -14,6 +14,7 @@ elimina o problema de CORS, já que tudo fica na mesma origem.
 
 import os
 import secrets
+import socket
 import sys
 from functools import wraps
 from pathlib import Path
@@ -21,7 +22,7 @@ from pathlib import Path
 # Permite `import banco` e `import modelo` mesmo executando de outra pasta.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from flask import Flask, jsonify, request, send_from_directory, session
+from flask import Flask, jsonify, redirect, request, send_from_directory, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import banco
@@ -37,10 +38,18 @@ RAIZ = Path(__file__).resolve().parent.parent
 # hashes de senha) e a pasta `backup/`. Aqui, o que não está na lista não sai.
 # --------------------------------------------------------------------------- #
 
-PAGINAS = {
-    "index.html", "rastrear.html", "registrar.html", "etiqueta.html",
-    "scanner.html", "pontos.html", "painel.html", "conta.html",
-    "admin.html",
+# As páginas são nomeadas SEM `.html`: é o que aparece na barra de endereço
+# (`/registrar`, e não `/registrar.html`). A extensão é detalhe de como o arquivo
+# está guardado no disco, e não faz parte do endereço da página — o servidor
+# resolve um para o outro aqui.
+#
+# Páginas que abrem SEM conta: a escolha inicial e a trilha do aparelho. Ler a
+# trilha de um código que se tem em mãos é a promessa central do projeto; tudo
+# o que lista, registra ou administra exige conta.
+PAGINAS_PUBLICAS = {"index", "rastrear"}
+
+PAGINAS = PAGINAS_PUBLICAS | {
+    "registrar", "scanner", "pontos", "painel", "conta", "admin",
 }
 ARQUIVOS_RAIZ = {"sw.js", "manifest.webmanifest", "icon.svg"}
 PASTAS_PUBLICAS = {"css", "js", "vendor"}
@@ -103,22 +112,15 @@ def nao_encontrado(_erro):
 
 
 # --------------------------------------------------------------------------- #
-# Identidade: usuário logado ou visitante
+# Identidade
 #
-# A conta é opcional em todo o fluxo. Quem registra um aparelho sem conta recebe
-# um identificador de visitante no cookie de sessão; ao criar conta ou entrar,
-# esses itens são adotados pela conta.
+# Registrar um aparelho passou a exigir conta, então não existe mais o
+# "visitante sem conta" que registrava e depois adotava os itens. Quem não
+# entrou só alcança a consulta por código, que não cria nem lista nada.
 # --------------------------------------------------------------------------- #
 
 def usuario_da_sessao() -> str | None:
     return session.get("usuario_id")
-
-
-def visitante_da_sessao(criar: bool = False) -> str | None:
-    if "visitante_id" not in session and criar:
-        session["visitante_id"] = banco.novo_id("v")
-        session.permanent = True
-    return session.get("visitante_id")
 
 
 # --------------------------------------------------------------------------- #
@@ -139,6 +141,10 @@ def conta_da_sessao(conexao) -> dict | None:
     return banco.obter_usuario(conexao, usuario_id) if usuario_id else None
 
 
+#: Todos os papéis — para rotas que exigem apenas estar autenticado.
+QUALQUER_CONTA = ("visitante", "operador", "admin")
+
+
 def exige(*papeis: str):
     """
     Fecha a rota para quem não tem um dos papéis exigidos.
@@ -154,7 +160,7 @@ def exige(*papeis: str):
             conta = conta_da_sessao(conexao)
             if conta is None:
                 return jsonify({
-                    "erro": "Esta ação exige uma conta de operador. Entre para continuar."
+                    "erro": "Esta ação exige uma conta. Entre para continuar."
                 }), 401
             if conta["papel"] not in papeis:
                 return jsonify({
@@ -180,28 +186,20 @@ def pontos(conexao):
 # API — itens e cadeia de custódia
 # --------------------------------------------------------------------------- #
 
-@app.get("/api/itens")
+@app.get("/api/painel")
 @com_banco
-def itens(conexao):
-    return jsonify(banco.listar_itens(conexao))
+@exige(*QUALQUER_CONTA)
+def painel(conexao, conta):
+    """
+    Dados dos indicadores. Não existe mais rota que devolva "todos os itens".
 
-
-@app.get("/api/eventos")
-@com_banco
-def eventos(conexao):
-    return jsonify(banco.listar_eventos(conexao))
-
-
-@app.get("/api/itens/<codigo>")
-@com_banco
-def item(conexao, codigo):
-    canonico = modelo.normalizar_codigo(codigo)
-    if not canonico:
-        return jsonify({"erro": "Código de rastreio inválido."}), 400
-    encontrado = banco.obter_item(conexao, canonico)
-    if encontrado is None:
-        return jsonify({"erro": "Código de rastreio não encontrado."}), 404
-    return jsonify(encontrado)
+    Uma conta comum só tem acesso aos próprios aparelhos, e o painel é a única
+    visão do conjunto que ela recebe — por isso vem sem código e sem dono: dá
+    para somar, contar e medir, não para descobrir o que os outros descartaram.
+    Operador e administrador recebem os dados identificados, porque a função
+    deles é justamente agir sobre um aparelho específico.
+    """
+    return jsonify(banco.listar_para_painel(conexao, modelo.pode_escrever(conta["papel"])))
 
 
 @app.get("/api/itens/<codigo>/rastreio")
@@ -218,7 +216,9 @@ def rastreio(conexao, codigo):
 
 @app.post("/api/itens")
 @com_banco
-def criar_item(conexao):
+@exige(*QUALQUER_CONTA)
+def criar_item(conexao, conta):
+    """Cadastra um aparelho em nome de quem está autenticado."""
     corpo = request.get_json(silent=True) or {}
 
     categoria = modelo.validar_categoria(corpo.get("categoria"))
@@ -230,16 +230,16 @@ def criar_item(conexao):
     ).fetchone():
         raise modelo.RegraViolada("Ponto de coleta desconhecido.")
 
-    usuario_id = usuario_da_sessao()
     novo = banco.criar_item(
         conexao,
         categoria=categoria,
         marca=modelo.texto(corpo.get("marca"), "marca"),
         peso_kg=peso,
         ponto_origem_id=ponto_origem,
-        responsavel=modelo.texto(corpo.get("responsavel"), "responsavel"),
-        usuario_id=usuario_id,
-        visitante_id=None if usuario_id else visitante_da_sessao(criar=True),
+        # Quem registrou é a conta autenticada, como no resto da cadeia: um
+        # nome digitado no formulário não diria nada sobre quem de fato registrou.
+        responsavel=modelo.texto(conta["nome"], "responsavel"),
+        usuario_id=conta["id"],
     )
     return jsonify(novo), 201
 
@@ -319,9 +319,8 @@ def cadastrar(conexao):
         conexao, nome=nome, email=email, senha_hash=generate_password_hash(senha)
     )
 
-    adotados = banco.adotar_itens_do_visitante(conexao, usuario["id"], visitante_da_sessao())
     _abrir_sessao(usuario["id"])
-    return jsonify({"usuario": usuario, "adotados": adotados}), 201
+    return jsonify({"usuario": usuario}), 201
 
 
 @app.post("/api/sessao")
@@ -336,9 +335,8 @@ def entrar(conexao):
         return jsonify({"erro": "E-mail ou senha incorretos."}), 401
 
     usuario = banco.usuario_json(linha)
-    adotados = banco.adotar_itens_do_visitante(conexao, usuario["id"], visitante_da_sessao())
     _abrir_sessao(usuario["id"])
-    return jsonify({"usuario": usuario, "adotados": adotados})
+    return jsonify({"usuario": usuario})
 
 
 @app.delete("/api/sessao")
@@ -361,10 +359,10 @@ def _abrir_sessao(usuario_id: str) -> None:
 
 @app.get("/api/meus-itens")
 @com_banco
-def meus_itens(conexao):
-    return jsonify(
-        banco.itens_do_dono(conexao, usuario_da_sessao(), visitante_da_sessao())
-    )
+@exige(*QUALQUER_CONTA)
+def meus_itens(conexao, conta):
+    """Só os aparelhos da conta autenticada — o id vem da sessão, não do cliente."""
+    return jsonify(banco.itens_do_dono(conexao, conta["id"]))
 
 
 # --------------------------------------------------------------------------- #
@@ -465,10 +463,10 @@ def admin_itens(conexao, conta):
     """
     Todos os aparelhos com etapa, origem, dono e nº de leituras.
 
-    A lista pública `/api/itens` continua existindo e continua aberta — é dela
-    que o painel tira os indicadores. Esta rota acrescenta o cruzamento com
-    pontos, contas e eventos, útil para quem administra e desnecessário para
-    quem só consulta um código.
+    É a ÚNICA rota que devolve os aparelhos identificados em lista. O painel
+    (`/api/painel`) serve os indicadores anonimizados para conta comum, e
+    `/api/meus-itens` serve o que é de cada um; aqui entra o cruzamento com
+    pontos, contas e eventos, que só faz sentido para quem administra.
     """
     return jsonify(banco.listar_itens_detalhados(conexao))
 
@@ -493,10 +491,37 @@ def admin_alteracoes(conexao, conta):
 # --------------------------------------------------------------------------- #
 
 @app.post("/api/demo/reiniciar")
-def reiniciar_demo():
-    """Recria o banco com os dados de exemplo. Existe só para a demonstração."""
-    banco.preparar(recriar=True)
+@com_banco
+@exige("admin")
+def reiniciar_demo(conexao, conta):
+    """
+    Recria o banco com os dados de exemplo. Existe só para a demonstração.
+
+    Exige admin porque apaga tudo: contas, aparelhos e a cadeia de custódia
+    inteira. Antes ficava aberta — qualquer visitante podia zerar o sistema no
+    meio da apresentação.
+
+    A carga sorteia senhas novas para as contas iniciais, inclusive a de
+    administrador, e a sessão de quem pediu o reinício morre junto com o banco.
+
+    As senhas novas saem NO TERMINAL do servidor, e não nesta resposta. Mandá-las
+    de volta pela rede seria contradizer o motivo de não as gravar em arquivo —
+    e aqui ainda não há HTTPS, então o corpo da resposta trafega em texto claro.
+    Quem pode reiniciar a demonstração é o administrador, que está com o terminal
+    do servidor à mão.
+    """
+    credenciais = banco.preparar(recriar=True)
     session.clear()
+
+    # `flush=True` porque isto sai durante uma requisição, e não na subida do
+    # servidor: com a saída redirecionada para um arquivo, o Python usa buffer
+    # de bloco e a senha ficaria presa nele por tempo indeterminado. Esta é a
+    # única cópia que existe — não pode depender de o buffer encher.
+    print("\n  Demonstração reiniciada. Contas recriadas, com senha sorteada:", flush=True)
+    for conta in credenciais:
+        print(f"    {conta['papel']:<9} {conta['email']:<22} senha: {conta['senha']}", flush=True)
+    print("\n  ANOTE AGORA: elas não ficam salvas em lugar nenhum.\n", flush=True)
+
     return jsonify({"ok": True})
 
 
@@ -521,18 +546,48 @@ def saude(conexao):
 
 @app.get("/")
 def home():
+    """
+    Raiz do site. A página decide sozinha o que mostrar: porta de entrada para
+    quem não tem sessão, home para quem tem.
+
+    O conteúdo da home não é protegido — são textos e a moldura dos números; os
+    números em si vêm de `/api/painel`, que exige sessão. Por isso esta rota
+    pode ser pública sem abrir nada.
+    """
     return send_from_directory(RAIZ, "index.html")
 
 
 @app.get("/<nome>")
 def arquivo_raiz(nome):
-    if nome in PAGINAS or nome in ARQUIVOS_RAIZ:
+    # A home tem um endereço só, e é `/`. `/index` existiria como sinônimo e
+    # apareceria em link e histórico como se fosse outra página.
+    if nome in ("index", "index.html"):
+        return redirect("/")
+
+    # `/registrar.html` continua funcionando, mas leva para `/registrar`: um
+    # endereço só por página evita que a mesma tela apareça com dois nomes em
+    # link, histórico e favorito. O redirecionamento é temporário (302) de
+    # propósito — um permanente ficaria gravado no navegador de quem abriu uma
+    # vez, e este ainda é um protótipo em mudança.
+    if nome.endswith(".html") and nome[: -len(".html")] in PAGINAS:
+        return redirect(f"/{nome[: -len('.html')]}")
+
+    if nome in PAGINAS:
+        if nome not in PAGINAS_PUBLICAS and not usuario_da_sessao():
+            # Devolver a página e deixar o JavaScript decidir mostraria por um
+            # instante uma tela que a pessoa não pode usar, e ainda dependeria de
+            # o script rodar. Melhor não entregar o arquivo.
+            return redirect(f"/?destino={nome}")
+        return send_from_directory(RAIZ, f"{nome}.html")
+
+    if nome in ARQUIVOS_RAIZ:
         resposta = send_from_directory(RAIZ, nome)
         if nome == "sw.js":
             # O service worker precisa poder controlar todo o site, e não apenas
             # a pasta de onde foi servido.
             resposta.headers["Service-Worker-Allowed"] = "/"
         return resposta
+
     return nao_encontrado(None)
 
 
@@ -546,16 +601,49 @@ def arquivo_publico(pasta, arquivo):
 
 # --------------------------------------------------------------------------- #
 
+def ip_na_rede() -> str | None:
+    """Descobre o IP desta máquina na rede local, para imprimir no terminal.
+
+    Abre um socket UDP para um endereço externo: nada chega a ser enviado, mas o
+    sistema já escolhe por qual placa de rede sairia e revela o IP dela.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        try:
+            sock.connect(("8.8.8.8", 53))
+            return sock.getsockname()[0]
+        except OSError:
+            return None  # Sem rede: só resta o loopback.
+
+
 def main() -> None:
-    banco.preparar()
+    credenciais = banco.preparar()
     porta = int(os.environ.get("PORTA", 8000))
+    # 0.0.0.0 aceita conexões de qualquer aparelho da rede local, e não apenas
+    # desta máquina. HOST=127.0.0.1 volta a fechar o servidor no loopback — o
+    # recomendado em Wi-Fi público, já que aqui o tráfego não é HTTPS.
+    host = os.environ.get("HOST", "0.0.0.0")
     print(f"\n  e-Trilha MS em execução:  http://localhost:{porta}")
+    if host == "0.0.0.0":
+        ip = ip_na_rede()
+        if ip:
+            print(f"  Na rede local:            http://{ip}:{porta}")
+        print("  Pela rede, a câmera do scanner não abre: exige localhost ou HTTPS.")
     print(f"  Banco de dados:           {banco.CAMINHO_BANCO}")
-    print("\n  Contas de demonstração (públicas, só para a apresentação):")
-    for conta in banco.CONTAS_DEMO:
-        print(f"    {conta['papel']:<9} {conta['email']:<20} senha: {conta['senha']}")
+
+    if credenciais:
+        # Única vez em que estas senhas aparecem. Não são gravadas em arquivo
+        # nenhum: o banco guarda apenas o hash, e o sorteio não se repete.
+        print("\n  Contas criadas agora, com senha sorteada:")
+        for conta in credenciais:
+            print(f"    {conta['papel']:<9} {conta['email']:<22} senha: {conta['senha']}")
+        print("\n  ANOTE AGORA. Elas não ficam salvas em lugar nenhum e não")
+        print("  podem ser recuperadas — só trocadas em /admin, já autenticado.", flush=True)
+    else:
+        print("  Contas:                   já existentes")
+        print("  (as senhas não podem ser lidas de volta do hash; troque-as em /admin)")
+
     print("\n  Encerre com Ctrl+C\n")
-    app.run(host="127.0.0.1", port=porta, debug=False)
+    app.run(host=host, port=porta, debug=False)
 
 
 if __name__ == "__main__":

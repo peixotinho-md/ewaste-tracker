@@ -68,8 +68,7 @@
 <script type="module">
 import * as store from './js/store.js';
 import { iniciarPagina, aviso, escapar } from './js/ui.js';
-import { CATEGORIAS, TIPOS_PONTO, categoria, distanciaKm } from './js/model.js';
-import { CONTORNO_MS } from './js/geo-ms.js';
+import { CATEGORIAS, TIPOS_PONTO, categoria, distanciaKm, CONTORNO_MS } from './js/model.js';
 
 await iniciarPagina();
 
@@ -271,7 +270,7 @@ function cartaoPonto(p) {
     </article>`;
 }
 
-/* Permite chegar já filtrado por link: pontos.html?municipio=Dourados */
+/* Permite chegar já filtrado por link: /pontos?municipio=Dourados */
 const daUrl = new URLSearchParams(location.search).get('municipio');
 if (daUrl) {
   municipioSelecionado = daUrl;
