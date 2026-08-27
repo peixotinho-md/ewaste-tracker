@@ -190,7 +190,11 @@ ponta a ponta nem devolve essa informação a quem entregou o aparelho.
 | RF09 | Consultar pontos de coleta com filtro por município e tipo de resíduo | Implementado |
 | RF10 | Ordenar pontos pela distância até o usuário | Implementado |
 | RF11 | Exibir indicadores de massa, material recuperado, CO₂e, gargalo e pendências | Implementado |
-| RF12 | Conta opcional com histórico de aparelhos do usuário | Implementado |
+| RF12 | Conta obrigatória para registrar e listar, com cada usuário vendo só os próprios aparelhos | Implementado |
+| RF22 | Manter a consulta por código aberta a quem não tem conta, a partir de uma tela pública própria | Implementado |
+| RF23 | Criar o administrador inicial com senha sorteada, sem credencial escrita no código | Implementado |
+| RF24 | Recusar peso fora da faixa aceita em vez de substituí-lo em silêncio | Implementado |
+| RF25 | Exigir o prefixo `MS` na consulta por código | Implementado |
 | RF13 | Compartilhar dados entre dispositivos e usuários diferentes | Implementado (API + SQLite) |
 | RF14 | Exigir conta de operador para registrar etapas, com o papel verificado no servidor | Implementado |
 | RF17 | Vincular o operador a um ponto de coleta e carimbar assinatura e local a partir da sessão | Implementado |
@@ -274,6 +278,7 @@ Nada é baixado em tempo de execução.
         │                                                    │
    model.js  ...... regras (validação de tela)          modelo.py  ... regras (validação real)
    indicadores.js . cálculo dos indicadores             banco.py  .... SQL e transações
+   qr.js  ......... geração e leitura do QR
                                                             │
                                                      SQLite (etrilha.db)
 ```
@@ -283,7 +288,7 @@ passa por `js/store.js`. Foi essa regra que tornou a migração barata. Na vers�
 anterior, o mesmo `store.js` lia e gravava no `localStorage`, e todas as suas
 funções já eram assíncronas justamente para que a troca não exigisse mexer nas
 telas. Quando o back-end entrou, **só o corpo dessas funções mudou** — de acesso
-local para `fetch`. Nenhuma das oito páginas precisou ser reescrita.
+local para `fetch`. Nenhuma das páginas precisou ser reescrita.
 
 ### 9.2 Por que a validação existe dos dois lados
 
@@ -303,23 +308,28 @@ exibição e não para decidir se uma gravação é aceita.
 
 | Método | Rota | O que faz |
 |---|---|---|
-| `GET` | `/api/pontos` | Pontos de coleta |
-| `GET` | `/api/itens` | Todos os itens (painel) |
-| `GET` | `/api/eventos` | Todos os eventos (painel) |
-| `GET` | `/api/itens/<codigo>` | Um item |
-| `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos |
-| `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` |
+| `GET` | `/api/pontos` | Pontos de coleta — **exige conta** |
+| `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos — **público** |
+| `GET` | `/api/painel` | Conjunto dos indicadores: anônimo para conta comum, identificado para operador e admin — **exige conta** |
+| `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` — **exige conta** |
 | `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa, valida a transição — **exige operador** |
 | `GET` / `POST` / `DELETE` | `/api/sessao` | Usuário atual, entrar, sair |
 | `POST` | `/api/usuarios` | Criar conta |
-| `GET` | `/api/meus-itens` | Itens do usuário logado ou do visitante |
+| `GET` | `/api/meus-itens` | Aparelhos da conta autenticada, e só dela |
 | `GET` | `/api/admin/itens` | Aparelhos com etapa, ponto de entrada, dono e nº de leituras — **exige admin** |
 | `GET` | `/api/admin/usuarios` | Lista as contas com papel, ponto e nº de aparelhos — **exige admin** |
 | `PATCH` | `/api/admin/usuarios/<id>` | Altera papel, ponto vinculado e senha — **exige admin** |
 | `DELETE` | `/api/admin/usuarios/<id>` | Exclui a conta — **exige admin e a senha dele no corpo** |
 | `GET` | `/api/admin/alteracoes` | Trilha de administração — **exige admin** |
-| `POST` | `/api/demo/reiniciar` | Recria o banco com os dados de exemplo |
+| `POST` | `/api/demo/reiniciar` | Recria o banco e sorteia senhas novas — **exige admin** |
 | `GET` | `/api/saude` | Diagnóstico do servidor e do banco |
+
+Uma rota some da lista por decisão de projeto: **não existe `GET /api/itens`**.
+Devolver "todos os itens" seria entregar a qualquer conta os aparelhos de todo
+mundo, e é justamente o que o modelo de acesso recusa (seção 9.7). Quem precisa
+do conjunto recebe `/api/painel`, anonimizado; quem precisa do próprio recebe
+`/api/meus-itens`; quem precisa de um aparelho específico usa o código que tem
+em mãos.
 
 Os códigos de status carregam significado: `201` quando algo é criado, `400`
 quando uma regra de negócio é violada (com a mensagem já pronta para a tela),
@@ -339,15 +349,16 @@ distinção, salvar o papel de um operador apagaria o posto dele sem querer.
 |---|---|
 | `pontos` | `id`, `nome`, `tipo`, `municipio`, `endereco`, `lat`, `lng`, `aceita`, `horario`, `telefone` |
 | `usuarios` | `id`, `nome`, `email` (UNIQUE), `senha_hash`, `criado_em`, `papel`, `ponto_id` |
-| `itens` | `codigo` (PK), `categoria`, `marca`, `peso_kg`, `dono_id`, `visitante_id`, `ponto_origem_id`, `criado_em`, `atualizado_em`, `etapa_atual`, `demo` |
+| `itens` | `codigo` (PK), `categoria`, `marca`, `peso_kg`, `dono_id`, `ponto_origem_id`, `criado_em`, `atualizado_em`, `etapa_atual`, `demo` |
 | `eventos` | `id`, `item_codigo`, `etapa`, `ponto_id`, `responsavel`, `observacao`, `em` |
 | `apagamentos` | `item_codigo` (PK), `midia`, `metodo`, `responsavel`, `em` |
 | `alteracoes_conta` | `id`, `alvo_id`, `alvo_nome`, `autor_id`, `autor_nome`, `acao`, `de`, `para`, `em` |
 
-Um item pertence a um usuário (`dono_id`) **ou** a um visitante sem conta
-(`visitante_id`, guardado no cookie de sessão). Ao criar conta, os itens do
-visitante são adotados por ela — é isso que mantém o cadastro opcional sem
-perder o histórico de quem registrou antes de se cadastrar.
+Todo item tem dono: registrar exige conta. `dono_id` é o que separa "meus
+aparelhos" dos aparelhos de outra pessoa, e a listagem sai sempre desse filtro —
+"os itens do usuário X" não é uma chamada que a API aceite. Excluir a conta não
+apaga o aparelho (`ON DELETE SET NULL`): o histórico da cadeia de custódia vale
+por si, e o que se perde é justamente o vínculo com a pessoa.
 
 `papel` tem `visitante` como padrão no próprio `CHECK` da coluna, e não no
 código: quem se cadastra pela tela não ganha poder de escrita, e mandar
@@ -420,18 +431,36 @@ descartar mídia sem destruir o dado é incidente de segurança, não descuido.
 
 ### 9.7 Autorização: quem pode escrever na cadeia
 
-Ler é público — qualquer pessoa consulta um código, sem conta. Escrever não.
-Quem lê a etiqueta é quem declara que o aparelho passou por uma etapa, e essa
-declaração assinada é o produto do sistema: aberta a qualquer um, não provaria
-nada. Três papéis dividem o acesso:
+Ler a trilha de **um** código que se tem em mãos é público. Todo o resto exige
+conta. Quem lê a etiqueta é quem declara que o aparelho passou por uma etapa, e
+essa declaração assinada é o produto do sistema: aberta a qualquer um, não
+provaria nada. Três papéis dividem o acesso:
 
-| Papel | Registrar o próprio aparelho | Ler QR e avançar etapa | Gerenciar contas |
-|---|---|---|---|
-| Visitante (com ou sem conta) | sim | não | não |
-| Operador | sim | sim | não |
-| Administrador | sim | sim | sim |
+| Papel | Consultar por código | Registrar o próprio aparelho | Ver os aparelhos de outros | Ler QR e avançar etapa | Gerenciar contas |
+|---|---|---|---|---|---|
+| Sem conta | sim | não | não | não | não |
+| Visitante | sim | sim | não | não | não |
+| Operador | sim | sim | sim | sim | não |
+| Administrador | sim | sim | sim | sim | sim |
 
-Quatro decisões sustentam esse controle:
+Cinco decisões sustentam esse controle:
+
+**A conta é a porta de entrada, e a consulta é a exceção declarada.** A primeira
+tela oferece entrar, criar conta ou consultar um código; só a terceira dispensa
+cadastro, e leva a uma página que faz uma coisa só — transformar um código num
+link de rastreio. Quem entregou um celular no ecoponto tem a etiqueta na mão e
+não deveria precisar de cadastro para ver onde o aparelho está: é exatamente o
+que a Lei 12.305/2010 deixa em aberto e o projeto se propõe a fechar. A guarda
+das demais páginas está no servidor, que **não entrega o arquivo** sem sessão,
+em vez de servir a página e deixar o JavaScript decidir.
+
+**Nenhuma conta lista os aparelhos de outra.** Não existe rota que devolva
+"todos os itens": `GET /api/meus-itens` filtra por `dono_id` a partir do cookie
+de sessão — o id do dono não é parâmetro, então não há chamada a montar para ver
+o que é dos outros —, e o painel de indicadores recebe um recorte **anônimo**,
+sem código, sem marca e sem dono, com uma referência sequencial que só serve
+para juntar cada evento ao seu item. Operador e administrador recebem os mesmos
+dados identificados, porque a função deles é agir sobre um aparelho específico.
 
 **A verificação é do servidor.** As telas do operador e do administrador somem
 do menu de quem não tem o papel, mas esconder o botão não é segurança: o
@@ -537,6 +566,44 @@ qualquer arquivo da pasta acabaria servindo também `backend/etrilha.db` — o
 banco inteiro, com os hashes de senha — e a pasta `backup/`. O que não está na
 lista responde 404.
 
+As páginas são endereçadas **sem a extensão** (`/registrar`, e não
+`/registrar.html`): a extensão descreve como o arquivo está guardado no disco, o
+que não é assunto de quem digita o endereço. `arquivo_raiz()` resolve o nome
+para o arquivo e redireciona a forma antiga para a nova, de modo que cada tela
+tenha um endereço só — dois endereços para a mesma página se espalham por links,
+histórico e favoritos, e depois divergem. Pelo mesmo motivo `/index` redireciona
+para `/`.
+
+São **oito páginas**, e não uma por tela: três delas atendem dois estados da
+mesma tarefa, decididos pelo contexto e não por um arquivo a mais. `/` é a porta
+de entrada para quem não tem sessão e a home para quem tem — é o mesmo momento
+da visita, e quem já entrou não tem o que fazer numa tela que só oferece entrar.
+`/rastrear` recebe o código digitado ou lido pela câmera, porque as duas formas
+terminam na mesma trilha. `/registrar?imprimir` troca o cadastro pela folha de
+etiquetas, já que o cadastro é o que produz a etiqueta que a folha imprime.
+
+O mesmo ponto é onde a sessão é conferida: pedir uma página que exige conta sem
+ter sessão devolve um redirecionamento para a entrada, e o arquivo não sai do
+servidor. Entregar o HTML e deixar o JavaScript esconder o conteúdo mostraria a
+tela por um instante e dependeria de o script rodar.
+
+### 9.9.1 Alcance do servidor na rede
+
+O servidor escuta em `0.0.0.0` e não em `127.0.0.1`, de modo que aparelhos da
+mesma rede local alcancem o sistema — é o que permite abrir o scanner no
+celular, onde ler um QR faz sentido. O endereço de rede é impresso na subida,
+junto com o de `localhost`.
+
+A escolha tem um custo que precisa ser dito: **em rede pública, qualquer pessoa
+conectada alcança o sistema**, e sem HTTPS a senha trafega em texto claro. Por
+isso o host é configurável por variável de ambiente (`HOST=127.0.0.1` fecha o
+servidor no loopback), e a mensagem de subida lembra que a câmera não abre pelo
+IP — `getUserMedia` exige contexto seguro, que por HTTP puro só existe em
+`localhost`.
+
+Num sistema real isso se resolveria com TLS e com o servidor atrás de um proxy;
+aqui, a variável de ambiente é a mitigação honesta para uma demonstração.
+
 ### 9.10 Algoritmos relevantes
 
 - **Máquina de estados** (`validar_transicao`): só aceita o passo imediatamente
@@ -547,6 +614,16 @@ lista responde 404.
   alfabeto base32 **sem os caracteres I, L, O e U** — os que as pessoas confundem
   ao ler uma etiqueta suja. Detecta todos os erros de um caractere e a maioria das
   transposições. A normalização ainda corrige `O→0`, `I→1`, `L→1` e `U→V`.
+- **Prefixo obrigatório** (`normalizar_codigo`): o código só é aceito começando
+  por `MS`, como em `MS-XXXX-XXXX`. São duas verificações com papéis distintos —
+  o prefixo diz de qual sistema é a etiqueta, e recusa de imediato qualquer outra
+  sequência de 8 caracteres que apareça num QR; o dígito verificador diz se ela
+  foi lida ou digitada corretamente.
+- **Validação do peso** (`normalizar_peso`): aceita de 0,01 kg a 500 kg. Peso
+  ausente cai no peso médio da categoria — é o caso de quem não tem balança —,
+  mas peso presente e inválido é **recusado**, e não substituído em silêncio:
+  trocar um `11111111111` pela média daria por bom um número digitado errado, e
+  o peso é o que alimenta todo o cálculo de material recuperado e de CO₂e.
 - **Validação do apagamento** (`validar_apagamento`): confere se o método
   declarado destrói o dado naquele tipo de mídia; a tabela de compatibilidade
   vem da arquitetura da mídia, não de convenção (seção 9.6).
@@ -615,7 +692,7 @@ Marcos previstos no cronograma da DAC:
 | 20 | Declarar ATA Secure Erase em memória flash | Aceito; atestado aparece no rastreio público |
 | 21 | Avançar um monitor (sem mídia) para a triagem | Aceito sem exigir atestado |
 | 22 | Tentar `UPDATE` ou `DELETE` na tabela `apagamentos` | Recusado pelos gatilhos |
-| 23 | Abrir `scanner.html` sem estar logado | Câmera e formulário não aparecem; a tela explica e leva ao login |
+| 23 | Abrir `/scanner` sem estar logado | Câmera e formulário não aparecem; a tela explica e leva ao login |
 | 24 | Gravar um evento por `curl`, sem sessão | HTTP 401 |
 | 25 | Gravar um evento logado como visitante | HTTP 403 |
 | 26 | Gravar um evento como operador, mandando outro nome e outro ponto no JSON | Aceito, mas gravado com o nome da conta e o ponto vinculado a ela |
@@ -637,6 +714,21 @@ Marcos previstos no cronograma da DAC:
 | 42 | Consultar um aparelho da conta excluída | Item, trilha e responsável dos eventos intactos, apenas sem dono |
 | 43 | Ver a trilha depois da exclusão | A conta excluída continua nomeada no registro |
 | 44 | Listar todos os aparelhos como admin, com busca e filtro por etapa | Lista filtra por texto, etapa e "só os atrasados" |
+| 45 | Pedir `/registrar`, `/painel`, `/conta` ou `/admin` sem sessão | HTTP 302 para a entrada; o HTML não é entregue |
+| 46 | Pedir `/` e `/rastrear` sem sessão | HTTP 200 — são as duas páginas públicas |
+| 47 | Abrir `/registrar.html` | Redirecionado para `/registrar` |
+| 48 | Chamar `/api/painel` sem sessão | HTTP 401 |
+| 49 | Chamar `/api/painel` como visitante | Itens sem código, sem marca e sem dono; eventos sem responsável |
+| 50 | Chamar `/api/painel` como operador | Mesmos itens, agora identificados (`detalhado: true`) |
+| 51 | Registrar um aparelho como visitante e pedir `/api/meus-itens` nas duas contas | O dono vê 1 aparelho; a outra conta vê 0 |
+| 52 | Registrar mandando `"responsavel"` no JSON | Ignorado: o evento é assinado com o nome da conta |
+| 53 | Chamar `/api/demo/reiniciar` sem ser admin | HTTP 403 |
+| 54 | Reiniciar a demonstração como admin | Banco recriado e credenciais novas devolvidas na resposta |
+| 55 | Subir o servidor com o banco já existente | Nenhuma senha impressa; só o caminho do arquivo de credenciais |
+| 56 | Enviar `pesoKg` igual a `11111111111`, `0`, `-5`, `501` e `abc` | Recusado com HTTP 400 e a mensagem correspondente |
+| 57 | Digitar mais de 3 dígitos no campo de peso | O campo corta a parte inteira em 3 dígitos |
+| 58 | Consultar `8VNC5RQ1`, sem o prefixo | Recusado: o código exige `MS` |
+| 59 | Consultar `MS-8VNC-5RQ1` | Aceito |
 
 ### 11.2 Resultados obtidos
 
@@ -676,7 +768,7 @@ PASSOU  DELETE em eventos bloqueado -> O histórico de eventos é somente de acr
 
 **Dados compartilhados** (cenário 13): item criado numa sessão e avançado para
 `COLETADO`; um navegador com perfil limpo, sem nenhum cookie da primeira sessão,
-abriu `rastrear.html` com o código e exibiu a trilha completa, incluindo o
+abriu `/rastrear` com o código e exibiu a trilha completa, incluindo o
 responsável registrado pela outra sessão.
 
 **Autorização** (cenários 23 a 27), chamando a API por fora da tela e depois
@@ -859,7 +951,13 @@ não um formulário.
 6. **Pontos de coleta fictícios**, posicionados sobre coordenadas reais dos
    municípios. Precisam ser levantados e validados em campo.
 7. **Composição material e fatores de CO₂e são médias de referência**, não
-   medições. Servem para ordem de grandeza, não para contabilidade ambiental oficial.
+   medições. Servem para ordem de grandeza, não para contabilidade ambiental
+   oficial. O painel abre a conta na própria tela — a origem do número, a
+   sequência do cálculo e o fator de cada material —, porque um total ambiental
+   que ninguém consegue conferir vale pouco. O peso, na outra ponta, é
+   **declarado por quem registra**: o sistema recusa valores fora da faixa
+   aceita, mas não tem como saber se o número corresponde ao aparelho. Numa
+   operação real a massa viria da balança da recicladora.
 8. **Mapa esquemático**, com contorno simplificado do estado — é um recurso de
    orientação, não uma base cartográfica.
 9. **Câmera exige contexto seguro** (`localhost` ou HTTPS). Pelo celular na rede
@@ -867,6 +965,11 @@ não um formulário.
 10. **A cadeia depende de confiança nos operadores.** O sistema garante que o
    histórico não seja reescrito, mas não prova que a leitura corresponde a um
    movimento físico real.
+11. **A interface móvel foi ajustada, não testada em campo.** O CSS ganhou um
+   ponto de quebra em 640 px — menu que desliza na horizontal em vez de quebrar
+   em três linhas dentro de um cabeçalho fixo, alvos de toque de 44 px, margens
+   menores —, mas a verificação foi por inspeção, sem aparelho real na mão. E é
+   justamente no celular que o sistema é usado de pé, num galpão.
 
 ---
 

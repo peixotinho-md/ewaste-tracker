@@ -49,26 +49,99 @@ O banco (`backend/etrilha.db`) é criado e populado automaticamente na primeira
 execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
 `vendor/` — não há build nem `npm install`.
 
-### Contas de demonstração
+### Acesso pela rede local
 
-A carga inicial cria duas contas, também impressas no terminal ao subir o
-servidor:
+O servidor escuta em `0.0.0.0`, ou seja, **aceita conexões de qualquer aparelho
+da mesma rede** — não só da máquina onde roda. Ao subir, ele imprime os dois
+endereços:
 
-| Papel | E-mail | Senha | O que pode |
-|---|---|---|---|
-| Administrador | `admin@etrilha.ms` | `etrilha-admin` | gerenciar contas e papéis, além de tudo do operador |
-| Operador | `operador@etrilha.ms` | `etrilha-operador` | ler QR e registrar as etapas, pelo Ecoponto Região Norte |
+```
+  e-Trilha MS em execução:  http://localhost:8000
+  Na rede local:            http://192.168.0.15:8000
+```
 
-Roteiro de apresentação com essas contas em
+Serve para abrir o sistema no celular, que é onde ler um QR faz sentido. Três
+coisas a saber:
+
+- **A câmera não funciona pelo IP.** `getUserMedia` só é liberado em contexto
+  seguro: `localhost` ou HTTPS. Por `http://192.168.x.x` o navegador bloqueia, e
+  sobra a digitação manual do código — disponível em todas as telas.
+- **O Firewall do Windows** pede liberação na primeira execução; marque "redes
+  privadas".
+- **Em Wi-Fi público, feche.** Qualquer pessoa na mesma rede alcança o sistema, e
+  aqui não há HTTPS: a senha trafega em texto claro. Para voltar a atender só
+  esta máquina:
+
+```powershell
+$env:HOST = "127.0.0.1"; python backend/app.py
+```
+
+A porta também é configurável, pela variável `PORTA`.
+
+### Contas iniciais
+
+A carga cria duas contas e **sorteia uma senha para cada uma**, mostrada no
+terminal na primeira execução:
+
+```
+  Contas criadas agora, com senha sorteada:
+    admin     admin@etrilha.ms       senha: ····················
+    operador  operador@etrilha.ms    senha: ····················
+```
+
+| Papel | E-mail | O que pode |
+|---|---|---|
+| Administrador | `admin@etrilha.ms` | gerenciar contas e papéis, além de tudo do operador |
+| Operador | `operador@etrilha.ms` | ler QR e registrar as etapas, pelo Ecoponto Região Norte |
+
+**Anote no momento em que aparecem.** Elas não são gravadas em arquivo nenhum:
+o banco guarda apenas o hash PBKDF2, e o sorteio não se repete nas execuções
+seguintes. Fechar o terminal perde a senha para sempre — resta trocá-la em
+`/admin` (já autenticado) ou reiniciar a demonstração, que apaga os dados junto.
+
+Duas decisões, com o mesmo motivo: senha fixa escrita no código vazaria pelo
+histórico do Git e continuaria valendo em toda cópia do projeto; senha gravada
+num arquivo ao lado do banco iria junto ao copiar a pasta, e ainda daria a falsa
+impressão de estar guardada em segurança.
+
+Roteiro de apresentação em
 [docs/CREDENCIAIS-DEMO.md](docs/CREDENCIAIS-DEMO.md).
 
-São credenciais **públicas, de demonstração**. O primeiro administrador nasce
-aqui de propósito: como só um admin promove outro, não pode haver
-auto-promoção pela tela — num sistema real esse primeiro cadastro seria um
-comando de instalação.
+O primeiro administrador nasce na carga de propósito: como só um admin promove
+outro, não pode haver auto-promoção pela tela — num sistema real esse primeiro
+cadastro seria um comando de instalação.
 
 Quem se cadastra pela tela nasce como **visitante**: registra e acompanha os
-próprios aparelhos, mas não grava etapas na cadeia de custódia de terceiros.
+próprios aparelhos, mas não vê os de mais ninguém nem grava etapas na cadeia de
+custódia de terceiros.
+
+### Endereços
+
+As páginas são servidas **sem a extensão**: `/registrar`, `/painel`,
+`/rastrear`. A extensão diz como o arquivo está guardado no disco, e isso não é
+assunto de quem digita o endereço. Quem resolve um para o outro é
+`arquivo_raiz()` em `backend/app.py`, que também redireciona `/registrar.html`
+para `/registrar` — links e favoritos antigos continuam valendo, e a tela passa
+a ter um endereço só. A home é `/`, e `/index` redireciona para lá pelo mesmo
+motivo.
+
+Três páginas fazem duas coisas cada, escolhidas pelo contexto em vez de por um
+arquivo separado: `/` mostra a porta de entrada ou a home conforme a sessão,
+`/rastrear` aceita código digitado ou lido pela câmera, e `/registrar?imprimir`
+troca o cadastro pela folha de etiquetas.
+
+### Conta obrigatória, consulta pública
+
+A primeira tela é a de entrada, com três caminhos: **entrar**, **criar conta**
+ou **consultar um código**. Só o terceiro dispensa cadastro, e leva a uma tela
+que faz uma coisa só — escanear o QR ou digitar o código para abrir a trilha do
+aparelho. Todas as outras páginas exigem sessão, verificada no servidor: pedir
+`registrar.html` pela URL sem estar logado devolve a tela de entrada, e não a
+página com um aviso.
+
+É a divisão que o projeto defende desde o começo: **ler a trilha de um aparelho
+cujo código você tem em mãos é de todos; escrever nela é de quem tem
+credencial.**
 
 > **Câmera:** só funciona em contexto seguro. Em `http://localhost` funciona.
 > Pelo celular na rede local (`http://192.168.x.x`) o navegador bloqueia, porque
@@ -79,13 +152,13 @@ próprios aparelhos, mas não grava etapas na cadeia de custódia de terceiros.
 
 ## Roteiro rápido de demonstração
 
-1. **`registrar.html`** — cadastre um notebook. O servidor gera um código como
+1. **`registrar.html`** — já logado, cadastre um notebook. O servidor gera um código como
    `MS-7K3F-2QX9` e a tela desenha o QR Code correspondente.
    - **"Ampliar para leitura"** abre o QR em tela cheia: dá para ler com a
      câmera de outro aparelho, sem imprimir nada.
-2. **`etiqueta.html`** — imprima (ou pré-visualize) a folha de etiquetas.
-3. **`scanner.html`** — a tela pede login: entre como
-   `operador@etrilha.ms` / `etrilha-operador`. Ligue a câmera, aponte para a
+2. **`/registrar?imprimir`** — imprima (ou pré-visualize) a folha de etiquetas.
+3. **`scanner.html`** — a tela pede login: entre como `operador@etrilha.ms`,
+   com a senha sorteada na carga. Ligue a câmera, aponte para a
    etiqueta e avance o aparelho etapa por etapa até `PROCESSADO`.
    - Antes de gravar, aparece a **tela de confirmação** com o que será
      registrado — código, categoria, etapa de origem e destino, local,
@@ -98,13 +171,14 @@ próprios aparelhos, mas não grava etapas na cadeia de custódia de terceiros.
    - Ao concluir a **triagem** de um notebook, HD ou celular, aparece o
      **atestado de apagamento**. Escolha "memória flash" e tente
      "sobrescrita de setores": o servidor recusa e explica o *wear leveling*.
-4. **`rastrear.html`** — abra em **outro navegador** e consulte o código: a
-   trilha completa e o certificado aparecem, sem login. É a prova de que os
-   dados são compartilhados, e não locais de cada máquina.
+4. **`/rastrear`** — abra em **outro navegador**, sem entrar em conta
+   nenhuma, e consulte o código, digitando ou pela câmera: a trilha completa e o
+   certificado aparecem, sem login. É a prova de que os dados são compartilhados,
+   e não locais de cada máquina.
 5. **`pontos.html`** — filtre os pontos de coleta por município e por aparelho.
 6. **`painel.html`** — massa desviada do aterro, materiais recuperados, CO₂e
    evitado, gargalo da cadeia e lista de pendências.
-7. **`admin.html`** — entre como `admin@etrilha.ms` / `etrilha-admin`. A tela
+7. **`admin.html`** — entre como `admin@etrilha.ms`. A tela
    abre com **todos os aparelhos cadastrados**: código, categoria, etapa, ponto
    de entrada, dono, nº de leituras e se o atestado de apagamento já saiu — com
    busca por texto, filtro por etapa e um atalho para ver só os atrasados.
@@ -126,8 +200,12 @@ próprios aparelhos, mas não grava etapas na cadeia de custódia de terceiros.
 | `MS-8VNC-5RQ1` | HD — coletado; a próxima etapa exige o atestado de apagamento |
 | `MS-4WGR-7K2N` | Impressora — parada na coleta e **atrasada** |
 
-O botão **"Reiniciar demonstração"**, no painel, recria o banco com os dados de
-exemplo.
+O botão **"Reiniciar demonstração"**, no painel, aparece só para administrador e
+recria o banco do zero: os aparelhos de exemplo voltam ao estado inicial e
+**todas as contas são apagadas**, junto com o que elas cadastraram. As contas
+iniciais renascem com senhas sorteadas, impressas **no terminal do servidor** —
+não na tela do navegador, porque mandar senha pela rede contradiria o motivo de
+não gravá-la em arquivo. Tenha a janela do terminal à vista antes de confirmar.
 
 ---
 
@@ -144,6 +222,7 @@ exemplo.
         │                                                    │
    model.js  ...... regras (validação de tela)          modelo.py  ... regras (validação real)
    indicadores.js . cálculo dos indicadores             banco.py  .... SQL e transações
+   qr.js  ......... geração e leitura do QR
                                                             │
                                                      SQLite (etrilha.db)
 ```
@@ -158,23 +237,21 @@ decide o que é gravado é o servidor.
 | Método | Rota | O que faz |
 |---|---|---|
 | `GET` | `/api/pontos` | Pontos de coleta |
-| `GET` | `/api/itens` | Todos os itens (painel) |
-| `GET` | `/api/eventos` | Todos os eventos (painel) |
-| `GET` | `/api/itens/<codigo>` | Um item |
-| `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos |
-| `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` |
+| `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos — **público** |
+| `GET` | `/api/painel` | Indicadores. Anônimo para conta comum, identificado para operador — **exige conta** |
+| `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` — **exige conta** |
 | `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa — **exige operador** (valida a transição) |
 | `GET` | `/api/sessao` | Usuário logado, se houver |
 | `POST` | `/api/sessao` | Entrar |
 | `DELETE` | `/api/sessao` | Sair |
 | `POST` | `/api/usuarios` | Criar conta |
-| `GET` | `/api/meus-itens` | Itens do usuário logado ou do visitante |
+| `GET` | `/api/meus-itens` | Aparelhos da conta autenticada, e só dela |
 | `GET` | `/api/admin/itens` | Todos os aparelhos com etapa, origem, dono e nº de leituras — **exige admin** |
 | `GET` | `/api/admin/usuarios` | Lista as contas — **exige admin** |
 | `PATCH` | `/api/admin/usuarios/<id>` | Papel, ponto vinculado e senha — **exige admin** |
 | `DELETE` | `/api/admin/usuarios/<id>` | Exclui a conta — **exige admin e a senha dele** |
 | `GET` | `/api/admin/alteracoes` | Trilha de administração — **exige admin** |
-| `POST` | `/api/demo/reiniciar` | Recria o banco com os dados de exemplo |
+| `POST` | `/api/demo/reiniciar` | Recria o banco e sorteia senhas novas — **exige admin** |
 | `GET` | `/api/saude` | Diagnóstico: servidor e contagens do banco |
 
 Dá para explorar a API sem abrir o navegador:
@@ -267,14 +344,13 @@ mesmo tempo poderiam gravar a mesma etapa duas vezes.
 ## Estrutura
 
 ```
-index.html        Home: consulta pública por código + números do estado
-rastrear.html     Trilha do aparelho, materiais recuperados e certificado
-registrar.html    Cadastro do dispositivo, código + QR, QR ampliado
-etiqueta.html     Folha de etiquetas QR para impressão
+index.html        Raiz: porta de entrada sem sessão, home com sessão
+rastrear.html     Consulta pública: câmera, código digitado, trilha e certificado
+registrar.html    Cadastro do dispositivo e (com ?imprimir) folha de etiquetas
 scanner.html      Leitura da etiqueta e registro da etapa (exige operador)
 pontos.html       Mapa SVG de MS + lista filtrável de pontos de coleta
 painel.html       Indicadores para gestores, cooperativas e empresas
-conta.html        Conta opcional e histórico do usuário
+conta.html        Minha conta e meus aparelhos
 admin.html        Aparelhos, contas, papéis e trilha de administração (exige admin)
 
 backend/app.py      Flask: rotas da API + entrega das páginas
@@ -283,13 +359,11 @@ backend/modelo.py   Regras impostas pelo servidor (etapas, código, categorias)
 backend/schema.sql  DDL, índices e gatilhos de somente-acréscimo
 dados/*.json        Pontos de coleta e itens de demonstração (fonte única)
 
-js/model.js       Etapas, categorias, composição material, código, Haversine
-js/store.js       Camada de dados — ÚNICA porta de acesso à API
+js/model.js       Etapas, categorias, composição material, código, Haversine, mapa
+js/store.js       Camada de dados — ÚNICA porta de acesso à API — conta e papéis
 js/indicadores.js Cálculo dos indicadores do painel (funções puras)
-js/auth.js        Conta opcional
 js/qr.js          Geração e leitura de QR Code
 js/ui.js          Cabeçalho, avisos, formatação e linha do tempo
-js/geo-ms.js      Contorno do mapa esquemático de MS
 
 vendor/qrcode.js  qrcode-generator (MIT) — geração
 vendor/jsqr.js    jsQR (Apache-2.0) — leitura, quando não há BarcodeDetector
@@ -305,9 +379,14 @@ Depois da primeira visita (quando o service worker se instala):
 
 | | Sem conexão |
 |---|---|
-| Abrir as páginas | Funciona (cache do service worker) |
-| Consultar trilha, pontos e painel | Funciona, com os últimos dados que passaram pelo navegador |
+| Abrir a entrada e a trilha | Funciona (cache do service worker) |
+| Consultar a trilha de um código já visitado | Funciona, com os últimos dados que passaram pelo navegador |
+| Abrir as páginas que exigem conta | **Não funciona** — o servidor é quem confere a sessão, e ele não está lá |
 | Registrar aparelho, avançar etapa, entrar | **Não funciona** — precisa do servidor, que é quem valida e grava |
+
+Só as duas páginas públicas são pré-carregadas. Guardar a casca de uma tela que
+exige conta não ajudaria: sem servidor ela não teria nem sessão para conferir
+nem dado para mostrar.
 
 Uma faixa no topo avisa quando o servidor não responde. Fila de gravações
 offline está listada como melhoria futura no Relatório Técnico.
@@ -345,7 +424,18 @@ offline está listada como melhoria futura no Relatório Técnico.
 - **Pontos de coleta fictícios**, posicionados sobre coordenadas reais dos
   municípios. Precisam ser levantados e validados em campo.
 - **Composição material e fatores de CO₂e são médias de referência**, não medições.
+  O painel abre a conta inteira em *"De onde vem o número de CO₂e"*: o total é a
+  emissão da produção primária do metal (mineração e refino) que a reciclagem
+  torna desnecessária, e não uma economia de transporte ou de aterro.
+- **O peso é declarado, não pesado.** O sistema aceita de 0,01 kg a 500 kg, com
+  até 3 dígitos antes da vírgula, e recusa o que estiver fora — mas não tem como
+  saber se o número informado corresponde ao aparelho. Numa operação real, a
+  massa viria da balança da recicladora.
 - **Mapa esquemático**, não uma base cartográfica.
+- **A interface foi ajustada para o celular, mas não testada em aparelho real.**
+  O CSS ganhou um ponto de quebra em 640 px — menu que desliza em vez de quebrar
+  em três linhas, alvos de toque de 44 px, margens menores —, e a validação foi
+  por inspeção do código, não em telefone.
 
 Detalhamento e melhorias futuras no [Relatório Técnico](docs/RELATORIO-TECNICO.md).
 
