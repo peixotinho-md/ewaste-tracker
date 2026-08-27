@@ -82,10 +82,16 @@ ler é de todos, escrever é de quem tem credencial.
 login — não é o JavaScript escondendo um botão.
 
 **3. Como visitante.** Crie uma conta pela tela. Ela nasce como *visitante*:
-registra e acompanha os próprios aparelhos. Registre um aparelho e mostre que
-ele aparece em *Meus aparelhos*. Depois abra o painel: os números do estado
-inteiro estão lá, mas a lista de pendências vem com os códigos substituídos por
-uma referência — os aparelhos são de outras pessoas.
+registra e acompanha os próprios aparelhos.
+
+- em `/registrar`, cadastre um notebook. O servidor devolve um código como
+  `MS-7K3F-2QX9` e a tela desenha o QR. **"Ampliar para leitura"** abre o QR em
+  tela cheia — dá para ler com a câmera de outro aparelho, sem imprimir nada;
+- em `/registrar?imprimir`, pré-visualize a folha de etiquetas;
+- em `/pontos`, filtre os pontos de coleta por município e por tipo de aparelho;
+- em `/painel`, os números do estado inteiro estão lá, mas a lista de pendências
+  vem com os códigos substituídos por uma referência — os aparelhos são de
+  outras pessoas.
 
 **4. Como operador:**
 
@@ -96,6 +102,10 @@ uma referência — os aparelhos são de outras pessoas.
   mostrar que nada é gravado, e confirme na segunda;
 - no bloco *"Testar a validação da máquina de estados"*, tente pular ou
   retroceder uma etapa: quem recusa é o servidor;
+- ao concluir a **triagem** de um notebook, HD ou celular, aparece o **atestado
+  de apagamento**. Escolha "memória flash" e tente "sobrescrita de setores": o
+  servidor recusa e explica o *wear leveling* — é o argumento de Arquitetura de
+  Computadores aplicado, e costuma ser o momento que a banca mais pergunta;
 - abra o painel de novo: agora as pendências vêm com o código e o link.
 
 **5. Como administrador:**
@@ -112,6 +122,17 @@ uma referência — os aparelhos são de outras pessoas.
   antes. Os aparelhos dela continuam cadastrados, e a exclusão fica na trilha;
 - tente rebaixar o próprio admin: é recusado, porque o sistema não pode ficar
   sem quem gerencie as contas.
+
+### Códigos já cadastrados
+
+| Código | Situação |
+|---|---|
+| `MS-3H7K-P2R6` | Notebook — ciclo completo, com certificado |
+| `MS-9QW2-4TXK` | Celular — ciclo completo, com certificado |
+| `MS-5F8N-JD3Z` | Servidor — em reciclagem |
+| `MS-2KJ6-8YVF` | Monitor — em triagem e **atrasado** (sem mídia de dados) |
+| `MS-8VNC-5RQ1` | HD — coletado; a próxima etapa exige o atestado de apagamento |
+| `MS-4WGR-7K2N` | Impressora — parada na coleta e **atrasada** |
 
 ---
 

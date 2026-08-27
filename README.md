@@ -26,6 +26,10 @@ REGISTRADO → COLETADO → EM_TRIAGEM → EM_TRANSPORTE → EM_RECICLAGEM → P
 Ao final, é emitido um **certificado de destinação final**, consultável por
 qualquer pessoa que tenha o código — sem login.
 
+O detalhamento técnico, com as decisões de projeto e os testes, está no
+**[Relatório Técnico](docs/RELATORIO-TECNICO.md)**. O roteiro de apresentação e
+as credenciais estão em **[docs/CREDENCIAIS-DEMO.md](docs/CREDENCIAIS-DEMO.md)**.
+
 ---
 
 ## Como executar
@@ -49,11 +53,30 @@ O banco (`backend/etrilha.db`) é criado e populado automaticamente na primeira
 execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
 `vendor/` — não há build nem `npm install`.
 
+### Contas iniciais
+
+A carga cria `admin@etrilha.ms` e `operador@etrilha.ms` e **sorteia uma senha
+para cada uma**, impressa no terminal na primeira execução:
+
+```
+  Contas criadas agora, com senha sorteada:
+    admin     admin@etrilha.ms       senha: ····················
+    operador  operador@etrilha.ms    senha: ····················
+```
+
+**Anote no momento em que aparecem.** Elas não são gravadas em arquivo nenhum: o
+banco guarda apenas o hash PBKDF2, e o sorteio não se repete. Fechar o terminal
+perde a senha — resta trocá-la em `/admin`, já autenticado, ou reiniciar a
+demonstração, que apaga os dados junto.
+
+Quem se cadastra pela tela nasce como **visitante**: registra e acompanha os
+próprios aparelhos, mas não vê os de mais ninguém nem grava etapas na cadeia de
+custódia de terceiros.
+
 ### Acesso pela rede local
 
 O servidor escuta em `0.0.0.0`, ou seja, **aceita conexões de qualquer aparelho
-da mesma rede** — não só da máquina onde roda. Ao subir, ele imprime os dois
-endereços:
+da mesma rede**. Ao subir, ele imprime os dois endereços:
 
 ```
   e-Trilha MS em execução:  http://localhost:8000
@@ -65,12 +88,12 @@ coisas a saber:
 
 - **A câmera não funciona pelo IP.** `getUserMedia` só é liberado em contexto
   seguro: `localhost` ou HTTPS. Por `http://192.168.x.x` o navegador bloqueia, e
-  sobra a digitação manual do código — disponível em todas as telas.
+  sobra a digitação do código, disponível em todas as telas. Para a
+  apresentação, use a webcam do notebook.
 - **O Firewall do Windows** pede liberação na primeira execução; marque "redes
   privadas".
 - **Em Wi-Fi público, feche.** Qualquer pessoa na mesma rede alcança o sistema, e
-  aqui não há HTTPS: a senha trafega em texto claro. Para voltar a atender só
-  esta máquina:
+  sem HTTPS a senha trafega em texto claro:
 
 ```powershell
 $env:HOST = "127.0.0.1"; python backend/app.py
@@ -78,134 +101,37 @@ $env:HOST = "127.0.0.1"; python backend/app.py
 
 A porta também é configurável, pela variável `PORTA`.
 
-### Contas iniciais
+---
 
-A carga cria duas contas e **sorteia uma senha para cada uma**, mostrada no
-terminal na primeira execução:
+## Conta obrigatória, consulta pública
 
-```
-  Contas criadas agora, com senha sorteada:
-    admin     admin@etrilha.ms       senha: ····················
-    operador  operador@etrilha.ms    senha: ····················
-```
-
-| Papel | E-mail | O que pode |
-|---|---|---|
-| Administrador | `admin@etrilha.ms` | gerenciar contas e papéis, além de tudo do operador |
-| Operador | `operador@etrilha.ms` | ler QR e registrar as etapas, pelo Ecoponto Região Norte |
-
-**Anote no momento em que aparecem.** Elas não são gravadas em arquivo nenhum:
-o banco guarda apenas o hash PBKDF2, e o sorteio não se repete nas execuções
-seguintes. Fechar o terminal perde a senha para sempre — resta trocá-la em
-`/admin` (já autenticado) ou reiniciar a demonstração, que apaga os dados junto.
-
-Duas decisões, com o mesmo motivo: senha fixa escrita no código vazaria pelo
-histórico do Git e continuaria valendo em toda cópia do projeto; senha gravada
-num arquivo ao lado do banco iria junto ao copiar a pasta, e ainda daria a falsa
-impressão de estar guardada em segurança.
-
-Roteiro de apresentação em
-[docs/CREDENCIAIS-DEMO.md](docs/CREDENCIAIS-DEMO.md).
-
-O primeiro administrador nasce na carga de propósito: como só um admin promove
-outro, não pode haver auto-promoção pela tela — num sistema real esse primeiro
-cadastro seria um comando de instalação.
-
-Quem se cadastra pela tela nasce como **visitante**: registra e acompanha os
-próprios aparelhos, mas não vê os de mais ninguém nem grava etapas na cadeia de
-custódia de terceiros.
-
-### Endereços
-
-As páginas são servidas **sem a extensão**: `/registrar`, `/painel`,
-`/rastrear`. A extensão diz como o arquivo está guardado no disco, e isso não é
-assunto de quem digita o endereço. Quem resolve um para o outro é
-`arquivo_raiz()` em `backend/app.py`, que também redireciona `/registrar.html`
-para `/registrar` — links e favoritos antigos continuam valendo, e a tela passa
-a ter um endereço só. A home é `/`, e `/index` redireciona para lá pelo mesmo
-motivo.
-
-Três páginas fazem duas coisas cada, escolhidas pelo contexto em vez de por um
-arquivo separado: `/` mostra a porta de entrada ou a home conforme a sessão,
-`/rastrear` aceita código digitado ou lido pela câmera, e `/registrar?imprimir`
-troca o cadastro pela folha de etiquetas.
-
-### Conta obrigatória, consulta pública
-
-A primeira tela é a de entrada, com três caminhos: **entrar**, **criar conta**
-ou **consultar um código**. Só o terceiro dispensa cadastro, e leva a uma tela
-que faz uma coisa só — escanear o QR ou digitar o código para abrir a trilha do
-aparelho. Todas as outras páginas exigem sessão, verificada no servidor: pedir
-`registrar.html` pela URL sem estar logado devolve a tela de entrada, e não a
+A primeira tela pergunta o que a pessoa quer: **entrar**, **criar conta** ou
+**consultar um código**. Só o terceiro caminho dispensa cadastro, e leva a
+`/rastrear`, que abre a trilha a partir do QR lido pela câmera ou do código
+digitado. Todas as outras páginas exigem sessão, verificada **no servidor**:
+pedir `/registrar` pela URL sem estar logado devolve a tela de entrada, e não a
 página com um aviso.
 
 É a divisão que o projeto defende desde o começo: **ler a trilha de um aparelho
 cujo código você tem em mãos é de todos; escrever nela é de quem tem
 credencial.**
 
-> **Câmera:** só funciona em contexto seguro. Em `http://localhost` funciona.
-> Pelo celular na rede local (`http://192.168.x.x`) o navegador bloqueia, porque
-> HTTP puro não é contexto seguro — nesse caso use a digitação manual do código,
-> disponível em todas as telas. Para a apresentação, use a webcam do notebook.
+Nenhuma conta lista os aparelhos de outra. O painel de indicadores mostra os
+números do estado com os aparelhos **anonimizados** para conta comum, e vem
+identificado só para operador e administrador, que precisam agir sobre um
+aparelho específico.
 
----
+### Endereços
 
-## Roteiro rápido de demonstração
+As páginas são servidas **sem a extensão** — `/registrar`, `/painel`,
+`/rastrear` —, porque a extensão diz como o arquivo está guardado no disco e
+isso não é assunto de quem digita o endereço. A forma antiga redireciona para a
+nova, de modo que cada tela tenha um endereço só.
 
-1. **`registrar.html`** — já logado, cadastre um notebook. O servidor gera um código como
-   `MS-7K3F-2QX9` e a tela desenha o QR Code correspondente.
-   - **"Ampliar para leitura"** abre o QR em tela cheia: dá para ler com a
-     câmera de outro aparelho, sem imprimir nada.
-2. **`/registrar?imprimir`** — imprima (ou pré-visualize) a folha de etiquetas.
-3. **`scanner.html`** — a tela pede login: entre como `operador@etrilha.ms`,
-   com a senha sorteada na carga. Ligue a câmera, aponte para a
-   etiqueta e avance o aparelho etapa por etapa até `PROCESSADO`.
-   - Antes de gravar, aparece a **tela de confirmação** com o que será
-     registrado — código, categoria, etapa de origem e destino, local,
-     assinatura e o atestado de apagamento. O histórico é somente de
-     acréscimo: não existe desfazer.
-   - O campo "responsável" não existe: quem assina é a conta autenticada, e
-     quem preenche esse campo é o servidor.
-   - No bloco *"Testar a validação da máquina de estados"*, tente pular uma
-     etapa ou voltar: **o servidor** recusa e explica o porquê.
-   - Ao concluir a **triagem** de um notebook, HD ou celular, aparece o
-     **atestado de apagamento**. Escolha "memória flash" e tente
-     "sobrescrita de setores": o servidor recusa e explica o *wear leveling*.
-4. **`/rastrear`** — abra em **outro navegador**, sem entrar em conta
-   nenhuma, e consulte o código, digitando ou pela câmera: a trilha completa e o
-   certificado aparecem, sem login. É a prova de que os dados são compartilhados,
-   e não locais de cada máquina.
-5. **`pontos.html`** — filtre os pontos de coleta por município e por aparelho.
-6. **`painel.html`** — massa desviada do aterro, materiais recuperados, CO₂e
-   evitado, gargalo da cadeia e lista de pendências.
-7. **`admin.html`** — entre como `admin@etrilha.ms`. A tela
-   abre com **todos os aparelhos cadastrados**: código, categoria, etapa, ponto
-   de entrada, dono, nº de leituras e se o atestado de apagamento já saiu — com
-   busca por texto, filtro por etapa e um atalho para ver só os atrasados.
-   Clique em **Abrir** numa conta para o painel dela — dados, aparelhos,
-   histórico, permissões e exclusão (que pede a senha do próprio admin). Promova
-   uma conta a operador, vincule-a a um ponto de coleta e veja a alteração
-   aparecer na **trilha de administração**. Tente rebaixar o único
-   administrador: o servidor recusa, para o sistema não ficar sem quem
-   gerencie as contas.
-
-**Códigos já cadastrados:**
-
-| Código | Situação |
-|---|---|
-| `MS-3H7K-P2R6` | Notebook — ciclo completo, com certificado |
-| `MS-9QW2-4TXK` | Celular — ciclo completo, com certificado |
-| `MS-5F8N-JD3Z` | Servidor — em reciclagem |
-| `MS-2KJ6-8YVF` | Monitor — em triagem e **atrasado** (sem mídia de dados) |
-| `MS-8VNC-5RQ1` | HD — coletado; a próxima etapa exige o atestado de apagamento |
-| `MS-4WGR-7K2N` | Impressora — parada na coleta e **atrasada** |
-
-O botão **"Reiniciar demonstração"**, no painel, aparece só para administrador e
-recria o banco do zero: os aparelhos de exemplo voltam ao estado inicial e
-**todas as contas são apagadas**, junto com o que elas cadastraram. As contas
-iniciais renascem com senhas sorteadas, impressas **no terminal do servidor** —
-não na tela do navegador, porque mandar senha pela rede contradiria o motivo de
-não gravá-la em arquivo. Tenha a janela do terminal à vista antes de confirmar.
+Três páginas fazem duas coisas cada, escolhidas pelo contexto em vez de por um
+arquivo separado: `/` mostra a porta de entrada ou a home conforme a sessão,
+`/rastrear` aceita código digitado ou lido pela câmera, e `/registrar?imprimir`
+troca o cadastro pela folha de etiquetas.
 
 ---
 
@@ -231,6 +157,17 @@ não gravá-la em arquivo. Tenha a janela do terminal à vista antes de confirma
 responder rápido ao usuário. No servidor, porque **qualquer pessoa consegue
 chamar a API por fora da tela** — com `curl` ou pelo console do navegador. Quem
 decide o que é gravado é o servidor.
+
+Três garantias sustentam a cadeia de custódia, detalhadas nas seções 9.5 a 9.7
+do [Relatório Técnico](docs/RELATORIO-TECNICO.md):
+
+- **o histórico não se reescreve** — gatilhos no próprio SQLite recusam `UPDATE`
+  e `DELETE` na tabela `eventos`;
+- **a assinatura não se falsifica** — o nome e o ponto gravados no evento vêm da
+  sessão, não do formulário;
+- **o atestado de apagamento não passa se for ineficaz** — declarar sobrescrita
+  de setores em memória flash é recusado, porque o *wear leveling* deixa cópias
+  inalcançáveis pelo endereço lógico.
 
 ### API
 
@@ -261,83 +198,9 @@ curl http://localhost:8000/api/saude
 curl http://localhost:8000/api/itens/MS-3H7K-P2R6/rastreio
 
 # Escrever na cadeia de custódia sem ser operador: 401
-curl -X POST -H "Content-Type: application/json" -d "{\"etapa\":\"COLETADO\"}"      http://localhost:8000/api/itens/MS-8VNC-5RQ1/eventos
+curl -X POST -H "Content-Type: application/json" -d "{\"etapa\":\"COLETADO\"}" \
+     http://localhost:8000/api/itens/MS-8VNC-5RQ1/eventos
 ```
-
-### Quem pode escrever na cadeia de custódia
-
-Ler é público: qualquer pessoa consulta um código, sem conta. **Escrever não.**
-Quem lê a etiqueta é quem declara que o aparelho passou por uma etapa, e essa
-declaração assinada é o produto do sistema — aberta a qualquer um, não valeria
-nada.
-
-| Papel | Registrar o próprio aparelho | Ler QR e avançar etapa | Gerenciar contas |
-|---|---|---|---|
-| Visitante (com ou sem conta) | sim | não | não |
-| Operador | sim | sim | não |
-| Administrador | sim | sim | sim |
-
-Três decisões que sustentam isso:
-
-- **A verificação é do servidor.** As telas do operador e do administrador
-  somem do menu para quem não tem o papel, mas é o `POST`/`PATCH` que responde
-  401 (falta entrar) ou 403 (entrou, sem permissão) — inclusive para chamadas
-  feitas por fora da tela.
-- **O papel é lido do banco a cada requisição**, nunca guardado no cookie:
-  revogar o papel de alguém passa a valer na hora, sem esperar a sessão dela
-  expirar.
-- **O servidor carimba a assinatura e o local.** O nome do responsável vem da
-  conta autenticada e o ponto vem do vínculo dela, então o formulário não
-  consegue assinar com o nome de outra pessoa nem registrar passagem por um
-  local onde não trabalha.
-
-Promover alguém a operador é conceder poder de escrita no histórico, então a
-concessão também deixa rastro: a tabela `alteracoes_conta` guarda quem alterou
-o quê e quando, com os mesmos gatilhos de somente-acréscimo dos eventos.
-
-### Apagamento seguro: arquitetura do hardware como regra de negócio
-
-Um aparelho descartado carrega dados, não só metal — e é exatamente o caso das
-PMEs de TI que o projeto atende. Apagar arquivo ou formatar **não destrói o
-conteúdo**, e o método correto depende de **como a mídia guarda o bit**:
-
-| | Disco magnético (HDD) | Memória flash (SSD, NVMe, eMMC) |
-|---|---|---|
-| Como o bit é guardado | Orientação magnética no prato | Carga elétrica presa numa célula |
-| Endereço lógico → físico | Estável | **Não há**: a *flash translation layer* remapeia blocos |
-| Sobrescrever setores | Funciona | **Não funciona** — *wear leveling* e *over-provisioning* deixam cópias inalcançáveis |
-| Desmagnetizar | Funciona | **Não faz nada** — não há magnetismo guardando o dado |
-
-Na triagem, aparelhos com memória não volátil só avançam com um **atestado de
-apagamento** (mídia + método), e o servidor recusa a combinação ineficaz:
-
-```
-POST /api/itens/MS-YFFG-ZXBC/eventos
-  {"etapa":"EM_TRIAGEM","apagamento":{"midia":"flash","metodo":"SOBRESCRITA"}}
-
-HTTP 400  "Sobrescrita de todos os setores" não destrói os dados em memória
-          flash. Sobrescrever pelo endereço lógico não alcança os blocos que o
-          wear leveling remapeou nem a área de over-provisioning.
-```
-
-O atestado aparece no rastreio público junto ao certificado.
-
-### O banco garante a cadeia de custódia
-
-Não basta a aplicação prometer que não reescreve o histórico. `schema.sql` cria
-**gatilhos que recusam qualquer `UPDATE` ou `DELETE`** na tabela `eventos`, no
-nível do próprio SQLite:
-
-```sql
-CREATE TRIGGER eventos_sem_update BEFORE UPDATE ON eventos
-BEGIN
-  SELECT RAISE(ABORT, 'O histórico de eventos é somente de acréscimo: alterar é proibido.');
-END;
-```
-
-E as escritas usam `BEGIN IMMEDIATE`, porque são do tipo "ler a etapa atual,
-decidir, gravar": sem o bloqueio antecipado, dois operadores lendo o mesmo QR ao
-mesmo tempo poderiam gravar a mesma etapa duas vezes.
 
 ---
 
@@ -375,69 +238,30 @@ backup/           Versão anterior, só front-end, preservada
 
 ## Funcionamento sem internet
 
-Depois da primeira visita (quando o service worker se instala):
+Depois da primeira visita, o service worker guarda as **duas páginas públicas**
+(a entrada e o rastreio) e os arquivos do front-end. Sem conexão, consultar a
+trilha de um código já visitado continua funcionando, com os últimos dados que
+passaram pelo navegador.
 
-| | Sem conexão |
-|---|---|
-| Abrir a entrada e a trilha | Funciona (cache do service worker) |
-| Consultar a trilha de um código já visitado | Funciona, com os últimos dados que passaram pelo navegador |
-| Abrir as páginas que exigem conta | **Não funciona** — o servidor é quem confere a sessão, e ele não está lá |
-| Registrar aparelho, avançar etapa, entrar | **Não funciona** — precisa do servidor, que é quem valida e grava |
-
-Só as duas páginas públicas são pré-carregadas. Guardar a casca de uma tela que
-exige conta não ajudaria: sem servidor ela não teria nem sessão para conferir
-nem dado para mostrar.
-
-Uma faixa no topo avisa quando o servidor não responde. Fila de gravações
-offline está listada como melhoria futura no Relatório Técnico.
-
----
-
-## Articulação com as disciplinas do semestre
-
-| Disciplina | Onde aparece |
-|---|---|
-| **Algoritmos e Programação** | Máquina de estados das etapas (`validar_transicao`), dígito verificador do código, Haversine, agregações do painel |
-| **Arquitetura de Computadores** | **Atestado de apagamento**: a diferença entre disco magnético e memória flash (orientação magnética contra carga em célula; endereçamento estável contra *flash translation layer*) define quais métodos destroem o dado — e virou regra que o servidor impõe. Mais a tabela de composição material: ouro nos contatos e no encapsulamento dos CIs, cobre nas trilhas da placa, alumínio nos dissipadores, terras raras nos ímãs de HD |
-| **Redes de Computadores** | Arquitetura cliente-servidor sobre HTTP, API REST com verbos e códigos de status, cookie de sessão, mesma origem para evitar CORS, QR transportando o identificador **sem rede** no ponto de coleta |
-| **Sistemas Operacionais** | Navegador como ambiente de execução com sandbox e **permissões** (câmera, geolocalização); processo servidor escutando numa porta; service worker em segundo plano; concorrência e bloqueio de arquivo no SQLite |
+Registrar aparelho, avançar etapa e entrar **não funcionam offline**: dependem do
+servidor, que é quem valida e grava. A tela mostra um erro claro em vez de fingir
+sucesso — uma fila de gravações offline está listada como melhoria futura.
 
 ---
 
 ## Limitações desta versão
 
-- **O credenciamento do operador é por confiança no administrador.** Existe
-  papel, vínculo com ponto de coleta e trilha de quem concedeu o quê, mas nada
-  amarra a conta a uma pessoa física verificada — não há documento, contrato
-  com a cooperativa nem segundo fator. Num sistema real, o credenciamento
-  passaria pelo cadastro do órgão ambiental.
-- **Qualquer operador pode avançar qualquer aparelho.** O papel não distingue
-  as etapas: quem opera a coleta consegue registrar também a reciclagem. Separar
-  as competências por etapa é melhoria mapeada.
-- **Senha redefinida pelo admin é entregue fora do sistema.** Não há envio por
-  e-mail nem obrigação de troca no primeiro acesso.
-- **Sem HTTPS.** A senha trafega em texto claro. Em `localhost` isso não é
-  problema; em rede, é.
-- **Gravação exige conexão.** Não há fila de sincronização offline.
-- **Servidor de desenvolvimento.** O `app.run` do Flask atende um pedido por
-  vez e não é feito para produção — em uso real, entraria atrás de Gunicorn/Nginx.
-- **Pontos de coleta fictícios**, posicionados sobre coordenadas reais dos
-  municípios. Precisam ser levantados e validados em campo.
-- **Composição material e fatores de CO₂e são médias de referência**, não medições.
-  O painel abre a conta inteira em *"De onde vem o número de CO₂e"*: o total é a
-  emissão da produção primária do metal (mineração e refino) que a reciclagem
-  torna desnecessária, e não uma economia de transporte ou de aterro.
-- **O peso é declarado, não pesado.** O sistema aceita de 0,01 kg a 500 kg, com
-  até 3 dígitos antes da vírgula, e recusa o que estiver fora — mas não tem como
-  saber se o número informado corresponde ao aparelho. Numa operação real, a
-  massa viria da balança da recicladora.
-- **Mapa esquemático**, não uma base cartográfica.
-- **A interface foi ajustada para o celular, mas não testada em aparelho real.**
-  O CSS ganhou um ponto de quebra em 640 px — menu que desliza em vez de quebrar
-  em três linhas, alvos de toque de 44 px, margens menores —, e a validação foi
-  por inspeção do código, não em telefone.
+As principais, com o detalhamento na seção 14 do
+[Relatório Técnico](docs/RELATORIO-TECNICO.md):
 
-Detalhamento e melhorias futuras no [Relatório Técnico](docs/RELATORIO-TECNICO.md).
+- **o papel não distingue as etapas** — um operador de ponto de coleta ainda
+  consegue registrar `EM_RECICLAGEM`;
+- **sem HTTPS** — a senha trafega em texto claro; em `localhost` não é problema,
+  em rede é;
+- **gravação exige conexão**, e o servidor é o de desenvolvimento do Flask;
+- **os dados são de demonstração** — pontos de coleta fictícios sobre
+  coordenadas reais, peso declarado e não pesado, e fatores de CO₂e que são
+  médias de referência, não medições.
 
 ---
 
