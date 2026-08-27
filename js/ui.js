@@ -71,8 +71,10 @@ async function montarCabecalho() {
 
   // Nas telas públicas — a porta de entrada, a consulta e a trilha — quem não
   // entrou vê um cabeçalho sem menu: todo link dali levaria a uma página que o
-  // servidor não entrega sem sessão, e oferecer caminho fechado é ruído.
-  if (!usuario) {
+  // servidor não entrega sem sessão, e oferecer caminho fechado é ruído. Vale
+  // também para quem entrou com senha provisória: a sessão existe, mas está
+  // presa à troca de senha, e o menu inteiro voltaria para a raiz.
+  if (!usuario || usuario.senhaProvisoria) {
     alvo.innerHTML = `
       <a class="marca" href="/">
         <span class="marca-simbolo" aria-hidden="true">♻</span>

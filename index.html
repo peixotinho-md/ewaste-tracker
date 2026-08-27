@@ -77,7 +77,7 @@ function desenharHome() {
     <section class="cartao">
       <h1>Onde está o seu aparelho?</h1>
       <p>Digite o código impresso na etiqueta para ver em que etapa da reciclagem
-         o dispositivo está. Vale para qualquer código, não só para os seus.</p>
+         o dispositivo está.</p>
 
       <form class="busca-codigo" id="form-busca">
         <label class="oculto" for="codigo">Código de rastreio</label>
@@ -87,7 +87,6 @@ function desenharHome() {
       </form>
       <p class="sutil" style="margin-top:.6rem">
         Pode digitar com ou sem hífen, em maiúsculas ou minúsculas — o sistema corrige.
-        Sem a etiqueta em mãos? <a href="conta">Abra a sua conta</a> para ver os seus aparelhos.
       </p>
     </section>
 
@@ -317,6 +316,42 @@ function telaCriar() {
     ${avisoSenha()}`;
 }
 
+function telaTrocarSenha() {
+  return `
+    <div class="faixa faixa-alerta">
+      <strong>Defina uma senha sua para continuar.</strong> A senha atual foi
+      definida por outra pessoa — a carga inicial do sistema ou um administrador
+      — e portanto não é só sua. Enquanto isso não mudar, a conta não identifica
+      quem a está usando, e o servidor recusa qualquer outra ação.
+    </div>
+
+    <section class="cartao">
+      <h1>Nova senha</h1>
+      <form id="form-senha">
+        <div class="campo">
+          <label for="s-atual">Senha atual</label>
+          <input id="s-atual" type="password" autocomplete="current-password" required>
+          <p class="dica">A mesma com que você acabou de entrar.</p>
+        </div>
+        <div class="campo">
+          <label for="s-nova">Nova senha</label>
+          <input id="s-nova" type="password" autocomplete="new-password" required minlength="6">
+          <p class="dica">Mínimo de 6 caracteres, e diferente da atual.</p>
+        </div>
+        <div class="campo">
+          <label for="s-confirma">Repita a nova senha</label>
+          <input id="s-confirma" type="password" autocomplete="new-password" required minlength="6">
+        </div>
+        <div class="botoes">
+          <button class="botao botao-grande" type="submit">Definir e continuar</button>
+          <button class="botao botao-secundario" id="btn-sair" type="button">Sair</button>
+        </div>
+      </form>
+    </section>
+
+    ${avisoSenha()}`;
+}
+
 function avisoSenha() {
   return `
     <div class="faixa faixa-info">
@@ -329,7 +364,7 @@ function avisoSenha() {
     </div>`;
 }
 
-const TELAS = { escolha: telaEscolha, entrar: telaEntrar, criar: telaCriar };
+const TELAS = { escolha: telaEscolha, entrar: telaEntrar, criar: telaCriar, senha: telaTrocarSenha };
 
 function mostrar(nome) {
   conteudo.innerHTML = TELAS[nome]();
@@ -352,7 +387,9 @@ function mostrar(nome) {
         senha: document.getElementById('e-senha').value,
       });
       aviso(`Bem-vindo de volta, ${usuario.nome.split(' ')[0]}.`);
-      location.href = destino ?? '/';
+      // Conta com senha provisória só alcança a raiz; mandar para o destino
+      // pedido daria uma volta pelo redirecionamento do servidor.
+      location.href = usuario.senhaProvisoria ? '/' : (destino ?? '/');
     } catch (erro) {
       aviso(erro.message, 'erro');
     }
@@ -375,6 +412,30 @@ function mostrar(nome) {
     }
   });
 
+  document.getElementById('form-senha')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const nova = document.getElementById('s-nova').value;
+    if (nova !== document.getElementById('s-confirma').value) {
+      aviso('A confirmação não confere com a nova senha.', 'erro');
+      return;
+    }
+    try {
+      await store.trocarSenha({
+        senhaAtual: document.getElementById('s-atual').value,
+        senhaNova: nova,
+      });
+      aviso('Senha definida. Agora ela é só sua.');
+      location.href = destino ?? '/';
+    } catch (erro) {
+      aviso(erro.message, 'erro');
+    }
+  });
+
+  document.getElementById('btn-sair')?.addEventListener('click', async () => {
+    await store.encerrarSessao();
+    location.href = '/';
+  });
+
   // O primeiro campo da tela recebe o foco: quem chegou aqui veio para digitar.
   conteudo.querySelector('input')?.focus();
 }
@@ -389,7 +450,14 @@ function mostrar(nome) {
  * lugar do erro, porque quem falhou foi o script que desenharia tudo.
  * ------------------------------------------------------------------ */
 
-if (await store.usuarioAtual()) {
+const usuario = await store.usuarioAtual();
+
+if (usuario?.senhaProvisoria) {
+  // A conta existe, mas a senha em vigor foi definida por outra pessoa — a
+  // carga inicial ou um admin. Até o dono escolher a dele, esta é a única tela
+  // que ele alcança, e o servidor recusa todo o resto.
+  mostrar('senha');
+} else if (usuario) {
   desenharHome();
 } else {
   mostrar(destino ? 'entrar' : 'escolha');

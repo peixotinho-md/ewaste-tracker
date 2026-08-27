@@ -251,8 +251,9 @@ def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
     for conta in CONTAS_INICIAIS:
         senha = _sortear_senha()
         conexao.execute(
-            """INSERT INTO usuarios (id, nome, email, senha_hash, criado_em, papel, ponto_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO usuarios (id, nome, email, senha_hash, criado_em, papel,
+                                     ponto_id, senha_provisoria)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 1)""",
             (
                 novo_id("u"),
                 conta["nome"],
@@ -326,6 +327,9 @@ def usuario_json(linha) -> dict:
         "papel": linha["papel"],
         "pontoId": linha["ponto_id"],
         "criadoEm": linha["criado_em"],
+        # A tela precisa saber para desenhar a troca obrigatória; quem impede o
+        # resto é o servidor, no decorador `exige`.
+        "senhaProvisoria": bool(linha["senha_provisoria"]),
     }
 
 
@@ -574,6 +578,29 @@ def criar_usuario(conexao, *, nome: str, email: str, senha_hash: str) -> dict:
     return obter_usuario(conexao, usuario_id)
 
 
+def trocar_senha(conexao, usuario: dict, senha_hash: str) -> dict:
+    """
+    Troca a senha da PRÓPRIA conta e encerra o estado provisório.
+
+    É a única escrita que uma conta com senha provisória consegue fazer. Some
+    daqui o `senha_provisoria`, porque a partir de agora só o dono conhece o
+    segredo — que é o que faz a conta valer como identidade.
+
+    A trilha registra a troca com a pessoa como autora de si mesma: uma senha
+    redefinida pelo admin e uma trocada pelo dono são fatos diferentes, e quem
+    auditar precisa distinguir.
+    """
+    with transacao(conexao):
+        conexao.execute(
+            "UPDATE usuarios SET senha_hash = ?, senha_provisoria = 0 WHERE id = ?",
+            (senha_hash, usuario["id"]),
+        )
+        _registrar_alteracao(
+            conexao, alvo=usuario, autor=usuario, acao="senha",
+        )
+    return obter_usuario(conexao, usuario["id"])
+
+
 def buscar_usuario_por_email(conexao, email: str):
     return conexao.execute(
         "SELECT * FROM usuarios WHERE email = ?", (str(email).strip().lower(),)
@@ -726,8 +753,14 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
             )
 
         if senha_hash:
+            # Senha definida por outra pessoa nasce provisória: o admin que a
+            # redefiniu também a conhece, então ela ainda não identifica o dono.
+            # Redefinir a PRÓPRIA senha não marca nada — quem escolheu foi quem
+            # vai usar.
+            provisoria = 0 if alvo_id == autor["id"] else 1
             conexao.execute(
-                "UPDATE usuarios SET senha_hash = ? WHERE id = ?", (senha_hash, alvo_id)
+                "UPDATE usuarios SET senha_hash = ?, senha_provisoria = ? WHERE id = ?",
+                (senha_hash, provisoria, alvo_id),
             )
             # A trilha registra QUE houve redefinição, jamais o segredo.
             _registrar_alteracao(

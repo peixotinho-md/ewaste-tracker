@@ -36,6 +36,26 @@ async function desenhar() {
   if (!usuario) { location.href = '/?destino=conta'; return; }
 
   conteudo.innerHTML = await telaLogado(usuario);
+
+  document.getElementById('form-senha').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const nova = document.getElementById('s-nova').value;
+    if (nova !== document.getElementById('s-confirma').value) {
+      aviso('A confirmação não confere com a nova senha.', 'erro');
+      return;
+    }
+    try {
+      await store.trocarSenha({
+        senhaAtual: document.getElementById('s-atual').value,
+        senhaNova: nova,
+      });
+      aviso('Senha trocada.');
+      ev.target.reset();
+    } catch (erro) {
+      aviso(erro.message, 'erro');
+    }
+  });
+
   document.getElementById('btn-sair').addEventListener('click', async () => {
     await store.encerrarSessao();
     aviso('Sessão encerrada. A consulta por código continua aberta.');
@@ -94,6 +114,33 @@ async function telaLogado(usuario) {
         <div class="rotulo">de CO₂e evitados por você</div>
         <div class="nota">contando só o que já foi reciclado</div>
       </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Trocar a senha</h2>
+      <p class="sutil">
+        A senha atual é pedida junto porque a sessão aberta prova que alguém
+        entrou, não que quem está no teclado agora é você.
+      </p>
+      <form id="form-senha">
+        <div class="grade grade-3" style="align-items:end">
+          <div class="campo" style="margin:0">
+            <label for="s-atual">Senha atual</label>
+            <input id="s-atual" type="password" autocomplete="current-password" required>
+          </div>
+          <div class="campo" style="margin:0">
+            <label for="s-nova">Nova senha</label>
+            <input id="s-nova" type="password" autocomplete="new-password" required minlength="6">
+          </div>
+          <div class="campo" style="margin:0">
+            <label for="s-confirma">Repita a nova</label>
+            <input id="s-confirma" type="password" autocomplete="new-password" required minlength="6">
+          </div>
+        </div>
+        <div class="botoes" style="margin-top:.8rem">
+          <button class="botao botao-secundario" type="submit">Trocar senha</button>
+        </div>
+      </form>
     </section>
 
     <section class="cartao">

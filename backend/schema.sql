@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 5;
+PRAGMA user_version = 6;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
@@ -51,7 +51,16 @@ CREATE TABLE usuarios (
   criado_em  TEXT NOT NULL,
   papel      TEXT NOT NULL DEFAULT 'visitante'
              CHECK (papel IN ('visitante', 'operador', 'admin')),
-  ponto_id   TEXT REFERENCES pontos (id) ON DELETE SET NULL
+  ponto_id   TEXT REFERENCES pontos (id) ON DELETE SET NULL,
+
+  -- 1 enquanto a senha em vigor tiver sido definida por OUTRA PESSOA: a
+  -- sorteada na carga inicial e a redefinida por um admin. Nos dois casos
+  -- existe alguém, além do dono, que conhece a senha — e enquanto isso for
+  -- verdade a conta não prova quem a está usando. O servidor então só aceita
+  -- desta conta a própria troca de senha, até que o dono escolha a dele.
+  --
+  -- Quem se cadastra pela tela escolhe a senha na hora, e nasce com 0.
+  senha_provisoria INTEGER NOT NULL DEFAULT 0 CHECK (senha_provisoria IN (0, 1))
 );
 
 CREATE INDEX idx_usuarios_papel ON usuarios (papel);

@@ -69,9 +69,16 @@ banco guarda apenas o hash PBKDF2, e o sorteio não se repete. Fechar o terminal
 perde a senha — resta trocá-la em `/admin`, já autenticado, ou reiniciar a
 demonstração, que apaga os dados junto.
 
-Quem se cadastra pela tela nasce como **visitante**: registra e acompanha os
-próprios aparelhos, mas não vê os de mais ninguém nem grava etapas na cadeia de
-custódia de terceiros.
+**No primeiro acesso, o sistema exige que você defina uma senha sua.** A regra é
+a mesma para as duas situações em que a senha em vigor foi escolhida por outra
+pessoa: a sorteada na carga e a redefinida por um administrador. Nos dois casos
+existe alguém, além do dono, que conhece o segredo — e enquanto isso for verdade
+a conta não prova quem a está usando. Até a troca, o servidor aceita dessa conta
+apenas a própria troca de senha; todo o resto responde 403.
+
+Quem se cadastra pela tela escolhe a senha na hora, então não passa por isso — e
+nasce como **visitante**: registra e acompanha os próprios aparelhos, mas não vê
+os de mais ninguém nem grava etapas na cadeia de custódia de terceiros.
 
 ### Acesso pela rede local
 
@@ -182,6 +189,7 @@ do [Relatório Técnico](docs/RELATORIO-TECNICO.md):
 | `POST` | `/api/sessao` | Entrar |
 | `DELETE` | `/api/sessao` | Sair |
 | `POST` | `/api/usuarios` | Criar conta |
+| `POST` | `/api/sessao/senha` | Troca a senha da própria conta, pedindo a atual — **exige conta** |
 | `GET` | `/api/meus-itens` | Aparelhos da conta autenticada, e só dela |
 | `GET` | `/api/admin/itens` | Todos os aparelhos com etapa, origem, dono e nº de leituras — **exige admin** |
 | `GET` | `/api/admin/usuarios` | Lista as contas — **exige admin** |

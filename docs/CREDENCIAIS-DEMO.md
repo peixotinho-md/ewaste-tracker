@@ -81,6 +81,16 @@ ler é de todos, escrever é de quem tem credencial.
 `http://localhost:8000/registrar` direto pela URL. O servidor devolve a tela de
 login — não é o JavaScript escondendo um botão.
 
+**2b. Primeiro acesso.** Entre como `admin@etrilha.ms` com a senha sorteada. Em
+vez do painel, aparece **"Defina uma senha sua para continuar"** — a senha
+atual foi escolhida pela carga do sistema, e portanto não é só sua. Antes de
+definir a nova, mostre que a trava é do servidor e não da tela: peça
+`/api/painel` pelo terminal, com a sessão aberta, e ele responde 403. É o mesmo
+argumento do item anterior, aplicado a um estado da conta em vez de a um papel.
+
+A regra vale igual para uma conta cuja senha foi redefinida por um
+administrador — e é o que você vai mostrar no passo 5.
+
 **3. Como visitante.** Crie uma conta pela tela. Ela nasce como *visitante*:
 registra e acompanha os próprios aparelhos.
 
@@ -121,7 +131,12 @@ registra e acompanha os próprios aparelhos.
 - tente **excluir** uma conta: o sistema pede a *sua* senha de administrador
   antes. Os aparelhos dela continuam cadastrados, e a exclusão fica na trilha;
 - tente rebaixar o próprio admin: é recusado, porque o sistema não pode ficar
-  sem quem gerencie as contas.
+  sem quem gerencie as contas;
+- **redefina a senha da conta visitante** criada no passo 3 e entre com ela: o
+  sistema exige que ela defina uma senha própria antes de qualquer coisa. Você,
+  que redefiniu, conhece a senha atual — é exatamente por isso que ela não serve
+  como identidade. Redefinir a *própria* senha não dispara a exigência: quem
+  escolheu foi quem vai usar.
 
 ### Códigos já cadastrados
 
@@ -177,7 +192,6 @@ Vale dizer isto na apresentação, se perguntarem:
   não pode haver auto-promoção pela tela, ou o controle não valeria nada. Num
   sistema real, esse primeiro cadastro seria um comando de instalação, executado
   por quem opera o servidor;
-- a senha sorteada deveria exigir **troca no primeiro acesso**;
 - faltaria um comando de administração para **sortear uma senha nova sem
   recriar o banco** — hoje, quem perde a senha do admin perde junto os dados de
   teste;

@@ -191,6 +191,16 @@ export async function abrirSessao({ email, senha }) {
   return api('/sessao', { metodo: 'POST', corpo: { email: (email ?? '').trim(), senha } });
 }
 
+/**
+ * Troca a senha da própria conta e encerra o estado provisório.
+ *
+ * A senha atual vai junto de propósito: o cookie prova que alguém entrou, não
+ * que quem está no teclado agora é o dono da conta.
+ */
+export async function trocarSenha({ senhaAtual, senhaNova }) {
+  return api('/sessao/senha', { metodo: 'POST', corpo: { senhaAtual, senhaNova } });
+}
+
 export async function encerrarSessao() {
   return api('/sessao', { metodo: 'DELETE' });
 }

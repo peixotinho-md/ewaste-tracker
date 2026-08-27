@@ -136,6 +136,24 @@ def usuario_da_sessao() -> str | None:
 # tem efeito imediato, sem esperar a sessão dele expirar.
 # --------------------------------------------------------------------------- #
 
+def _senha_provisoria() -> bool:
+    """
+    A sessão atual está presa à troca de senha?
+
+    Abre uma conexão própria porque é chamada na entrega das páginas, fora das
+    rotas da API. É uma consulta por chave primária, e só para quem tem sessão.
+    """
+    usuario_id = usuario_da_sessao()
+    if not usuario_id:
+        return False
+    conexao = banco.conectar()
+    try:
+        conta = banco.obter_usuario(conexao, usuario_id)
+        return bool(conta and conta["senhaProvisoria"])
+    finally:
+        conexao.close()
+
+
 def conta_da_sessao(conexao) -> dict | None:
     usuario_id = usuario_da_sessao()
     return banco.obter_usuario(conexao, usuario_id) if usuario_id else None
@@ -145,7 +163,7 @@ def conta_da_sessao(conexao) -> dict | None:
 QUALQUER_CONTA = ("visitante", "operador", "admin")
 
 
-def exige(*papeis: str):
+def exige(*papeis: str, provisoria_ok: bool = False):
     """
     Fecha a rota para quem não tem um dos papéis exigidos.
 
@@ -166,6 +184,15 @@ def exige(*papeis: str):
                 return jsonify({
                     "erro": "Sua conta não tem permissão para esta ação. "
                             "Peça a um administrador para ajustar o papel dela."
+                }), 403
+            # Enquanto a senha for provisória, a conta não prova quem a está
+            # usando: quem a definiu — a carga inicial ou um admin — também a
+            # conhece. A única ação liberada é a própria troca. A verificação
+            # fica AQUI, e não só na tela, porque é aqui que ela vale.
+            if conta["senhaProvisoria"] and not provisoria_ok:
+                return jsonify({
+                    "erro": "Defina uma senha sua antes de continuar. A atual foi "
+                            "definida por outra pessoa, que também a conhece."
                 }), 403
             return rota(conexao, *args, conta=conta, **kwargs)
         return envelope
@@ -355,6 +382,36 @@ def _abrir_sessao(usuario_id: str) -> None:
     session.clear()
     session["usuario_id"] = usuario_id
     session.permanent = True
+
+
+@app.post("/api/sessao/senha")
+@com_banco
+@exige(*QUALQUER_CONTA, provisoria_ok=True)
+def trocar_senha(conexao, conta):
+    """
+    Troca a senha da própria conta. É a única rota que uma conta com senha
+    provisória alcança — e é por ela que se sai desse estado.
+
+    Exige a senha atual mesmo já havendo sessão, pelo mesmo motivo que o `sudo`
+    pergunta a senha de quem já está logado: o cookie prova que alguém entrou,
+    não que quem está no teclado agora é o dono. Numa máquina compartilhada, sem
+    isso bastaria a sessão aberta para trocar a senha e tomar a conta.
+    """
+    corpo = request.get_json(silent=True) or {}
+    linha = banco.buscar_usuario_por_email(conexao, conta["email"])
+
+    if not check_password_hash(linha["senha_hash"], str(corpo.get("senhaAtual") or "")):
+        return jsonify({"erro": "Senha atual incorreta."}), 403
+
+    nova = modelo.validar_senha(corpo.get("senhaNova"))
+    if check_password_hash(linha["senha_hash"], nova):
+        raise modelo.RegraViolada(
+            "A senha nova precisa ser diferente da atual — é justamente a atual "
+            "que outra pessoa conhece."
+        )
+
+    usuario = banco.trocar_senha(conexao, conta, generate_password_hash(nova))
+    return jsonify({"usuario": usuario})
 
 
 @app.get("/api/meus-itens")
@@ -573,6 +630,10 @@ def arquivo_raiz(nome):
         return redirect(f"/{nome[: -len('.html')]}")
 
     if nome in PAGINAS:
+        # Senha provisória prende a sessão na raiz, onde está o formulário de
+        # troca. Sem isto a pessoa navegaria por telas que a API vai recusar.
+        if nome not in PAGINAS_PUBLICAS and _senha_provisoria():
+            return redirect("/")
         if nome not in PAGINAS_PUBLICAS and not usuario_da_sessao():
             # Devolver a página e deixar o JavaScript decidir mostraria por um
             # instante uma tela que a pessoa não pode usar, e ainda dependeria de

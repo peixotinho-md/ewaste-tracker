@@ -193,6 +193,7 @@ ponta a ponta nem devolve essa informação a quem entregou o aparelho.
 | RF12 | Conta obrigatória para registrar e listar, com cada usuário vendo só os próprios aparelhos | Implementado |
 | RF22 | Manter a consulta por código aberta a quem não tem conta, a partir de uma tela pública própria | Implementado |
 | RF23 | Criar o administrador inicial com senha sorteada, sem credencial escrita no código | Implementado |
+| RF26 | Exigir troca de senha no primeiro acesso, quando quem a definiu não foi o dono | Implementado |
 | RF24 | Recusar peso fora da faixa aceita em vez de substituí-lo em silêncio | Implementado |
 | RF25 | Exigir o prefixo `MS` na consulta por código | Implementado |
 | RF13 | Compartilhar dados entre dispositivos e usuários diferentes | Implementado (API + SQLite) |
@@ -315,6 +316,7 @@ exibição e não para decidir se uma gravação é aceita.
 | `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa, valida a transição — **exige operador** |
 | `GET` / `POST` / `DELETE` | `/api/sessao` | Usuário atual, entrar, sair |
 | `POST` | `/api/usuarios` | Criar conta |
+| `POST` | `/api/sessao/senha` | Troca a senha da própria conta, pedindo a atual — **exige conta** |
 | `GET` | `/api/meus-itens` | Aparelhos da conta autenticada, e só dela |
 | `GET` | `/api/admin/itens` | Aparelhos com etapa, ponto de entrada, dono e nº de leituras — **exige admin** |
 | `GET` | `/api/admin/usuarios` | Lista as contas com papel, ponto e nº de aparelhos — **exige admin** |
@@ -468,6 +470,25 @@ do menu de quem não tem o papel, mas esconder o botão não é segurança: o
 a quem entrou sem permissão, inclusive para chamadas feitas por `curl`. A
 distinção entre os dois códigos é usada pela tela: 401 pede login, 403 explica
 que a conta não tem o papel — entrar de novo não resolveria.
+
+**Senha definida por outra pessoa não vale como identidade.** A conta nasce com
+`senha_provisoria = 1` nos dois casos em que o segredo foi escolhido por
+terceiros: a sorteada na carga inicial e a redefinida por um administrador.
+Enquanto a marca estiver de pé, o decorador `exige` recusa toda rota com 403,
+liberando apenas `POST /api/sessao/senha` — e a entrega das páginas prende a
+sessão na raiz, onde está o formulário. A marca cai quando o dono escolhe a
+própria senha.
+
+O raciocínio é o mesmo que sustenta a assinatura dos eventos: o sistema promete
+que cada leitura foi feita por quem diz ter sido. Uma senha que o administrador
+também conhece não sustenta essa promessa — ele poderia entrar como o operador e
+assinar por ele. Redefinir a *própria* senha não marca nada, porque aí quem
+escolheu é quem vai usar.
+
+A troca exige a senha atual mesmo já havendo sessão, pela mesma razão que o
+`sudo` pergunta a senha de quem já está logado: o cookie prova que alguém
+entrou, não que quem está no teclado agora é o dono. Numa máquina compartilhada,
+sem isso bastaria encontrar a sessão aberta para tomar a conta.
 
 **O papel é lido do banco a cada requisição**, e não guardado no cookie de
 sessão. Guardá-lo no cookie seria mais rápido, mas revogar o papel de alguém só
@@ -729,6 +750,17 @@ Marcos previstos no cronograma da DAC:
 | 57 | Digitar mais de 3 dígitos no campo de peso | O campo corta a parte inteira em 3 dígitos |
 | 58 | Consultar `8VNC5RQ1`, sem o prefixo | Recusado: o código exige `MS` |
 | 59 | Consultar `MS-8VNC-5RQ1` | Aceito |
+| 60 | Entrar com a senha sorteada da carga | A sessão abre, mas toda rota responde 403 pedindo a troca |
+| 61 | Pedir qualquer página com a senha provisória | Redirecionado para a raiz, onde está o formulário |
+| 62 | Trocar a senha informando a atual errada | HTTP 403; a senha continua a mesma |
+| 63 | Trocar a senha repetindo a atual | Recusado: é justamente a atual que outra pessoa conhece |
+| 64 | Trocar por uma senha de 3 caracteres | Recusado pelo mínimo de 6 |
+| 65 | Trocar por uma senha válida | A marca cai, a sessão destrava e a senha antiga deixa de valer |
+| 66 | Criar conta pela tela | Nasce sem a marca: quem escolheu a senha foi o dono |
+| 67 | Admin redefine a senha de outra conta | A conta passa a exigir troca no acesso seguinte |
+| 68 | Admin redefine a própria senha | Não exige troca — quem escolheu é quem vai usar |
+| 69 | Trocar a senha sem sessão | HTTP 401 |
+| 70 | Operador com senha provisória tenta gravar um evento | HTTP 403; depois da troca, aceito |
 
 ### 11.2 Resultados obtidos
 

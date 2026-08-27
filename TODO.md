@@ -39,12 +39,7 @@ em três linhas, alvos de toque de 44 px, margens menores. A verificação foi p
 inspeção do código, sem aparelho na mão. É justamente no celular que o sistema é
 usado de pé, num galpão.
 
-## 4. Forçar troca de senha no primeiro acesso
-
-A senha sorteada vale para sempre até alguém trocá-la. Em uso real, o primeiro
-login deveria exigir a troca.
-
-## 5. Competência por etapa
+## 4. Competência por etapa
 
 O papel de operador permite registrar qualquer etapa. O desenho correto é o
 ponto de coleta registrar `COLETADO` e a recicladora registrar `PROCESSADO`,
