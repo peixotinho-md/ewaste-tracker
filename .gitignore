@@ -18,5 +18,12 @@ __pycache__/
 .coverage
 htmlcov/
 
+# O PDF da Pré-Entrega. O que é versionado é o docs/pre-entrega-1.html que o
+# gera — meio megabyte de binário entraria no histórico a cada regeração e
+# nunca mais sairia, e o git não sabe mostrar o que mudou entre dois PDFs.
+#
+#   chrome --headless --no-pdf-header-footer #          --print-to-pdf=docs/PRE-ENTREGA-1.pdf docs/pre-entrega-1.html
+docs/PRE-ENTREGA-1.pdf
+
 # Cópia da versão anterior: o histórico do git já cumpre esse papel
 backup/
