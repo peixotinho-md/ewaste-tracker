@@ -12,60 +12,26 @@
 
 ## Onde estão as senhas
 
-Ao subir o servidor pela primeira vez (`python backend/app.py`), a carga cria
-duas contas e sorteia uma senha para cada uma:
+As contas iniciais e a **conta de reserva**, o que cada uma abre e como
+recuperar uma senha perdida estão em um lugar só, no
+[README](../README.md#contas-iniciais) — repetir as tabelas aqui já tinha
+produzido duas versões diferentes da mesma informação.
 
-```
-  Contas criadas agora, com senha sorteada:
-    admin     admin@etrilha.ms       senha: ····················
-    operador  operador@etrilha.ms    senha: ····················
-
-  ANOTE AGORA. Elas não ficam salvas em lugar nenhum e não
-  podem ser recuperadas — só trocadas em /admin, já autenticado.
-```
-
-**Anote no momento em que aparecem.** Fechar o terminal, ou deixar a saída rolar
-para fora da janela, perde a senha para sempre.
-
-| Papel | E-mail | Ponto vinculado |
-|---|---|---|
-| **Administrador** | `admin@etrilha.ms` | — (sem ponto fixo) |
-| **Operador** | `operador@etrilha.ms` | Ecoponto Campo Grande — Região Norte |
-
-Nas execuções seguintes nada é impresso: o banco guarda apenas o **hash
-PBKDF2** e o sorteio não se repete. Já autenticado, dá para trocar a senha de
-qualquer conta em `/admin`. Perdida a senha do admin, o único caminho é reiniciar
-a demonstração — o que apaga junto tudo o que foi cadastrado nos testes.
-
-**Por que sorteada, e não fixa no código:** senha escrita em `banco.py` vaza pelo
-histórico do Git e continua valendo em toda instalação que copiar o projeto.
-
-**Por que não gravada em arquivo:** um arquivo ao lado do banco vai junto quando
-a pasta é copiada, compactada ou enviada — e ainda dá a falsa impressão de estar
-guardado em segurança. Exibida e descartada, a senha existe enquanto alguém a
-está lendo.
+O essencial para a apresentação: a carga cria `admin@etrilha.ms`,
+`operador@etrilha.ms` e `reserva@etrilha.ms`, sorteia uma senha para cada e as
+imprime **uma única vez, no terminal**. Anote no momento em que aparecem. Se
+perder, `python backend/app.py --nova-senha <e-mail>` sorteia outra sem tocar
+nos dados.
 
 ---
 
 ## O que cada conta abre
 
-| | Consultar por código | Registrar aparelho | Ver os próprios aparelhos | Ler QR e avançar etapa | Administrar contas |
-|---|---|---|---|---|---|
-| Sem conta | sim | não | não | não | não |
-| Visitante | sim | sim | só os dele | não | não |
-| **Operador** | sim | sim | só os dele | **sim** | não |
-| **Administrador** | sim | sim | só os dele | **sim** | **sim** |
-
-A porta de entrada é a raiz do site (`/`): sem sessão ela oferece **entrar**,
-**criar conta** ou **consultar um código**; com sessão, ela vira a home. A
-consulta leva a `/rastrear`, a outra página pública, onde dá para escanear o QR
-ou digitar o código. Toda outra página exige sessão, e o servidor nem entrega o
-arquivo sem ela.
-
-Nenhuma conta enxerga os aparelhos de outra pessoa: o painel de indicadores
-mostra os números com os aparelhos **anonimizados** para conta comum, e vem
-identificado só para operador e administrador, que precisam agir sobre um
-aparelho específico.
+A tabela dos quatro papéis está na seção *Modelo de acesso* do
+[Relatório Técnico](RELATORIO-TECNICO.md). Em uma linha: ler a trilha de um
+código que se tem em mãos é público; registrar exige conta; ler QR e avançar
+etapa exige operador; gerenciar contas exige administrador. Nenhuma conta
+enxerga os aparelhos de outra.
 
 ---
 
@@ -92,7 +58,9 @@ A regra vale igual para uma conta cuja senha foi redefinida por um
 administrador — e é o que você vai mostrar no passo 5.
 
 **3. Como visitante.** Crie uma conta pela tela. Ela nasce como *visitante*:
-registra e acompanha os próprios aparelhos.
+registra e acompanha os próprios aparelhos. Repare que **não existe aba "Ler
+QR"** no menu dela — e que abrir `/scanner` pela URL devolve para a home: quem
+recusa é o servidor, não o menu.
 
 - em `/registrar`, cadastre um notebook. O servidor devolve um código como
   `MS-7K3F-2QX9` e a tela desenha o QR. **"Ampliar para leitura"** abre o QR em
@@ -138,6 +106,19 @@ registra e acompanha os próprios aparelhos.
   como identidade. Redefinir a *própria* senha não dispara a exigência: quem
   escolheu foi quem vai usar.
 
+**6. A recuperação de acesso.** É o passo que fecha o argumento do controle de
+contas. No terminal, rode `python backend/app.py --nova-senha` (sem e-mail) e
+entre com o que ele imprimir: a sessão abre com uma **marca d'água em todas as
+telas** dizendo que aquela é a conta de reserva e só deve ser usada quando o
+acesso ao admin se perder. Procure a conta na lista de `/admin`: ela **não está
+lá**, e tentar alterá-la pelo id responde como se não existisse. Dali, redefina
+a senha de `admin@etrilha.ms` e volte a usá-la.
+
+O ponto a fazer: a reserva não é um administrador escondido para uso comum. Ela
+não aparece na lista para não ser o alvo fácil de quem apagasse todos os admins
+visíveis, mas tudo o que ela faz entra na trilha de administração como o de
+qualquer conta — e a marca d'água existe para que ninguém se acostume com ela.
+
 ### Códigos já cadastrados
 
 | Código | Situação |
@@ -171,8 +152,9 @@ recria o banco do zero:
 
 - os pontos de coleta e os 10 aparelhos de exemplo voltam ao estado inicial;
 - **todas as contas são apagadas**, junto com os aparelhos que registraram;
-- as contas iniciais renascem com **senhas novas, sorteadas**, impressas no
-  **terminal do servidor** — não na tela do navegador.
+- as três contas iniciais — incluindo a de reserva — renascem com **senhas
+  novas, sorteadas**, impressas no **terminal do servidor**, não na tela do
+  navegador.
 
 Você é desconectado no processo, e a senha anterior deixou de existir. Tenha a
 janela do terminal à vista **antes** de confirmar o reinício: é lá, e só lá, que
@@ -192,9 +174,10 @@ Vale dizer isto na apresentação, se perguntarem:
   não pode haver auto-promoção pela tela, ou o controle não valeria nada. Num
   sistema real, esse primeiro cadastro seria um comando de instalação, executado
   por quem opera o servidor;
-- faltaria um comando de administração para **sortear uma senha nova sem
-  recriar o banco** — hoje, quem perde a senha do admin perde junto os dados de
-  teste;
+- a **conta de reserva** e o `--nova-senha` resolvem a recuperação de acesso
+  para um protótipo de uma máquina só. Num sistema real, a reserva seria uma
+  credencial guardada em cofre, com uso alarmado — aqui o que ela deixa é a
+  linha na trilha de administração e a marca d'água na tela de quem a usa;
 - faltaria ainda **HTTPS**: sem ele a senha trafega em texto claro na rede. Em
   `localhost` isso não é problema porque nada sai da máquina — mas o servidor
   hoje aceita conexões da rede local, e aí a ressalva vale de verdade.

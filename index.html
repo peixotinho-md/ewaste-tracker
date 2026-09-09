@@ -17,14 +17,13 @@
   <div id="conteudo"></div>
 </main>
 
-<footer class="rodape">
-  e-Trilha MS · Protótipo acadêmico — DAC 262, Tecnologia em Análise e Desenvolvimento de Sistemas.
-</footer>
+<footer class="rodape" data-rodape></footer>
 
 <script type="module">
 import * as store from './js/store.js';
 import { calcularIndicadores, equivalencias } from './js/indicadores.js';
-import { iniciarPagina, aviso, escapar, formatarMassa, formatarNumero } from './js/ui.js';
+import { iniciarPagina, aviso, escapar, formatarMassa, formatarNumero,
+         ligarTrocaDeSenha } from './js/ui.js';
 import { normalizarCodigo } from './js/model.js';
 
 /* ------------------------------------------------------------------ *
@@ -155,7 +154,8 @@ function desenharHome() {
            com filtro por cidade e por tipo de resíduo aceito.</p>
         <div class="botoes">
           <a class="botao" href="pontos">Ver pontos de coleta</a>
-          <a class="botao botao-secundario" href="scanner">Sou operador: ler QR</a>
+          ${store.podeOperar(usuario) ? `
+            <a class="botao botao-secundario" href="scanner">Ler QR</a>` : ''}
         </div>
       </div>
     </section>`;
@@ -412,23 +412,9 @@ function mostrar(nome) {
     }
   });
 
-  document.getElementById('form-senha')?.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const nova = document.getElementById('s-nova').value;
-    if (nova !== document.getElementById('s-confirma').value) {
-      aviso('A confirmação não confere com a nova senha.', 'erro');
-      return;
-    }
-    try {
-      await store.trocarSenha({
-        senhaAtual: document.getElementById('s-atual').value,
-        senhaNova: nova,
-      });
-      aviso('Senha definida. Agora ela é só sua.');
-      location.href = destino ?? '/';
-    } catch (erro) {
-      aviso(erro.message, 'erro');
-    }
+  ligarTrocaDeSenha({
+    sucesso: 'Senha definida. Agora ela é só sua.',
+    depois: () => { location.href = destino ?? '/'; },
   });
 
   document.getElementById('btn-sair')?.addEventListener('click', async () => {

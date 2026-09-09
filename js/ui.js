@@ -53,13 +53,20 @@ export function escapar(texto) {
  * Cabeçalho e navegação
  * ------------------------------------------------------------------ */
 
+// `visivel` é o teste que a entrada precisa passar para entrar no menu. Sem
+// ele, a página vale para qualquer conta. Esconder o link é conveniência: quem
+// digitar o endereço direto esbarra no servidor, que não entrega a página nem
+// atende a API sem o papel.
 const PAGINAS = [
   { href: '/', rotulo: 'Início' },
   { href: 'registrar', rotulo: 'Registrar aparelho' },
-  { href: 'scanner', rotulo: 'Ler QR' },
+  // Ler o QR é ESCREVER na cadeia de custódia de um aparelho que é de outra
+  // pessoa. Para quem não pode operar, a aba só levaria a uma tela recusada.
+  { href: 'scanner', rotulo: 'Ler QR', visivel: store.podeOperar },
   { href: 'rastrear', rotulo: 'Rastrear' },
   { href: 'pontos', rotulo: 'Pontos de coleta' },
   { href: 'painel', rotulo: 'Painel' },
+  { href: 'admin', rotulo: 'Administração', visivel: store.ehAdmin },
 ];
 
 async function montarCabecalho() {
@@ -84,12 +91,7 @@ async function montarCabecalho() {
     return;
   }
 
-  // A administração só aparece para quem é admin. Esconder o link é
-  // conveniência: a rota da API continua fechada por conta própria, no
-  // servidor, para quem tentar abrir a página direto pela URL.
-  const paginas = store.ehAdmin(usuario)
-    ? [...PAGINAS, { href: 'admin', rotulo: 'Administração' }]
-    : PAGINAS;
+  const paginas = PAGINAS.filter((p) => !p.visivel || p.visivel(usuario));
 
   const links = paginas.map(
     (p) =>
@@ -107,6 +109,20 @@ async function montarCabecalho() {
       ${escapar(usuario.nome.split(' ')[0])}
       ${usuario.papel !== 'visitante' ? seloPapel(usuario.papel) : ''}
     </a>`;
+}
+
+/**
+ * Preenche o rodapé, que era a mesma linha copiada em oito arquivos — e já
+ * tinha divergido em dois textos diferentes, que é o que sempre acontece com
+ * um conteúdo repetido à mão. Agora existe num lugar só.
+ *
+ * A marca `nao-imprimir` fica no HTML de cada página, e não aqui: quem decide
+ * se o rodapé sai no papel é a página (a folha de etiquetas não quer), não o
+ * componente.
+ */
+function montarRodape() {
+  const alvo = document.querySelector('[data-rodape]');
+  if (alvo) alvo.textContent = 'e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.';
 }
 
 /* ------------------------------------------------------------------ *
@@ -142,6 +158,73 @@ export function seloPapel(papel) {
  * ------------------------------------------------------------------ */
 
 /**
+ * Abre um `<dialog>` modal e resolve com o que a pessoa respondeu.
+ *
+ * É a máquina compartilhada por `confirmar()` e `confirmarComSenha()`, que
+ * eram duas cópias da mesma coisa: montar o diálogo, garantir UMA resposta,
+ * fechar e limpar. O que muda entre as duas é só o miolo do formulário e o que
+ * conta como "sim" — e é isso que os parâmetros descrevem.
+ *
+ * A resposta é dada no CLIQUE, e não no evento `close` do diálogo: assim a
+ * promessa não depende da entrega assíncrona desse evento, que se mostrou pouco
+ * confiável em navegador sem interface (usado nos testes). O guarda
+ * `respondido` garante uma resposta só, venha ela do botão, do Esc ou do close.
+ *
+ * @param {string} titulo    cabeçalho do diálogo.
+ * @param {string} corpo     HTML já montado por quem chamou.
+ * @param {string} alerta    faixa vermelha opcional.
+ * @param {string} miolo     HTML entre o alerta e os botões.
+ * @param {string} textoOk   rótulo do botão que confirma.
+ * @param {string} textoNao  rótulo do botão que desiste.
+ * @param {string} classeOk  classe extra do botão que confirma.
+ * @param {*}      recusa    valor com que a promessa resolve ao desistir.
+ * @param {Function} aoAbrir recebe o diálogo e devolve `() => valor do "sim"`.
+ */
+function dialogo({ titulo, corpo = '', alerta = '', miolo = '', textoOk, textoNao,
+                   classeOk = '', recusa, aoAbrir }) {
+  return new Promise((resolver) => {
+    const caixa = document.createElement('dialog');
+    caixa.className = 'confirmacao';
+    caixa.innerHTML = `
+      <h2>${escapar(titulo)}</h2>
+      ${corpo}
+      ${alerta ? `<div class="faixa faixa-alerta">${alerta}</div>` : ''}
+      ${miolo}
+      <div class="botoes confirmacao-botoes">
+        <button class="botao botao-secundario" type="button" data-resposta="nao">${escapar(textoNao)}</button>
+        <button class="botao ${classeOk}" type="button" data-resposta="sim">${escapar(textoOk)}</button>
+      </div>`;
+
+    let respondido = false;
+    const responder = (valor) => {
+      if (respondido) return;
+      respondido = true;
+      if (caixa.open) caixa.close();
+      caixa.remove();
+      resolver(valor);
+    };
+
+    document.body.append(caixa);
+    caixa.showModal();
+
+    // `aoAbrir` monta o que é específico de cada diálogo e devolve como ler o
+    // "sim". Roda DEPOIS de `showModal()`, e não antes, porque é onde cada um
+    // escolhe quem recebe o foco: `showModal()` foca sozinho o primeiro
+    // elemento focável — o botão de cancelar — e sobrescreveria a escolha.
+    // É o que põe o cursor no campo de senha em `confirmarComSenha()`.
+    const valorDoSim = aoAbrir?.(caixa, responder) ?? (() => true);
+
+    caixa.querySelector('[data-resposta="sim"]')
+      .addEventListener('click', () => responder(valorDoSim()));
+    caixa.querySelector('[data-resposta="nao"]')
+      .addEventListener('click', () => responder(recusa));
+    // Esc (evento `cancel`) e qualquer outro fechamento equivalem a desistir.
+    caixa.addEventListener('cancel', () => responder(recusa));
+    caixa.addEventListener('close', () => responder(recusa));
+  });
+}
+
+/**
  * Pergunta antes de gravar algo que não tem volta, mostrando exatamente o que
  * será gravado.
  *
@@ -157,42 +240,13 @@ export function seloPapel(papel) {
  * @returns {Promise<boolean>} true se a pessoa confirmou.
  */
 export function confirmar({ titulo, corpo = '', alerta = '', confirmar: textoOk = 'Confirmar',
-                            cancelar: textoCancelar = 'Voltar e corrigir' }) {
-  return new Promise((resolver) => {
-    const dialogo = document.createElement('dialog');
-    dialogo.className = 'confirmacao';
-    dialogo.innerHTML = `
-      <h2>${escapar(titulo)}</h2>
-      ${corpo}
-      ${alerta ? `<div class="faixa faixa-alerta">${alerta}</div>` : ''}
-      <div class="botoes confirmacao-botoes">
-        <button class="botao botao-secundario" type="button" data-resposta="nao">${escapar(textoCancelar)}</button>
-        <button class="botao" type="button" data-resposta="sim">${escapar(textoOk)}</button>
-      </div>`;
-
-    // A resposta é dada no clique, e não no evento `close` do diálogo: assim a
-    // promessa não depende da entrega assíncrona desse evento, que se mostrou
-    // pouco confiável em navegador sem interface (usado nos testes). O guarda
-    // `respondido` garante uma resposta só, venha ela do botão ou do Esc.
-    let respondido = false;
-    const responder = (ok) => {
-      if (respondido) return;
-      respondido = true;
-      if (dialogo.open) dialogo.close();
-      dialogo.remove();
-      resolver(ok);
-    };
-
-    dialogo.querySelectorAll('[data-resposta]').forEach((botao) =>
-      botao.addEventListener('click', () => responder(botao.dataset.resposta === 'sim'))
-    );
-    // Esc (evento `cancel`) e qualquer outro fechamento equivalem a desistir.
-    dialogo.addEventListener('cancel', () => responder(false));
-    dialogo.addEventListener('close', () => responder(false));
-
-    document.body.append(dialogo);
-    dialogo.showModal();
-    dialogo.querySelector('[data-resposta="nao"]').focus();
+                            cancelar: textoNao = 'Voltar e corrigir' }) {
+  return dialogo({
+    titulo, corpo, alerta, textoOk, textoNao, recusa: false,
+    aoAbrir: (caixa) => {
+      caixa.querySelector('[data-resposta="nao"]').focus();
+      return () => true;
+    },
   });
 }
 
@@ -211,46 +265,73 @@ export function confirmar({ titulo, corpo = '', alerta = '', confirmar: textoOk 
 export function confirmarComSenha({ titulo, corpo = '', alerta = '',
                                     confirmar: textoOk = 'Confirmar',
                                     rotuloSenha = 'Sua senha' }) {
-  return new Promise((resolver) => {
-    const dialogo = document.createElement('dialog');
-    dialogo.className = 'confirmacao';
-    dialogo.innerHTML = `
-      <h2>${escapar(titulo)}</h2>
-      ${corpo}
-      ${alerta ? `<div class="faixa faixa-alerta">${alerta}</div>` : ''}
+  return dialogo({
+    titulo, corpo, alerta, textoOk, textoNao: 'Cancelar',
+    classeOk: 'botao-perigo', recusa: null,
+    miolo: `
       <div class="campo">
         <label for="senha-confirmacao">${escapar(rotuloSenha)}</label>
         <input id="senha-confirmacao" type="password" autocomplete="current-password">
-      </div>
-      <div class="botoes confirmacao-botoes">
-        <button class="botao botao-secundario" type="button" data-resposta="nao">Cancelar</button>
-        <button class="botao botao-perigo" type="button" data-resposta="sim">${escapar(textoOk)}</button>
-      </div>`;
+      </div>`,
+    aoAbrir: (caixa, responder) => {
+      const campo = caixa.querySelector('#senha-confirmacao');
+      const valor = () => campo.value || null;
+      // Enter no campo confirma: é o gesto natural de quem acabou de digitar.
+      campo.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); responder(valor()); }
+      });
+      campo.focus();
+      return valor;
+    },
+  });
+}
 
-    let respondido = false;
-    const responder = (senha) => {
-      if (respondido) return;
-      respondido = true;
-      if (dialogo.open) dialogo.close();
-      dialogo.remove();
-      resolver(senha);
-    };
+/* ------------------------------------------------------------------ *
+ * Troca de senha
+ * ------------------------------------------------------------------ */
 
-    const campo = dialogo.querySelector('#senha-confirmacao');
-    const confirmarAgora = () => responder(campo.value || null);
+/**
+ * Liga o formulário de troca de senha ao servidor.
+ *
+ * Duas telas pedem a mesma coisa por motivos diferentes — `conta`, quando a
+ * pessoa quer trocar, e a raiz, quando o servidor EXIGE a troca porque a senha
+ * em vigor foi definida por outra pessoa. A moldura das duas é legitimamente
+ * diferente (uma é uma seção entre outras, a outra é a tela inteira), mas a
+ * regra é uma só: conferir a repetição aqui, mandar ao servidor e reagir.
+ *
+ * Era o mesmo bloco escrito duas vezes. Com a regra em dois lugares, corrigir a
+ * conferência num deles deixaria o outro para trás — e o campo "repita a nova"
+ * existe justamente para pegar um erro de digitação numa senha que ninguém vê
+ * enquanto digita.
+ *
+ * Os ids dos campos são os mesmos nas duas telas, e é o que permite um handler
+ * só; o formulário é procurado DENTRO dele para não depender da ordem em que
+ * cada página desenha o conteúdo.
+ *
+ * @param {string} sucesso  aviso mostrado quando a troca dá certo.
+ * @param {Function} depois o que fazer em seguida — recarregar, sair, navegar.
+ */
+export function ligarTrocaDeSenha({ sucesso, depois }) {
+  const formulario = document.getElementById('form-senha');
+  if (!formulario) return;
 
-    dialogo.querySelector('[data-resposta="sim"]').addEventListener('click', confirmarAgora);
-    dialogo.querySelector('[data-resposta="nao"]').addEventListener('click', () => responder(null));
-    // Enter no campo de senha confirma: é o gesto natural de quem acabou de digitar.
-    campo.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') { ev.preventDefault(); confirmarAgora(); }
-    });
-    dialogo.addEventListener('cancel', () => responder(null));
-    dialogo.addEventListener('close', () => responder(null));
-
-    document.body.append(dialogo);
-    dialogo.showModal();
-    campo.focus();
+  formulario.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const nova = document.getElementById('s-nova').value;
+    if (nova !== document.getElementById('s-confirma').value) {
+      aviso('A confirmação não confere com a nova senha.', 'erro');
+      return;
+    }
+    try {
+      await store.trocarSenha({
+        senhaAtual: document.getElementById('s-atual').value,
+        senhaNova: nova,
+      });
+      aviso(sucesso);
+      depois(formulario);
+    } catch (erro) {
+      aviso(erro.message, 'erro');
+    }
   });
 }
 
@@ -328,7 +409,51 @@ export async function iniciarPagina() {
   const saude = await store.verificarServidor();
   if (!saude) avisarServidorFora();
   await montarCabecalho();
+  montarRodape();
+  await marcarContaDeReserva();
   registrarServiceWorker();
+}
+
+/**
+ * Marca a sessão da conta de reserva, em toda página, enquanto ela durar.
+ *
+ * A reserva é a chave de emergência do sistema: um administrador que não
+ * aparece na tela de administração e que ninguém consegue excluir por lá. Ela
+ * resolve o dia em que o acesso ao admin do dia a dia se perde — e vira um
+ * problema no dia seguinte, se a pessoa achar mais prático continuar usando.
+ * A administração passaria a depender de uma conta invisível, sem selo no
+ * cabeçalho e sem linha na lista de contas.
+ *
+ * Por isso são duas peças, e não uma. A FAIXA diz o que fazer e some da vista
+ * ao rolar a página; a MARCA D'ÁGUA não sai da frente e não é lida, é notada —
+ * é o que ainda avisa dez minutos depois, quando a faixa já ficou para trás.
+ * Ela é `aria-hidden`, porque texto girado e repetido catorze vezes não ajuda
+ * quem usa leitor de tela: para esse caso quem carrega o recado é a faixa.
+ */
+async function marcarContaDeReserva() {
+  if (!store.ehReserva(await store.usuarioAtual())) return;
+
+  const faixa = document.createElement('div');
+  faixa.className = 'faixa faixa-alerta';
+  faixa.style.cssText = 'margin:0;border-radius:0;text-align:center';
+  faixa.innerHTML = `
+    <strong>Você entrou na conta de reserva.</strong>
+    Ela existe só para quando o acesso a <code>admin@etrilha.ms</code> se perder:
+    redefina a senha daquela conta em <a href="admin">Administração</a>, volte a
+    usá-la e saia daqui. Esta conta não aparece na lista de contas.`;
+  document.body.prepend(faixa);
+
+  const marca = document.createElement('div');
+  marca.className = 'marca-dagua';
+  marca.setAttribute('aria-hidden', 'true');
+  // Cada faixa diagonal repete o recado para que ele apareça inteiro em
+  // qualquer largura de tela — no celular, só um pedaço da linha cabe.
+  const recado = 'conta reserva · use só se perder o acesso ao admin · ';
+  marca.innerHTML = Array.from(
+    { length: 14 },
+    () => `<span>${recado.repeat(8)}</span>`
+  ).join('');
+  document.body.append(marca);
 }
 
 /**

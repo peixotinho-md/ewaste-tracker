@@ -159,14 +159,34 @@ export async function registrarEvento(
  * na chamada para ver os aparelhos de outra pessoa.
  * ------------------------------------------------------------------ */
 
+/*
+ * Quem está logado, com a resposta reaproveitada dentro do mesmo carregamento
+ * de página.
+ *
+ * Toda página pergunta isso duas vezes: uma no cabeçalho, montado por `ui.js`,
+ * e outra no corpo, para decidir o que desenhar. Eram duas viagens ao servidor
+ * para a mesma resposta. Guardar a PROMESSA, e não o resultado, resolve também
+ * o caso das duas perguntas saírem juntas: a segunda espera a primeira em vez
+ * de abrir outra requisição.
+ *
+ * O que se guarda vale por um carregamento de página, e não mais: qualquer
+ * chamada que mexa na sessão chama `esquecerSessao()`. É o que mantém a regra
+ * da seção acima — o papel continua vindo do servidor, e uma revogação passa a
+ * valer no próximo carregamento, não em algum momento indeterminado depois.
+ */
+let sessaoEmCurso = null;
+
 export async function usuarioAtual() {
-  try {
-    const { usuario } = await api('/sessao');
-    return usuario;
-  } catch {
+  sessaoEmCurso ??= api('/sessao')
+    .then(({ usuario }) => usuario)
     // Cabeçalho não pode quebrar a página por causa de um servidor fora do ar.
-    return null;
-  }
+    .catch(() => null);
+  return sessaoEmCurso;
+}
+
+/** Descarta a sessão memorizada. Chamado por tudo que a altera. */
+function esquecerSessao() {
+  sessaoEmCurso = null;
 }
 
 export async function meusItens() {
@@ -181,6 +201,7 @@ export async function cadastrarUsuario({ nome, email, senha }) {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email ?? '')) throw new Error('E-mail inválido.');
   if ((senha ?? '').length < 6) throw new Error('A senha precisa ter ao menos 6 caracteres.');
 
+  esquecerSessao();  // o cadastro já entra com a conta nova (POST /api/usuarios abre sessão)
   return api('/usuarios', {
     metodo: 'POST',
     corpo: { nome: nome.trim(), email: email.trim(), senha },
@@ -188,6 +209,7 @@ export async function cadastrarUsuario({ nome, email, senha }) {
 }
 
 export async function abrirSessao({ email, senha }) {
+  esquecerSessao();
   return api('/sessao', { metodo: 'POST', corpo: { email: (email ?? '').trim(), senha } });
 }
 
@@ -198,10 +220,12 @@ export async function abrirSessao({ email, senha }) {
  * que quem está no teclado agora é o dono da conta.
  */
 export async function trocarSenha({ senhaAtual, senhaNova }) {
+  esquecerSessao();
   return api('/sessao/senha', { metodo: 'POST', corpo: { senhaAtual, senhaNova } });
 }
 
 export async function encerrarSessao() {
+  esquecerSessao();
   return api('/sessao', { metodo: 'DELETE' });
 }
 
@@ -269,6 +293,7 @@ export async function listarAlteracoes(usuarioId = null) {
  * não há HTTPS.
  */
 export async function reiniciar() {
+  esquecerSessao();  // o banco é recriado: a conta que pediu o reinício some junto
   return api('/demo/reiniciar', { metodo: 'POST' });
 }
 
@@ -293,6 +318,17 @@ export const podeOperar = (usuario) =>
   usuario?.papel === 'operador' || usuario?.papel === 'admin';
 
 export const ehAdmin = (usuario) => usuario?.papel === 'admin';
+
+/**
+ * É a conta de RESERVA — o administrador que não aparece na tela de
+ * administração e existe para o dia em que o acesso ao admin do dia a dia se
+ * perder?
+ *
+ * Aqui, ao contrário das funções acima, esconder não é o objetivo: a tela usa
+ * isto para AVISAR, deixando visível em toda página que a sessão aberta é uma
+ * chave de emergência. Uma reserva usada por comodidade deixa de ser reserva.
+ */
+export const ehReserva = (usuario) => usuario?.reserva === true;
 
 /**
  * Guarda de página: devolve o usuário quando ele tem um dos papéis pedidos, ou

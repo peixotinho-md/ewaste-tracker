@@ -13,5 +13,10 @@ backend/_servidor.log
 .venv/
 __pycache__/
 
+# Saída das ferramentas de teste
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Cópia da versão anterior: o histórico do git já cumpre esse papel
 backup/

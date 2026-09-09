@@ -16,6 +16,7 @@ import os
 import secrets
 import socket
 import sys
+from datetime import timedelta
 from functools import wraps
 from pathlib import Path
 
@@ -48,8 +49,14 @@ RAIZ = Path(__file__).resolve().parent.parent
 # o que lista, registra ou administra exige conta.
 PAGINAS_PUBLICAS = {"index", "rastrear"}
 
-PAGINAS = PAGINAS_PUBLICAS | {
-    "registrar", "scanner", "pontos", "painel", "conta", "admin",
+# Páginas que exigem poder de ESCRITA na cadeia de custódia. O leitor de QR não
+# tem o que oferecer a quem não é operador: cada leitura dele grava um evento, e
+# a API recusaria toda ação da tela. Entregar o arquivo mesmo assim mostraria uma
+# câmera aberta que não serve para nada.
+PAGINAS_OPERADOR = {"scanner"}
+
+PAGINAS = PAGINAS_PUBLICAS | PAGINAS_OPERADOR | {
+    "registrar", "pontos", "painel", "conta", "admin",
 }
 ARQUIVOS_RAIZ = {"sw.js", "manifest.webmanifest", "icon.svg"}
 PASTAS_PUBLICAS = {"css", "js", "vendor"}
@@ -79,6 +86,14 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,   # o JavaScript da página não lê o cookie
     SESSION_COOKIE_SAMESITE="Lax",  # não acompanha requisições de outros sites
     JSON_SORT_KEYS=False,
+    # Sessão de meio dia. O padrão do Flask é 31 dias, o que numa demonstração em
+    # sala significa a conta de quem apresentou continuar aberta por um mês na
+    # máquina do laboratório.
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+    # Nenhum corpo legítimo desta API chega perto disso: o maior é o cadastro de
+    # um aparelho, com meia dúzia de campos curtos. O limite recusa o corpo antes
+    # de lê-lo por inteiro na memória.
+    MAX_CONTENT_LENGTH=64 * 1024,
 )
 
 
@@ -136,20 +151,20 @@ def usuario_da_sessao() -> str | None:
 # tem efeito imediato, sem esperar a sessão dele expirar.
 # --------------------------------------------------------------------------- #
 
-def _senha_provisoria() -> bool:
+def _conta_para_a_pagina() -> dict | None:
     """
-    A sessão atual está presa à troca de senha?
+    A conta da sessão, para as decisões tomadas na ENTREGA DAS PÁGINAS.
 
-    Abre uma conexão própria porque é chamada na entrega das páginas, fora das
-    rotas da API. É uma consulta por chave primária, e só para quem tem sessão.
+    Abre uma conexão própria porque é chamada fora das rotas da API, que
+    recebem a delas de `com_banco`. É uma consulta por chave primária, e só
+    para quem tem sessão.
     """
     usuario_id = usuario_da_sessao()
     if not usuario_id:
-        return False
+        return None
     conexao = banco.conectar()
     try:
-        conta = banco.obter_usuario(conexao, usuario_id)
-        return bool(conta and conta["senhaProvisoria"])
+        return banco.obter_usuario(conexao, usuario_id)
     finally:
         conexao.close()
 
@@ -334,10 +349,8 @@ def cadastrar(conexao):
 
     if not nome:
         raise modelo.RegraViolada("Informe seu nome.")
-    if "@" not in email or "." not in email.split("@")[-1]:
-        raise modelo.RegraViolada("E-mail inválido.")
-    if len(senha) < 6:
-        raise modelo.RegraViolada("A senha precisa ter ao menos 6 caracteres.")
+    email = modelo.validar_email(email)
+    modelo.validar_senha(senha)
 
     # generate_password_hash usa PBKDF2 com sal aleatório e muitas iterações.
     # É o oposto do SHA-256 simples da versão anterior: propositalmente lento,
@@ -575,8 +588,10 @@ def reiniciar_demo(conexao, conta):
     # de bloco e a senha ficaria presa nele por tempo indeterminado. Esta é a
     # única cópia que existe — não pode depender de o buffer encher.
     print("\n  Demonstração reiniciada. Contas recriadas, com senha sorteada:", flush=True)
-    for conta in credenciais:
-        print(f"    {conta['papel']:<9} {conta['email']:<22} senha: {conta['senha']}", flush=True)
+    for credencial in credenciais:
+        marca = "   (reserva)" if credencial.get("reserva") else ""
+        print(f"    {credencial['papel']:<9} {credencial['email']:<22} "
+              f"senha: {credencial['senha']}{marca}", flush=True)
     print("\n  ANOTE AGORA: elas não ficam salvas em lugar nenhum.\n", flush=True)
 
     return jsonify({"ok": True})
@@ -630,15 +645,24 @@ def arquivo_raiz(nome):
         return redirect(f"/{nome[: -len('.html')]}")
 
     if nome in PAGINAS:
-        # Senha provisória prende a sessão na raiz, onde está o formulário de
-        # troca. Sem isto a pessoa navegaria por telas que a API vai recusar.
-        if nome not in PAGINAS_PUBLICAS and _senha_provisoria():
-            return redirect("/")
-        if nome not in PAGINAS_PUBLICAS and not usuario_da_sessao():
+        if nome in PAGINAS_PUBLICAS:
+            return send_from_directory(RAIZ, f"{nome}.html")
+
+        conta = _conta_para_a_pagina()
+        if conta is None:
             # Devolver a página e deixar o JavaScript decidir mostraria por um
             # instante uma tela que a pessoa não pode usar, e ainda dependeria de
             # o script rodar. Melhor não entregar o arquivo.
             return redirect(f"/?destino={nome}")
+        # Senha provisória prende a sessão na raiz, onde está o formulário de
+        # troca. Sem isto a pessoa navegaria por telas que a API vai recusar.
+        if conta["senhaProvisoria"]:
+            return redirect("/")
+        # A conta entrou, mas não opera: a aba nem aparece no menu dela, e quem
+        # chegar pelo endereço direto volta para a home em vez de encarar uma
+        # tela cujo único botão a API recusa.
+        if nome in PAGINAS_OPERADOR and conta["papel"] not in ("operador", "admin"):
+            return redirect("/")
         return send_from_directory(RAIZ, f"{nome}.html")
 
     if nome in ARQUIVOS_RAIZ:
@@ -676,7 +700,44 @@ def ip_na_rede() -> str | None:
             return None  # Sem rede: só resta o loopback.
 
 
+def nova_senha(email: str) -> int:
+    """
+    `python backend/app.py --nova-senha <e-mail>` — a recuperação de acesso.
+
+    Sorteia uma senha para a conta indicada, imprime uma vez e sai sem subir o
+    servidor. Perder a senha do administrador deixou de custar a demonstração
+    inteira: antes, os únicos caminhos eram `/admin` (que exige o login perdido)
+    e reiniciar a demonstração, que apaga contas e aparelhos junto.
+
+    Sem e-mail, o comando trata a conta de RESERVA — o administrador que não
+    aparece na tela de administração e existe exatamente para este dia.
+    """
+    banco.preparar()
+    conexao = banco.conectar()
+    try:
+        credencial = banco.redefinir_senha(conexao, email)
+    except modelo.RegraViolada as erro:
+        print(f"\n  {erro}\n")
+        return 1
+    finally:
+        conexao.close()
+
+    print(f"\n  Senha sorteada para {credencial['email']} ({credencial['papel']}):")
+    print(f"\n    {credencial['senha']}\n")
+    print("  ANOTE AGORA: ela não fica salva em lugar nenhum. Ao entrar, o")
+    print("  sistema pede que você defina uma senha sua — esta foi lida por")
+    print("  quem rodou o comando, então ainda não identifica o dono.\n")
+    return 0
+
+
 def main() -> None:
+    # A recuperação de acesso é ato de quem opera o SERVIDOR, e não da interface
+    # que exige justamente o login perdido. Por isso mora no terminal.
+    if "--nova-senha" in sys.argv:
+        posicao = sys.argv.index("--nova-senha")
+        email = sys.argv[posicao + 1] if len(sys.argv) > posicao + 1 else banco.EMAIL_RESERVA
+        raise SystemExit(nova_senha(email))
+
     credenciais = banco.preparar()
     porta = int(os.environ.get("PORTA", 8000))
     # 0.0.0.0 aceita conexões de qualquer aparelho da rede local, e não apenas
@@ -696,12 +757,16 @@ def main() -> None:
         # nenhum: o banco guarda apenas o hash, e o sorteio não se repete.
         print("\n  Contas criadas agora, com senha sorteada:")
         for conta in credenciais:
-            print(f"    {conta['papel']:<9} {conta['email']:<22} senha: {conta['senha']}")
-        print("\n  ANOTE AGORA. Elas não ficam salvas em lugar nenhum e não")
-        print("  podem ser recuperadas — só trocadas em /admin, já autenticado.", flush=True)
+            marca = "   (reserva)" if conta.get("reserva") else ""
+            print(f"    {conta['papel']:<9} {conta['email']:<22} "
+                  f"senha: {conta['senha']}{marca}")
+        print("\n  ANOTE AGORA. Elas não ficam salvas em lugar nenhum e o hash não")
+        print("  as devolve. A de reserva não aparece na tela de administração:")
+        print("  é a segunda chave, para o dia em que a do admin se perder.")
+        print("\n  Perdeu a senha:  python backend/app.py --nova-senha <e-mail>", flush=True)
     else:
         print("  Contas:                   já existentes")
-        print("  (as senhas não podem ser lidas de volta do hash; troque-as em /admin)")
+        print("  Perdeu a senha:           python backend/app.py --nova-senha <e-mail>")
 
     print("\n  Encerre com Ctrl+C\n")
     app.run(host=host, port=porta, debug=False)

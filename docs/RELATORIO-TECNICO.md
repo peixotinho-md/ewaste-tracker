@@ -258,9 +258,12 @@ Três decisões de projeto sustentam a proposta:
 | QR — leitura | `BarcodeDetector` (API nativa) com `jsQR` (Apache-2.0) como alternativa | O caminho nativo é mais rápido; a biblioteca cobre os navegadores sem suporte |
 | Offline | Service Worker | Pontos de coleta e galpões de triagem nem sempre têm conexão |
 | Mapa | SVG desenhado pela própria aplicação | Não depende de serviço externo de mapas nem de internet |
+| Testes | pytest com o *test client* do Flask | Exercita as rotas sem subir servidor nem abrir navegador; o banco de cada teste é uma cópia temporária, então a suíte não toca no banco de demonstração |
 
-A única dependência a instalar é o Flask (`pip install -r requirements.txt`).
-Nada é baixado em tempo de execução.
+A única dependência para EXECUTAR é o Flask (`pip install -r requirements.txt`).
+O pytest fica em `requirements-dev.txt`, separado de propósito: quem só quer
+subir o sistema não instala ferramenta de teste. Nada é baixado em tempo de
+execução.
 
 ---
 
@@ -471,6 +474,13 @@ a quem entrou sem permissão, inclusive para chamadas feitas por `curl`. A
 distinção entre os dois códigos é usada pela tela: 401 pede login, 403 explica
 que a conta não tem o papel — entrar de novo não resolveria.
 
+O leitor de QR vai um passo além e **não é entregue** a quem não pode operar:
+`/scanner` redireciona para a home. Nas outras páginas fechadas vale o contrário
+— a de administração, por exemplo, é servida a qualquer conta, porque sobra ali
+o que explicar a quem não tem permissão. No scanner não sobra nada: a página
+inteira é a ação recusada, e entregá-la só abriria uma câmera cujo resultado a
+API rejeita a cada leitura.
+
 **Senha definida por outra pessoa não vale como identidade.** A conta nasce com
 `senha_provisoria = 1` nos dois casos em que o segredo foi escolhido por
 terceiros: a sorteada na carga inicial e a redefinida por um administrador.
@@ -518,6 +528,75 @@ Duas regras de integridade completam:
   rebaixando ao mesmo tempo não deixem o sistema sem nenhum — é o mesmo motivo
   do `BEGIN IMMEDIATE` da seção 9.8;
 - **ninguém rebaixa a si mesmo**, que é o caso mais comum de tiro no pé.
+
+### A conta de reserva
+
+As regras acima protegem contra o acidente, não contra a perda do segredo. Só um
+administrador promove outro — é o que impede a auto-promoção pelo formulário
+público —, e a senha do admin inicial é sorteada e mostrada **uma vez** no
+terminal. Perdida essa senha, o único caminho de volta seria recriar o banco,
+que apaga contas e aparelhos junto: um erro de operação custando a cadeia de
+custódia inteira.
+
+A carga cria então uma terceira conta, `reserva@etrilha.ms`, marcada com
+`reserva = 1` no banco. Ela é administrador e **não aparece na tela de
+administração**: `listar_usuarios()` a filtra, e `atualizar_usuario()` e
+`excluir_usuario()` a recusam por conta própria — com a **mesma resposta** que
+dariam a um id inexistente, porque uma mensagem específica ("essa conta não pode
+ser alterada") já contaria que ela existe. A filtragem na listagem sozinha seria
+cosmética; um id vindo de um backup ou de um log bastaria para contorná-la.
+
+Ela some da lista justamente para não ser o alvo fácil do acidente que deveria
+cobrir: um administrador descontrolado — ou alguém com a sessão dele — apagaria
+toda conta de admin que enxergasse. Pelo mesmo raciocínio, a reserva **não conta**
+como o administrador que sobra na regra do "último admin": se contasse, a regra
+deixaria rebaixar o último admin visível e a administração do dia a dia passaria
+a depender de uma conta que não aparece em tela nenhuma.
+
+O que ela **não** ganha é sigilo sobre o que faz: uma vez usada, suas ações
+entram em `alteracoes_conta` como as de qualquer outra conta. Esconder a conta é
+proteger a chave; um administrador cujos atos não deixassem rastro seria um
+backdoor, não uma reserva.
+
+Pelo mesmo motivo, a sessão da reserva é **marcada em toda tela**: uma faixa no
+topo diz o que fazer, e uma marca d'água diagonal fica ATRÁS do conteúdo
+enquanto a sessão durar — os cartões, o cabeçalho e o rodapé têm fundo opaco e a
+cobrem, de modo que ela aparece pelas frestas da página. Por cima do texto,
+qualquer opacidade que não atrapalhasse a leitura já a tornava invisível; por
+trás, ela pode ser vista sem disputar com nada. O risco que isso cobre não é técnico, é de hábito — a
+reserva não aparece em lista nenhuma, não pode ser excluída e nunca pede
+justificativa, o que a torna a conta mais cômoda do sistema. Uma administração
+que passasse a se apoiar nela ficaria sem a prestação de contas que a tela de
+administração existe para dar. São duas peças e não uma porque cumprem tempos
+diferentes: a faixa é lida uma vez e sai da vista ao rolar a página; a marca
+d'água ainda está lá dez minutos depois. A marca é `aria-hidden` — texto girado
+e repetido não ajuda quem usa leitor de tela, e para esse caso quem carrega o
+recado é a faixa — e não sai na impressão, onde cobriria os QR Codes da folha de
+etiquetas.
+
+### Recuperação de acesso
+
+A reserva só resolve o problema se a senha dela própria for recuperável — senão
+é um segredo tão perdível quanto o que protege. O comando é do terminal:
+
+```powershell
+python backend/app.py --nova-senha admin@etrilha.ms
+```
+
+Sorteia, grava só o hash novo, imprime uma vez e sai sem subir o servidor. Sem
+e-mail, trata a conta de reserva. A senha nasce `senha_provisoria = 1` pela
+mesma regra da seção anterior: quem rodou o comando a leu.
+
+O lugar é deliberado. A interface não serve para isso — `/admin` exige estar
+logado como administrador, que é exatamente o que se perdeu. E o comando não
+abre nada que já não estivesse aberto: quem alcança o terminal do servidor
+alcança `backend/etrilha.db`, com todos os hashes dentro. O que ele muda é o
+custo do erro, que deixa de ser a demonstração inteira.
+
+A redefinição entra na trilha de administração com o autor nomeado como
+`terminal do servidor` — exceto a da reserva, cujo nome apareceria na tela de
+administração e denunciaria a conta que precisa não aparecer lá. Nesse caso o
+registro é a linha impressa no terminal de quem rodou o comando.
 
 ### Excluir uma conta sem apagar o que ela declarou
 
@@ -633,8 +712,14 @@ aqui, a variável de ambiente é a mitigação honesta para uma demonstração.
   sobre o que o cliente afirmou ser a etapa atual.
 - **Dígito verificador** (`digito_verificador`): soma ponderada módulo 32 sobre um
   alfabeto base32 **sem os caracteres I, L, O e U** — os que as pessoas confundem
-  ao ler uma etiqueta suja. Detecta todos os erros de um caractere e a maioria das
-  transposições. A normalização ainda corrige `O→0`, `I→1`, `L→1` e `U→V`.
+  ao ler uma etiqueta suja. A normalização ainda corrige `O→0`, `I→1`, `L→1` e
+  `U→V`. A detecção de erro de um caractere é **parcial, e medida**: os pesos são
+  8, 7, 6, 5, 4, 3, 2, e todo peso **par** divide o módulo 32, o que deixa passar
+  a troca cujo efeito na soma é múltiplo de 32. Nas posições de peso ímpar a
+  detecção é total; no conjunto, cerca de **5% das trocas de um caractere
+  escapam** (`testes/teste_modelo.py` mede e trava esse número). Pesos todos
+  ímpares seriam coprimos com 32 e levariam a brecha a zero — ao custo de mudar
+  o dígito de todo código já emitido. Ver limitação nº 7.
 - **Prefixo obrigatório** (`normalizar_codigo`): o código só é aceito começando
   por `MS`, como em `MS-XXXX-XXXX`. São duas verificações com papéis distintos —
   o prefixo diz de qual sistema é a etiqueta, e recusa de imediato qualquer outra
@@ -713,7 +798,8 @@ Marcos previstos no cronograma da DAC:
 | 20 | Declarar ATA Secure Erase em memória flash | Aceito; atestado aparece no rastreio público |
 | 21 | Avançar um monitor (sem mídia) para a triagem | Aceito sem exigir atestado |
 | 22 | Tentar `UPDATE` ou `DELETE` na tabela `apagamentos` | Recusado pelos gatilhos |
-| 23 | Abrir `/scanner` sem estar logado | Câmera e formulário não aparecem; a tela explica e leva ao login |
+| 23 | Abrir `/scanner` sem estar logado | A página não é entregue; redireciona para o login |
+| 23a | Abrir `/scanner` logado como visitante | A aba não está no menu, e o endereço direto volta para a home |
 | 24 | Gravar um evento por `curl`, sem sessão | HTTP 401 |
 | 25 | Gravar um evento logado como visitante | HTTP 403 |
 | 26 | Gravar um evento como operador, mandando outro nome e outro ponto no JSON | Aceito, mas gravado com o nome da conta e o ponto vinculado a ela |
@@ -734,6 +820,12 @@ Marcos previstos no cronograma da DAC:
 | 41 | Excluir uma conta com a senha correta | Conta removida; a tela informa quantos aparelhos ficaram sem dono |
 | 42 | Consultar um aparelho da conta excluída | Item, trilha e responsável dos eventos intactos, apenas sem dono |
 | 43 | Ver a trilha depois da exclusão | A conta excluída continua nomeada no registro |
+| 43a | Procurar a conta de reserva na lista da administração | Ausente |
+| 43b | Alterar ou excluir a reserva pelo id | Recusado, com a mesma resposta de um id inexistente |
+| 43c | Rebaixar o último admin visível, havendo a reserva | Recusado: a reserva não conta como o administrador que sobra |
+| 43d | Rodar `--nova-senha` e entrar com o que ele imprimiu | Login aceito, preso à troca de senha |
+| 43e | Navegar pelas telas com a sessão da reserva | Marca d'água e faixa acompanham todas elas |
+| 43f | Imprimir a folha de etiquetas com a sessão da reserva | A marca d'água não sai no papel |
 | 44 | Listar todos os aparelhos como admin, com busca e filtro por etapa | Lista filtra por texto, etapa e "só os atrasados" |
 | 45 | Pedir `/registrar`, `/painel`, `/conta` ou `/admin` sem sessão | HTTP 302 para a entrada; o HTML não é entregue |
 | 46 | Pedir `/` e `/rastrear` sem sessão | HTTP 200 — são as duas páginas públicas |
@@ -913,6 +1005,78 @@ Exemplo com o notebook de 1,9 kg dos dados de demonstração:
 O ouro responde por mais de um quarto do CO₂e evitado apesar de pesar 171 mg:
 produzir 1 kg de ouro primário movimenta toneladas de minério.
 
+### 11.4 Testes automatizados
+
+O roteiro de 11.1 é executado por uma pessoa, uma vez, e prova que o sistema
+funcionava naquele momento. A suíte automatizada prova que ele continua
+funcionando depois de cada alteração — que é o que faz falta num projeto de cinco
+pessoas mexendo no mesmo código.
+
+```powershell
+python -m pip install -r requirements.txt -r requirements-dev.txt
+python -m pytest
+python -m pytest --cov=backend --cov-report=term-missing
+```
+
+**351 testes, 19 segundos, 94% do código do servidor**, assim distribuídos:
+
+| Arquivo | Cobre |
+|---|---|
+| `testes/teste_modelo.py` | Máquina de estados, dígito verificador, peso, atestado de apagamento, papéis. Sem I/O e sem banco: é o módulo de regras isolado |
+| `testes/teste_api_autorizacao.py` | Matriz das 21 rotas × papéis. Verifica o RNF06 e a distinção entre **401** (falta entrar) e **403** (entrou e não pode) |
+| `testes/teste_api_itens.py` | Cadeia de custódia inteira pela API, e as duas regras de assinatura: o responsável e o ponto vêm da sessão, não do corpo |
+| `testes/teste_api_admin.py` | Papéis, exclusão com re-autenticação, trilha de administração, último administrador |
+| `testes/teste_api_contas.py` | Cadastro, login, anti-enumeração de e-mail, fixação de sessão, troca de senha |
+| `testes/teste_banco_gatilhos.py` | Os seis gatilhos de somente-acréscimo, chaves estrangeiras e `CHECK` — o RNF07 |
+| `testes/teste_paginas.py` | Portão de autenticação no nível do HTML e a allowlist de arquivos entregues — a seção 9.9 |
+| `testes/teste_paridade_front.py` | Compara as tabelas de `backend/modelo.py` com as de `js/model.js`, que a seção 9.2 duplica de propósito |
+
+| Módulo | Cobertura |
+|---|---|
+| `backend/modelo.py` | 100% |
+| `backend/banco.py` | 98% |
+| `backend/app.py` | 89% |
+
+O que falta em `app.py` é `main()`, a descoberta do IP na rede e a impressão das
+credenciais — código que só roda ao subir o servidor.
+
+**A suíte foi verificada contra si mesma.** Cobertura alta não prova que um teste
+falharia se o código quebrasse, então cinco defeitos foram introduzidos de
+propósito, um a um, e a suíte pegou os cinco:
+
+| Defeito introduzido | Teste que acusou |
+|---|---|
+| Cadastro deixa de forçar `visitante` no INSERT | `teste_cadastro_nasce_visitante_mesmo_pedindo_admin` |
+| `401` por falta de sessão vira `403` | `teste_sem_sessao_responde_401` |
+| O `responsavel` do evento passa a vir do corpo | `teste_responsavel_do_corpo_e_descartado` |
+| Sobrescrita em memória flash passa a ser aceita | `teste_sobrescrita_em_flash_e_recusada_pela_api` |
+| Gatilho `eventos_sem_delete` removido do esquema | `teste_delete_e_abortado_pelo_gatilho[eventos]` |
+
+### 11.5 Defeitos encontrados pela suíte
+
+Escrever os testes revelou três defeitos que a conferência manual não pegaria,
+porque nenhum deles quebra a tela:
+
+1. **Um código de rastreio em cada 1024 nascia inválido.** `formatar_codigo`
+   removia um `MS` no início do corpo, o que era conveniência para aceitar o
+   código já prefixado. Como o corpo é sorteado num alfabeto de 32 caracteres,
+   ele começa com M e S uma vez a cada 1024 — e o código saía com 6 caracteres
+   em vez de 8. Isso ia para o banco como chave primária e para o QR impresso na
+   etiqueta: o aparelho nascia **sem rastreio, de forma irreversível**, e
+   qualquer leitura devolvia "código inválido". Corrigido nos dois lados
+   (`backend/modelo.py` e `js/model.js`): a função não remove mais o prefixo,
+   porque nenhum dos dois chamadores o envia.
+2. **O atestado de apagamento tinha uma saída vazia.** Um notebook concluía a
+   triagem declarando mídia `sem_midia` e método `NAO_APLICAVEL` — exatamente o
+   atestado sem conteúdo que a validação da seção 9.6 existe para impedir. A
+   mensagem de recusa para esse caso já estava escrita no código e era
+   inalcançável, o que mostra que a intenção sempre foi recusá-lo. Como a tabela
+   `apagamentos` é somente de acréscimo, cada ocorrência ficaria gravada para
+   sempre.
+3. **A validação de e-mail do servidor era mais frouxa que a da tela.** O
+   servidor aceitava `@dominio.ms`, sem parte local, que `js/store.js` recusa.
+   A verificação virou `modelo.validar_email`, com o mesmo padrão dos dois lados.
+
 ---
 
 ## 12. Viabilidade
@@ -982,7 +1146,17 @@ não um formulário.
    equivalente.
 6. **Pontos de coleta fictícios**, posicionados sobre coordenadas reais dos
    municípios. Precisam ser levantados e validados em campo.
-7. **Composição material e fatores de CO₂e são médias de referência**, não
+7. **O dígito verificador não pega todo erro de um caractere.** A soma
+   ponderada usa os pesos 8, 7, 6, 5, 4, 3, 2, e os pares dividem o módulo 32:
+   cerca de 5% das trocas de um caractere produzem outro código com o mesmo
+   dígito. Nas posições de peso ímpar a detecção é total. Pesos todos ímpares
+   fechariam a brecha, e a correção é de uma linha em cada lado
+   (`backend/modelo.py` e `js/model.js`) — o que custa é o resto: todo código já
+   emitido muda de dígito, o que invalidaria as etiquetas impressas e os dez
+   itens de `dados/itens-demo.json`. Vale fazer antes de qualquer etiqueta real
+   ser colada em aparelho. O número está medido e travado em
+   `testes/teste_modelo.py`, que falha se ele mudar.
+8. **Composição material e fatores de CO₂e são médias de referência**, não
    medições. Servem para ordem de grandeza, não para contabilidade ambiental
    oficial. O painel abre a conta na própria tela — a origem do número, a
    sequência do cálculo e o fator de cada material —, porque um total ambiental
@@ -990,14 +1164,14 @@ não um formulário.
    **declarado por quem registra**: o sistema recusa valores fora da faixa
    aceita, mas não tem como saber se o número corresponde ao aparelho. Numa
    operação real a massa viria da balança da recicladora.
-8. **Mapa esquemático**, com contorno simplificado do estado — é um recurso de
+9. **Mapa esquemático**, com contorno simplificado do estado — é um recurso de
    orientação, não uma base cartográfica.
-9. **Câmera exige contexto seguro** (`localhost` ou HTTPS). Pelo celular na rede
+10. **Câmera exige contexto seguro** (`localhost` ou HTTPS). Pelo celular na rede
    local via HTTP puro, só a digitação manual funciona.
-10. **A cadeia depende de confiança nos operadores.** O sistema garante que o
+11. **A cadeia depende de confiança nos operadores.** O sistema garante que o
    histórico não seja reescrito, mas não prova que a leitura corresponde a um
    movimento físico real.
-11. **A interface móvel foi ajustada, não testada em campo.** O CSS ganhou um
+12. **A interface móvel foi ajustada, não testada em campo.** O CSS ganhou um
    ponto de quebra em 640 px — menu que desliza na horizontal em vez de quebrar
    em três linhas dentro de um cabeçalho fixo, alvos de toque de 44 px, margens
    menores —, mas a verificação foi por inspeção, sem aparelho real na mão. E é
@@ -1065,3 +1239,4 @@ não um formulário.
 - ARASE, Kazuhiko. **qrcode-generator.** Licença MIT.
 - WOLFE, Cosmo. **jsQR.** Licença Apache-2.0.
 - PALLETS. **Flask** e **Werkzeug.** Licença BSD-3-Clause.
+- KREKEL, Holger; e colaboradores. **pytest.** Licença MIT. Usado só em desenvolvimento; não entra em execução.

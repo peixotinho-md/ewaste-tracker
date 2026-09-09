@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 6;
+PRAGMA user_version = 7;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
@@ -60,7 +60,24 @@ CREATE TABLE usuarios (
   -- desta conta a própria troca de senha, até que o dono escolha a dele.
   --
   -- Quem se cadastra pela tela escolhe a senha na hora, e nasce com 0.
-  senha_provisoria INTEGER NOT NULL DEFAULT 0 CHECK (senha_provisoria IN (0, 1))
+  senha_provisoria INTEGER NOT NULL DEFAULT 0 CHECK (senha_provisoria IN (0, 1)),
+
+  -- 1 na CONTA DE RESERVA: um administrador que não aparece na tela de
+  -- administração e que nenhuma outra conta consegue alterar ou excluir.
+  --
+  -- Existe para um problema real deste desenho: só um admin promove outro, e a
+  -- senha do admin inicial é sorteada e mostrada uma vez. Perdida essa senha, o
+  -- único caminho de volta seria reiniciar a demonstração, que apaga contas e
+  -- aparelhos. A reserva é a segunda chave: quem tem acesso ao terminal do
+  -- servidor sorteia uma senha nova para ela (`--nova-senha`), entra e redefine
+  -- a senha do admin visível em /admin.
+  --
+  -- Ela some da LISTA de contas justamente para não ser o alvo fácil: um admin
+  -- que se descontrolasse — ou alguém com a sessão dele — apagaria toda conta
+  -- de administrador visível, e o sistema ficaria sem volta. O que a reserva
+  -- FAZ, porém, continua na trilha de `alteracoes_conta` como o de qualquer
+  -- outra conta: esconder a conta é proteger a chave, não apagar o rastro.
+  reserva INTEGER NOT NULL DEFAULT 0 CHECK (reserva IN (0, 1))
 );
 
 CREATE INDEX idx_usuarios_papel ON usuarios (papel);

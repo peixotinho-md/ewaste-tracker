@@ -71,7 +71,7 @@
            andamento sem precisar de conta.</p>
         <div class="botoes">
           <a class="botao" id="link-etiqueta" href="registrar?imprimir">Imprimir etiqueta</a>
-          <a class="botao botao-secundario" href="scanner">Abrir o leitor de QR</a>
+          <a class="botao botao-secundario oculto" id="link-scanner" href="scanner">Abrir o leitor de QR</a>
           <a class="botao botao-secundario" id="link-rastreio" href="#">Ver a trilha</a>
           <button class="botao botao-secundario" id="btn-outro" type="button">Registrar outro</button>
         </div>
@@ -130,7 +130,7 @@
 
 </main>
 
-<footer class="rodape nao-imprimir">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+<footer class="rodape nao-imprimir" data-rodape></footer>
 
 <script type="module">
 import * as store from './js/store.js';
@@ -163,6 +163,12 @@ if (new URLSearchParams(location.search).has('imprimir')) {
  * ================================================================== */
 
 async function modoCadastro() {
+// O atalho para o leitor de QR só faz sentido para quem pode gravar etapas —
+// para o dono comum do aparelho, levaria a uma tela que o servidor recusa.
+if (store.podeOperar(await store.usuarioAtual())) {
+  document.getElementById('link-scanner').classList.remove('oculto');
+}
+
 const selCategoria = document.getElementById('categoria');
 const selPonto = document.getElementById('ponto');
 const inputPeso = document.getElementById('peso');

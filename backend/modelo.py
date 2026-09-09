@@ -238,6 +238,15 @@ def validar_apagamento(categoria: str, midia, metodo) -> tuple[str, str]:
         raise RegraViolada(
             "Informe o tipo de mídia de dados do aparelho antes de concluir a triagem."
         )
+
+    # `sem_midia` é a saída para o aparelho que não guarda dado nenhum, e ela não
+    # pode valer para uma categoria que sempre guarda. Sem esta verificação, um
+    # celular concluía a triagem declarando "sem mídia / não aplicável" — que é
+    # precisamente o atestado vazio que esta função existe para impedir, e ficava
+    # gravado para sempre, porque a tabela `apagamentos` é somente de acréscimo.
+    if midia == "sem_midia":
+        raise RegraViolada(METODOS_APAGAMENTO["NAO_APLICAVEL"]["porque_nao"])
+
     definicao = METODOS_APAGAMENTO.get(metodo)
     if definicao is None:
         raise RegraViolada("Informe como os dados do aparelho foram destruídos.")
@@ -261,7 +270,17 @@ CORRECOES = {"O": "0", "I": "1", "L": "1", "U": "V"}
 
 
 def digito_verificador(corpo: str) -> str | None:
-    """Soma ponderada módulo 32, mesma ideia do CPF e do ISBN."""
+    """
+    Soma ponderada módulo 32, mesma ideia do CPF e do ISBN.
+
+    A detecção de erro de um caractere é PARCIAL. Os pesos são
+    `len(corpo) + 1 - i` — 8, 7, 6, 5, 4, 3, 2 — e um peso par divide 32: existe
+    uma troca cujo efeito na soma é múltiplo de 32 e passa despercebida. Peso
+    ímpar é coprimo com 32 e pega toda troca simples. Cerca de 5% das trocas de
+    um caractere escapam; `testes/teste_modelo.py` mede e trava esse número.
+    Trocar os pesos por valores todos ímpares levaria a brecha a zero, mas
+    mudaria o dígito de todo código já impresso em etiqueta.
+    """
     soma = 0
     for i, caractere in enumerate(corpo):
         if caractere not in ALFABETO:
@@ -271,8 +290,17 @@ def digito_verificador(corpo: str) -> str | None:
 
 
 def formatar_codigo(corpo: str) -> str:
-    limpo = corpo[2:] if corpo.startswith("MS") else corpo
-    return f"MS-{limpo[:4]}-{limpo[4:8]}"
+    """
+    Agrupa os 8 caracteres do corpo na forma MS-XXXX-XXXX.
+
+    Recebe SEMPRE o corpo já sem o prefixo: `gerar_codigo` monta os 7 sorteados
+    mais o dígito, e `normalizar_codigo` já retirou o "MS" antes de conferir.
+    Não tente remover o prefixo aqui — um corpo legítimo pode começar com as
+    letras M e S, e cortá-las produzia um código de 6 caracteres que nenhuma
+    validação aceita depois. Como o código é a chave primária do item e vai
+    impresso na etiqueta, o aparelho ficava sem rastreio para sempre.
+    """
+    return f"MS-{corpo[:4]}-{corpo[4:8]}"
 
 
 def gerar_codigo() -> str:
@@ -347,6 +375,21 @@ def validar_papel(papel) -> str:
     if papel not in PAPEIS:
         raise RegraViolada("Papel inválido. Use visitante, operador ou admin.")
     return papel
+
+
+#: Forma mínima de um endereço: algo, arroba, domínio com ponto e sufixo.
+#:
+#: É o MESMO padrão usado em `js/store.js`, e é o mínimo que se pode afirmar sem
+#: tentar entregar a mensagem: validar e-mail por expressão regular não decide se
+#: a caixa existe. O que esta verificação evita é o erro de digitação óbvio.
+PADRAO_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def validar_email(email) -> str:
+    email = str(email or "").strip()
+    if not PADRAO_EMAIL.match(email):
+        raise RegraViolada("E-mail inválido.")
+    return email
 
 
 def validar_senha(senha) -> str:

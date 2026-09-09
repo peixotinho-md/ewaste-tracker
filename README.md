@@ -53,21 +53,79 @@ O banco (`backend/etrilha.db`) é criado e populado automaticamente na primeira
 execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
 `vendor/` — não há build nem `npm install`.
 
+### Rodar os testes
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
+São 351 testes em cerca de 19 segundos, cobrindo 94% do servidor. Cada teste
+trabalha numa **cópia temporária** do banco, então rodar a suíte não toca em
+`backend/etrilha.db` nem nas contas da demonstração. Para o número de cobertura:
+
+```powershell
+python -m pytest --cov=backend --cov-report=term-missing
+```
+
+O detalhamento está na seção 11.4 do
+[Relatório Técnico](docs/RELATORIO-TECNICO.md); os três defeitos que a suíte
+encontrou, na 11.5.
+
 ### Contas iniciais
 
-A carga cria `admin@etrilha.ms` e `operador@etrilha.ms` e **sorteia uma senha
-para cada uma**, impressa no terminal na primeira execução:
+A carga cria três contas e **sorteia uma senha para cada uma**, impressa no
+terminal na primeira execução:
 
 ```
   Contas criadas agora, com senha sorteada:
     admin     admin@etrilha.ms       senha: ····················
     operador  operador@etrilha.ms    senha: ····················
+    admin     reserva@etrilha.ms     senha: ····················   (reserva)
 ```
 
 **Anote no momento em que aparecem.** Elas não são gravadas em arquivo nenhum: o
-banco guarda apenas o hash PBKDF2, e o sorteio não se repete. Fechar o terminal
-perde a senha — resta trocá-la em `/admin`, já autenticado, ou reiniciar a
-demonstração, que apaga os dados junto.
+banco guarda apenas o hash PBKDF2, e o sorteio não se repete.
+
+### A conta de reserva
+
+`reserva@etrilha.ms` é um administrador que **não aparece na tela de
+administração** e que nenhuma conta consegue alterar ou excluir por lá — as
+rotas a recusam com a mesma resposta que dariam a um id inexistente, porque uma
+mensagem própria já contaria que ela existe.
+
+Ela existe porque só um admin promove outro. Sem uma segunda chave, perder a
+senha de `admin@etrilha.ms` — ou um administrador apagar todos os outros — não
+teria volta a não ser reiniciando a demonstração, que apaga contas e aparelhos
+junto. Some da lista justamente para não ser o alvo fácil desse mesmo acidente.
+
+Enquanto a sessão for dela, **toda tela recebe uma marca d'água** dizendo que
+aquela é a conta de reserva e que ela só deve ser usada quando o acesso ao admin
+se perder, mais uma faixa no topo explicando o que fazer. É proposital que
+incomode um pouco: a reserva não aparece em lista nenhuma e não pode ser
+excluída, o que a torna cômoda demais para virar a conta do dia a dia — e uma
+administração apoiada numa conta invisível é pior do que não ter reserva. A
+marca some da impressão, para não atravessar a folha de etiquetas.
+
+A reserva **não conta** como o "último administrador" da regra que impede
+rebaixar ou excluir o admin que sobrou: a administração do dia a dia continua
+tendo de ficar de pé sozinha. E o que a reserva faz, uma vez usada, entra na
+trilha de `alteracoes_conta` como o de qualquer outra conta — esconder a conta é
+proteger a chave, não apagar o rastro.
+
+### Perdeu a senha
+
+Recuperação de acesso é ato de quem opera o **servidor**, não da interface que
+exige justamente o login perdido:
+
+```powershell
+python backend/app.py --nova-senha admin@etrilha.ms
+```
+
+Sorteia, grava só o hash novo, imprime uma vez e sai — sem subir o servidor e
+sem tocar em mais nada. Sem e-mail, o comando trata a conta de reserva, que é o
+caminho para reentrar e redefinir a do admin em `/admin`. Não abre nada que já
+não estivesse aberto: quem chega ao terminal já tem o arquivo do banco na mão.
 
 **No primeiro acesso, o sistema exige que você defina uma senha sua.** A regra é
 a mesma para as duas situações em que a senha em vigor foi escolhida por outra
@@ -239,6 +297,7 @@ js/ui.js          Cabeçalho, avisos, formatação e linha do tempo
 vendor/qrcode.js  qrcode-generator (MIT) — geração
 vendor/jsqr.js    jsQR (Apache-2.0) — leitura, quando não há BarcodeDetector
 sw.js             Service worker: consulta offline
+testes/           Suíte pytest: regras, autorização, gatilhos e páginas
 backup/           Versão anterior, só front-end, preservada
 ```
 
@@ -278,3 +337,4 @@ As principais, com o detalhamento na seção 14 do
 - [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) — Kazuhiko Arase, MIT
 - [jsQR](https://github.com/cozmo/jsQR) — Cosmo Wolfe, Apache-2.0
 - [Flask](https://flask.palletsprojects.com/) — Pallets, BSD-3-Clause
+- [pytest](https://pytest.org/) — Holger Krekel e colaboradores, MIT (só em desenvolvimento)

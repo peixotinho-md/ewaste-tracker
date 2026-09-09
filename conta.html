@@ -16,12 +16,12 @@
   <div id="conteudo"></div>
 </main>
 
-<footer class="rodape">e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.</footer>
+<footer class="rodape" data-rodape></footer>
 
 <script type="module">
 import * as store from './js/store.js';
 import { iniciarPagina, aviso, cartaoItem, seloPapel, escapar, formatarMassa,
-         formatarNumero } from './js/ui.js';
+         formatarNumero, ligarTrocaDeSenha } from './js/ui.js';
 import { ETAPA_FINAL, co2eEvitado } from './js/model.js';
 
 await iniciarPagina();
@@ -37,23 +37,9 @@ async function desenhar() {
 
   conteudo.innerHTML = await telaLogado(usuario);
 
-  document.getElementById('form-senha').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const nova = document.getElementById('s-nova').value;
-    if (nova !== document.getElementById('s-confirma').value) {
-      aviso('A confirmação não confere com a nova senha.', 'erro');
-      return;
-    }
-    try {
-      await store.trocarSenha({
-        senhaAtual: document.getElementById('s-atual').value,
-        senhaNova: nova,
-      });
-      aviso('Senha trocada.');
-      ev.target.reset();
-    } catch (erro) {
-      aviso(erro.message, 'erro');
-    }
+  ligarTrocaDeSenha({
+    sucesso: 'Senha trocada.',
+    depois: (formulario) => formulario.reset(),
   });
 
   document.getElementById('btn-sair').addEventListener('click', async () => {

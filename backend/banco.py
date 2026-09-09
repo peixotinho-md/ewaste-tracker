@@ -27,7 +27,8 @@ CAMINHO_BANCO = PASTA_BACKEND / "etrilha.db"
 CAMINHO_SCHEMA = PASTA_BACKEND / "schema.sql"
 PASTA_DADOS = RAIZ / "dados"
 
-# Contas criadas na carga inicial: um administrador e um operador de exemplo.
+# Contas criadas na carga inicial: um administrador, um operador de exemplo e
+# um administrador de reserva, que não aparece na tela de administração.
 #
 # A SENHA NÃO ESTÁ AQUI, nem em lugar nenhum. Ela é sorteada a cada carga
 # (`_semear_contas`), impressa UMA vez no terminal de quem subiu o servidor e
@@ -55,7 +56,21 @@ CONTAS_INICIAIS = [
         # Preenchido na carga com o primeiro ponto de coleta cadastrado.
         "ponto_id": None,
     },
+    {
+        # A segunda chave. Não aparece na tela de administração, ninguém a
+        # altera nem a exclui por lá, e é por ela que se volta quando a senha
+        # do admin visível se perde. Ver o comentário de `reserva` em
+        # schema.sql e `redefinir_senha` mais abaixo.
+        "nome": "Administração de reserva",
+        "email": "reserva@etrilha.ms",
+        "papel": "admin",
+        "ponto_id": None,
+        "reserva": True,
+    },
 ]
+
+#: E-mail da conta de reserva, para quem precisa nomeá-la fora deste módulo.
+EMAIL_RESERVA = "reserva@etrilha.ms"
 
 def _sortear_senha() -> str:
     """Senha aleatória de ~16 caracteres, do gerador criptográfico do sistema."""
@@ -242,8 +257,8 @@ def _semear(conexao) -> list[dict]:
 
 def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
     """
-    Cria o administrador inicial e um operador de exemplo, cada um com uma senha
-    sorteada, e devolve as credenciais para quem subiu o servidor ver.
+    Cria as contas de `CONTAS_INICIAIS`, cada uma com uma senha sorteada, e
+    devolve as credenciais para quem subiu o servidor ver.
 
     Já está dentro da transação de `_semear`.
     """
@@ -252,8 +267,8 @@ def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
         senha = _sortear_senha()
         conexao.execute(
             """INSERT INTO usuarios (id, nome, email, senha_hash, criado_em, papel,
-                                     ponto_id, senha_provisoria)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 1)""",
+                                     ponto_id, senha_provisoria, reserva)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)""",
             (
                 novo_id("u"),
                 conta["nome"],
@@ -262,9 +277,15 @@ def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
                 agora_iso(),
                 conta["papel"],
                 ponto_do_operador if conta["papel"] == "operador" else conta["ponto_id"],
+                1 if conta.get("reserva") else 0,
             ),
         )
-        criadas.append({"papel": conta["papel"], "email": conta["email"], "senha": senha})
+        criadas.append({
+            "papel": conta["papel"],
+            "email": conta["email"],
+            "senha": senha,
+            "reserva": bool(conta.get("reserva")),
+        })
     return criadas
 
 
@@ -330,6 +351,11 @@ def usuario_json(linha) -> dict:
         # A tela precisa saber para desenhar a troca obrigatória; quem impede o
         # resto é o servidor, no decorador `exige`.
         "senhaProvisoria": bool(linha["senha_provisoria"]),
+        # Sai para que a tela marque a sessão da reserva como o que ela é: uma
+        # chave de emergência, e não a conta do dia a dia. Não revela nada — a
+        # reserva nunca aparece em `listar_usuarios()`, então toda conta que a
+        # administração enxerga recebe daqui um `false` que já era verdade.
+        "reserva": bool(linha["reserva"]),
     }
 
 
@@ -624,8 +650,16 @@ def obter_usuario(conexao, usuario_id: str) -> dict | None:
 # --------------------------------------------------------------------------- #
 
 def listar_usuarios(conexao) -> list[dict]:
+    """
+    As contas que a tela de administração mostra.
+
+    A de reserva fica de fora — é o que a torna reserva. Ela também não é o
+    ÚNICO ponto onde isso é garantido: `atualizar_usuario` e `excluir_usuario`
+    a recusam por conta própria, para que um id descoberto por outro caminho
+    não a alcance.
+    """
     linhas = conexao.execute(
-        """SELECT * FROM usuarios
+        """SELECT * FROM usuarios WHERE reserva = 0
            ORDER BY CASE papel WHEN 'admin' THEN 0 WHEN 'operador' THEN 1 ELSE 2 END,
                     nome COLLATE NOCASE"""
     ).fetchall()
@@ -685,6 +719,55 @@ def listar_alteracoes(conexao, limite: int = 50, usuario_id: str | None = None) 
     ]
 
 
+def _conta_administravel(conexao, alvo_id: str):
+    """
+    A linha da conta que a administração pode tocar — ou o mesmo erro que um id
+    inexistente daria.
+
+    A conta de RESERVA cai aqui junto com o id que não existe, e de propósito com
+    a mesma mensagem: uma resposta própria ("essa conta não pode ser alterada")
+    já contaria que ela existe. Filtrá-la só em `listar_usuarios()` seria
+    cosmético — um id vindo de um backup ou de um log contornaria a lista.
+
+    Está numa função porque a regra vale para TODA ação de administração sobre
+    uma conta; escrita em cada rota, bastaria uma nova esquecer dela.
+    """
+    alvo = conexao.execute("SELECT * FROM usuarios WHERE id = ?", (alvo_id,)).fetchone()
+    if alvo is None or alvo["reserva"]:
+        raise modelo.RegraViolada("Conta não encontrada.")
+    return alvo
+
+
+def _exigir_outro_admin(conexao, alvo_id: str, acao: str) -> None:
+    """
+    Recusa a ação quando ela deixaria o sistema sem administrador VISÍVEL.
+
+    Duas sutilezas, e as duas moram aqui justamente para não precisarem ser
+    lembradas em cada chamada:
+
+    `reserva = 0` — a conta de reserva não conta como o administrador que sobra.
+    Se contasse, esta regra deixaria rebaixar o último admin visível e a
+    administração do dia a dia passaria a depender de uma conta que não aparece
+    em tela nenhuma. A reserva é a saída de emergência, não o admin de plantão.
+
+    A contagem roda DENTRO da transação de quem chamou, e é isso que impede a
+    corrida clássica: dois admins se rebaixando ao mesmo tempo, cada um vendo
+    que "ainda existe outro", e o sistema terminando sem nenhum. Quem serializa
+    as duas é o BEGIN IMMEDIATE de `transacao`.
+    """
+    restantes = conexao.execute(
+        """SELECT COUNT(*) AS n FROM usuarios
+           WHERE papel = 'admin' AND reserva = 0 AND id <> ?""",
+        (alvo_id,),
+    ).fetchone()["n"]
+    if restantes == 0:
+        raise modelo.RegraViolada(
+            f"Esta é a única conta de administrador. Promova outra pessoa a "
+            f"administrador antes de {acao} esta, ou o sistema ficaria sem "
+            f"quem gerencie as contas."
+        )
+
+
 def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
                       ponto_id=..., senha_hash=None) -> dict:
     """
@@ -695,28 +778,11 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
     significa desvincular o operador do ponto.
     """
     with transacao(conexao):
-        atual = conexao.execute(
-            "SELECT * FROM usuarios WHERE id = ?", (alvo_id,)
-        ).fetchone()
-        if atual is None:
-            raise modelo.RegraViolada("Conta não encontrada.")
+        atual = _conta_administravel(conexao, alvo_id)
 
         if papel is not None and papel != atual["papel"]:
-            # Ler a contagem de admins DENTRO da transação é o que impede a
-            # corrida clássica: dois admins se rebaixando ao mesmo tempo, cada
-            # um vendo que "ainda existe outro", e o sistema terminando sem
-            # nenhum. O BEGIN IMMEDIATE de `transacao` serializa as duas.
             if atual["papel"] == "admin":
-                restantes = conexao.execute(
-                    "SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'admin' AND id <> ?",
-                    (alvo_id,),
-                ).fetchone()["n"]
-                if restantes == 0:
-                    raise modelo.RegraViolada(
-                        "Esta é a única conta de administrador. Promova outra pessoa "
-                        "a administrador antes de rebaixar esta, ou o sistema ficaria "
-                        "sem quem gerencie as contas."
-                    )
+                _exigir_outro_admin(conexao, alvo_id, "rebaixar")
 
             conexao.execute(
                 "UPDATE usuarios SET papel = ? WHERE id = ?", (papel, alvo_id)
@@ -768,6 +834,47 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
             )
 
     return obter_usuario(conexao, alvo_id)
+
+
+def redefinir_senha(conexao, email: str) -> dict:
+    """
+    Sorteia uma senha nova para uma conta, a partir do TERMINAL do servidor.
+
+    É a recuperação de acesso deste sistema, e ela mora aqui de propósito. A
+    tela não serve para isso: `/admin` exige estar logado como administrador,
+    que é justamente o que se perdeu, e reiniciar a demonstração apagaria contas
+    e aparelhos junto. Quem opera o servidor, por outro lado, já tem o arquivo
+    do banco na mão — o comando não abre nada que não estivesse aberto, só evita
+    que a saída seja destruir os dados.
+
+    A senha nasce PROVISÓRIA: quem rodou o comando a leu no terminal, então ela
+    ainda não identifica o dono. O servidor só aceita dessa conta a própria
+    troca até que ele escolha a dele.
+
+    A redefinição entra na trilha de administração como qualquer outra, com o
+    autor nomeado como o terminal — exceto para a conta de reserva, cujo nome
+    apareceria na tela de administração e denunciaria a existência dela. Nesse
+    caso o registro é a própria linha impressa no terminal de quem rodou.
+    """
+    with transacao(conexao):
+        alvo = conexao.execute(
+            "SELECT * FROM usuarios WHERE email = ? COLLATE NOCASE", (email,)
+        ).fetchone()
+        if alvo is None:
+            raise modelo.RegraViolada(f"Não existe conta com o e-mail {email}.")
+
+        senha = _sortear_senha()
+        conexao.execute(
+            "UPDATE usuarios SET senha_hash = ?, senha_provisoria = 1 WHERE id = ?",
+            (generate_password_hash(senha), alvo["id"]),
+        )
+        if not alvo["reserva"]:
+            _registrar_alteracao(
+                conexao, alvo=dict(alvo),
+                autor={"id": None, "nome": "terminal do servidor"}, acao="senha",
+            )
+
+    return {"email": alvo["email"], "papel": alvo["papel"], "senha": senha}
 
 
 def listar_itens_detalhados(conexao) -> list[dict]:
@@ -833,23 +940,10 @@ def excluir_usuario(conexao, alvo_id: str, *, autor: dict) -> dict:
     Devolve quantos aparelhos ficaram sem dono, para a tela poder avisar antes.
     """
     with transacao(conexao):
-        alvo = conexao.execute(
-            "SELECT * FROM usuarios WHERE id = ?", (alvo_id,)
-        ).fetchone()
-        if alvo is None:
-            raise modelo.RegraViolada("Conta não encontrada.")
+        alvo = _conta_administravel(conexao, alvo_id)
 
         if alvo["papel"] == "admin":
-            restantes = conexao.execute(
-                "SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'admin' AND id <> ?",
-                (alvo_id,),
-            ).fetchone()["n"]
-            if restantes == 0:
-                raise modelo.RegraViolada(
-                    "Esta é a única conta de administrador. Promova outra pessoa a "
-                    "administrador antes de excluir esta, ou o sistema ficaria sem "
-                    "quem gerencie as contas."
-                )
+            _exigir_outro_admin(conexao, alvo_id, "excluir")
 
         itens_liberados = conexao.execute(
             "SELECT COUNT(*) AS n FROM itens WHERE dono_id = ?", (alvo_id,)

@@ -330,7 +330,15 @@ const CORRECOES = { O: '0', I: '1', L: '1', U: 'V' };
 
 /**
  * Dígito verificador por soma ponderada módulo 32 (mesma ideia do CPF e do
- * ISBN). Detecta todos os erros de um caractere e a maioria das transposições.
+ * ISBN).
+ *
+ * A detecção de erro de um caractere é PARCIAL, e vale registrar por quê: os
+ * pesos são `corpo.length + 1 - i`, ou seja 8, 7, 6, 5, 4, 3, 2. Um peso par
+ * divide 32, então existe uma troca cujo efeito na soma é múltiplo de 32 e
+ * passa despercebida; um peso ímpar é coprimo com 32 e pega toda troca simples.
+ * Medido em `testes/teste_paridade_front.py` e `testes/teste_modelo.py`: cerca
+ * de 5% das trocas de um caractere não são detectadas. Pesos todos ímpares
+ * levariam isso a zero — ao custo de invalidar os códigos já emitidos.
  */
 function digitoVerificador(corpo) {
   let soma = 0;
@@ -349,9 +357,12 @@ function digitoVerificador(corpo) {
  * cria o item: gerar no navegador arriscaria dois aparelhos com o mesmo código,
  * e a unicidade é o que o rastreio inteiro assume.
  */
+// Recebe SEMPRE o corpo já sem o prefixo — `normalizarCodigo` retira o "MS"
+// antes de conferir o dígito. Não remova o prefixo aqui: um corpo legítimo pode
+// começar com M e S, e cortá-las devolveria um código de 6 caracteres diferente
+// do que está impresso na etiqueta. Mesma correção em backend/modelo.py.
 function formatarCodigo(corpo) {
-  const limpo = corpo.replace(/^MS/, '');
-  return `MS-${limpo.slice(0, 4)}-${limpo.slice(4, 8)}`;
+  return `MS-${corpo.slice(0, 4)}-${corpo.slice(4, 8)}`;
 }
 
 /**

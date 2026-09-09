@@ -25,6 +25,11 @@
   --superficie: #ffffff;
   --borda: #dde5df;
 
+  /* Cor da marca d'água da conta de reserva. É um token próprio, e não o
+     `--terra-600` dos selos, porque aquele não é redefinido no tema escuro: a
+     marca precisa aparecer nos dois, e a opacidade faz parte da cor. */
+  --marca-dagua: rgba(160, 99, 29, 0.14);
+
   --raio: 12px;
   --raio-sm: 8px;
   --sombra: 0 1px 2px rgba(16, 56, 31, 0.06), 0 4px 16px rgba(16, 56, 31, 0.06);
@@ -48,6 +53,7 @@
     --borda: #2a3830;
     --verde-500: #46b06b;
     --verde-600: #3a9a5b;
+    --marca-dagua: rgba(233, 178, 109, 0.13);
     --sombra: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
   }
 }
@@ -485,13 +491,61 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .faixa-info { background: var(--azul-100); border-color: var(--azul-600); }
 .faixa > :last-child { margin-bottom: 0; }
 
+/* ---------- Marca d'água da conta de reserva ----------
+
+   Fica sobre a página inteira enquanto a sessão for da conta de reserva. Não é
+   decoração: essa conta existe para o dia em que o acesso ao admin do dia a dia
+   se perder, e quem a usa por comodidade acaba com uma administração que
+   depende de uma conta que ninguém vê na tela. A marca segue a pessoa por todas
+   as telas justamente porque o aviso de uma faixa só se lê uma vez.
+
+   `z-index: -1` a põe ATRÁS do conteúdo, e é o que a torna legível sem atrapalhar
+   a leitura: cartões, cabeçalho e rodapé têm fundo opaco (`--superficie`) e a
+   cobrem, então ela aparece só pelas frestas — as laterais de `main` e os vãos
+   entre os cartões. As caixas ficam como folhas sobre uma mesa carimbada. Passar
+   por cima do texto exigia baixar tanto a opacidade que a marca sumia; por trás,
+   ela pode ser vista sem disputar com nada.
+
+   O valor negativo funciona porque `body` não pinta fundo próprio: como `html`
+   não tem nenhum, o fundo de `body` é promovido ao canvas da página, que é
+   pintado abaixo de tudo. A marca fica entre esse canvas e o conteúdo. Dar um
+   fundo a `html` ou a `main` a esconderia por completo.
+
+   `pointer-events: none` a mantém inofensiva de todo modo: todo clique
+   atravessa. `inset` negativo dá folga para a rotação não deixar canto vazio. */
+.marca-dagua {
+  position: fixed;
+  inset: -25vmax;
+  z-index: -1;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  transform: rotate(-24deg);
+}
+.marca-dagua span {
+  white-space: nowrap;
+  text-align: center;
+  font-size: clamp(0.95rem, 2.2vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--marca-dagua);
+}
+
 .oculto { display: none !important; }
 .vazio { text-align: center; color: var(--tinta-fraca); padding: 2rem 1rem; }
 
+/* Mesma superfície do cabeçalho, e pelo mesmo motivo: sobre o fundo da
+   página o rodapé desaparecia — fundo igual ao do corpo e texto na tinta mais
+   fraca das três davam pouco contraste para uma faixa que fecha a página. */
 .rodape {
+  background: var(--superficie);
   border-top: 1px solid var(--borda);
   padding: 1.5rem 1rem 2.5rem;
-  color: var(--tinta-fraca);
+  color: var(--tinta-media);
   font-size: 0.82rem;
   text-align: center;
 }
@@ -604,7 +658,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* ---------- Impressão ---------- */
 
 @media print {
-  .cabecalho, .rodape, .nao-imprimir, .avisos { display: none !important; }
+  /* A marca d'água some no papel: ela atravessaria a folha de etiquetas por
+     cima dos QR Codes, que é justamente o que precisa sair legível. */
+  .cabecalho, .rodape, .nao-imprimir, .avisos, .marca-dagua { display: none !important; }
   body { background: #fff; }
   main { max-width: none; padding: 0; }
   .cartao { border: none; box-shadow: none; padding: 0; margin: 0; }
