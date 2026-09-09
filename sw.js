@@ -21,7 +21,7 @@
  *              no Relatório Técnico.
  */
 
-const CACHE = 'etrilhams-v5';
+const CACHE = 'etrilhams-v6';
 
 // Só as páginas que abrem sem conta entram na instalação. As demais o servidor
 // nem entrega sem sessão, e guardar a casca delas aqui só criaria uma tela que
