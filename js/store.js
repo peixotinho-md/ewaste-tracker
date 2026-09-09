@@ -63,9 +63,7 @@ export async function verificarServidor() {
   }
 }
 
-/* ------------------------------------------------------------------ *
- * Pontos de coleta
- * ------------------------------------------------------------------ */
+/* Pontos de coleta */
 
 export async function listarPontos() {
   return api('/pontos');
@@ -79,17 +77,14 @@ export async function listarMunicipiosComPonto() {
   );
 }
 
-/* ------------------------------------------------------------------ *
- * Itens (dispositivos)
- * ------------------------------------------------------------------ */
+/* Itens (dispositivos) */
 
 /**
  * Conjunto que alimenta o painel de indicadores e os números da home.
  *
- * Não existe chamada que devolva "todos os itens": uma conta comum só enxerga
- * os próprios aparelhos. O que vem daqui é o recorte que o servidor considera
- * seguro mostrar — sem código e sem dono para quem não é operador —, junto de
- * `detalhado`, que diz se os aparelhos vieram identificados.
+ * Não existe chamada que devolva "todos os itens". O recorte e por que ele é
+ * anônimo para conta comum estão na rota `/api/painel`, em `backend/app.py`;
+ * `detalhado` diz se os aparelhos vieram identificados.
  */
 export async function painel() {
   return api('/painel');
@@ -137,8 +132,7 @@ export async function registrarEvento(
   });
 }
 
-/* ------------------------------------------------------------------ *
- * Conta e sessão
+/* Conta e sessão
  *
  * A conta é OBRIGATÓRIA para tudo o que lista ou grava: registrar um aparelho,
  * imprimir etiquetas, ver "meus aparelhos", ler QR e administrar. Fica de fora
@@ -156,8 +150,7 @@ export async function registrarEvento(
  *
  * `meusItens` não recebe parâmetro de propósito: quem é o dono sai do cookie
  * de sessão, no servidor. Se a tela informasse o id do dono, bastaria trocá-lo
- * na chamada para ver os aparelhos de outra pessoa.
- * ------------------------------------------------------------------ */
+ * na chamada para ver os aparelhos de outra pessoa. */
 
 /*
  * Quem está logado, com a resposta reaproveitada dentro do mesmo carregamento
@@ -214,10 +207,8 @@ export async function abrirSessao({ email, senha }) {
 }
 
 /**
- * Troca a senha da própria conta e encerra o estado provisório.
- *
- * A senha atual vai junto de propósito: o cookie prova que alguém entrou, não
- * que quem está no teclado agora é o dono da conta.
+ * Troca a senha da própria conta e encerra o estado provisório. A senha atual
+ * vai junto de propósito — o porquê está em `trocar_senha`, em `backend/app.py`.
  */
 export async function trocarSenha({ senhaAtual, senhaNova }) {
   esquecerSessao();
@@ -229,13 +220,10 @@ export async function encerrarSessao() {
   return api('/sessao', { metodo: 'DELETE' });
 }
 
-/* ------------------------------------------------------------------ *
- * Administração de contas
+/* Administração de contas
  *
- * Todas estas chamadas exigem papel `admin`, e quem verifica isso é o
- * servidor. A tela de administração some do menu para quem não é admin, mas é
- * o 403 do servidor que de fato fecha a porta.
- * ------------------------------------------------------------------ */
+ * Todas exigem papel `admin`, verificado pelo decorador `exige` em
+ * `backend/app.py`. Esconder a tela é conveniência; o 403 é que fecha a porta. */
 
 export async function listarUsuarios() {
   return api('/admin/usuarios');
@@ -281,31 +269,26 @@ export async function listarAlteracoes(usuarioId = null) {
   return api(`/admin/alteracoes${consulta}`);
 }
 
-/* ------------------------------------------------------------------ *
- * Demonstração
- * ------------------------------------------------------------------ */
+/* Demonstração */
 
 /**
  * Recria o banco do servidor com os dados de exemplo. Exige conta de admin.
  *
- * A resposta NÃO traz as senhas novas: elas saem no terminal do servidor. Mandar
- * senha pela rede contradiria o motivo de não gravá-la em arquivo, e aqui ainda
- * não há HTTPS.
+ * A resposta NÃO traz as senhas novas: elas saem no terminal. O motivo está em
+ * `reiniciar_demo`, em `backend/app.py`.
  */
 export async function reiniciar() {
   esquecerSessao();  // o banco é recriado: a conta que pediu o reinício some junto
   return api('/demo/reiniciar', { metodo: 'POST' });
 }
 
-/* ------------------------------------------------------------------ *
- * Papéis
+/* Papéis
  *
  * Estas funções servem para a TELA decidir o que mostrar — esconder um botão
  * que não vai funcionar é gentileza com o usuário, não segurança. Quem impede
  * de fato é o servidor, que confere o papel a cada requisição e responde 401
  * ou 403. Por isso nada aqui guarda o papel: ele vem do servidor a cada
- * consulta, e uma revogação passa a valer na hora.
- * ------------------------------------------------------------------ */
+ * consulta, e uma revogação passa a valer na hora. */
 
 export const PAPEIS = {
   visitante: { rotulo: 'Visitante', descricao: 'Registra e acompanha os próprios aparelhos, e mais nada.' },

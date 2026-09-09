@@ -48,9 +48,7 @@ export function escapar(texto) {
   );
 }
 
-/* ------------------------------------------------------------------ *
- * Cabeçalho e navegação
- * ------------------------------------------------------------------ */
+/* Cabeçalho e navegação */
 
 // `visivel` é o teste que a entrada precisa passar para entrar no menu. Sem
 // ele, a página vale para qualquer conta. Esconder o link é conveniência: quem
@@ -124,9 +122,7 @@ function montarRodape() {
   if (alvo) alvo.textContent = 'e-Trilha MS · Protótipo acadêmico — DAC 262 TADS.';
 }
 
-/* ------------------------------------------------------------------ *
- * Avisos
- * ------------------------------------------------------------------ */
+/* Avisos */
 
 export function aviso(mensagem, tipo = 'ok') {
   let caixa = document.querySelector('.avisos');
@@ -152,9 +148,7 @@ export function seloPapel(papel) {
   return `<span class="selo selo-papel selo-${papel}">${escapar(def.rotulo)}</span>`;
 }
 
-/* ------------------------------------------------------------------ *
- * Confirmação de ação definitiva
- * ------------------------------------------------------------------ */
+/* Confirmação de ação definitiva */
 
 /**
  * Abre um `<dialog>` modal e resolve com o que a pessoa respondeu.
@@ -377,9 +371,7 @@ export function ligarTrocaDeSenha({ sucesso, depois }) {
   });
 }
 
-/* ------------------------------------------------------------------ *
- * Linha do tempo do rastreio
- * ------------------------------------------------------------------ */
+/* Linha do tempo do rastreio */
 
 /**
  * Monta a trilha completa: todas as etapas do fluxo, marcando as já cumpridas,
@@ -462,9 +454,7 @@ export function cartaoItem(item) {
     </a>`;
 }
 
-/* ------------------------------------------------------------------ *
- * Inicialização das páginas
- * ------------------------------------------------------------------ */
+/* Inicialização das páginas */
 
 /**
  * Toda página chama isto antes de desenhar qualquer coisa: confere se o

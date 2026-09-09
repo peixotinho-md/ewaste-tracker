@@ -6,9 +6,7 @@
  * isoladamente e reaproveitá-las quando o back-end for implementado.
  */
 
-/* ------------------------------------------------------------------ *
- * 1. Etapas da cadeia de custódia (máquina de estados)
- * ------------------------------------------------------------------ */
+/* 1. Etapas da cadeia de custódia (máquina de estados) */
 
 /**
  * O fluxo é linear e só avança. Cada etapa tem um SLA em horas: se o item
@@ -88,9 +86,7 @@ export function estaPendente(item, agora = new Date()) {
   return horas > def.slaHoras;
 }
 
-/* ------------------------------------------------------------------ *
- * 2. Categorias de dispositivo e composição material
- * ------------------------------------------------------------------ */
+/* 2. Categorias de dispositivo e composição material */
 
 /**
  * Percentuais médios de massa por material e teor de ouro em mg por kg.
@@ -190,30 +186,15 @@ export function categoria(id) {
   return CATEGORIAS.find((c) => c.id === id) ?? null;
 }
 
-/* ------------------------------------------------------------------ *
- * 2b. Apagamento seguro de mídias de dados
+/* 2b. Apagamento seguro de mídias de dados
  *
- * Um aparelho descartado não carrega só metal: carrega dados. Apagar um
- * arquivo ou formatar não destrói o conteúdo — só marca o espaço como livre.
- * E a forma correta de destruir depende de COMO a mídia guarda o bit, o que é
- * arquitetura do hardware, não software:
+ * Por que sobrescrever setores destrói o dado num HD e não destrói numa flash
+ * — wear leveling, over-provisioning e o resto da arquitetura da mídia — está
+ * explicado em `backend/modelo.py`, na seção de mesmo nome. Lá é o único lugar
+ * onde a regra decide alguma coisa.
  *
- *   DISCO MAGNÉTICO (HDD) — o bit é a orientação magnética de uma região do
- *   prato, e o endereço lógico corresponde a uma posição física estável.
- *   Sobrescrever o setor destrói o dado; um campo magnético forte
- *   (desmagnetização) apaga o disco inteiro.
- *
- *   MEMÓRIA FLASH (SSD, NVMe, eMMC) — o bit é carga presa numa célula, e o
- *   endereço lógico NÃO corresponde a uma célula fixa: a flash translation
- *   layer do controlador remapeia blocos para distribuir o desgaste (wear
- *   leveling) e mantém uma reserva invisível ao sistema (over-provisioning).
- *   Logo, sobrescrever pelo endereço lógico deixa cópias intactas em blocos
- *   que o sistema operacional nem consegue endereçar, e desmagnetizar não faz
- *   nada, porque não há magnetismo guardando o dado.
- *
- * Estas tabelas espelham `backend/modelo.py` e servem para a tela oferecer
- * apenas o que funciona. A recusa que vale continua sendo a do servidor.
- * ------------------------------------------------------------------ */
+ * Estas tabelas espelham as de lá e servem para a tela oferecer apenas o que
+ * funciona. A recusa que vale continua sendo a do servidor. */
 
 /** Categorias que carregam memória não volátil. */
 export const CATEGORIAS_COM_MIDIA = new Set([
@@ -270,9 +251,7 @@ export function metodosParaMidia(midia) {
     .map(([id, def]) => ({ id, ...def }));
 }
 
-/* ------------------------------------------------------------------ *
- * 3. Materiais e fator de CO2e evitado
- * ------------------------------------------------------------------ */
+/* 3. Materiais e fator de CO2e evitado */
 
 /**
  * kg de CO2e evitado por kg de material recuperado, comparando a reciclagem
@@ -315,9 +294,7 @@ export function co2eEvitado(item) {
   return total;
 }
 
-/* ------------------------------------------------------------------ *
- * 4. Código de rastreio com dígito verificador
- * ------------------------------------------------------------------ */
+/* 4. Código de rastreio com dígito verificador */
 
 /**
  * Alfabeto base32 sem os caracteres que as pessoas confundem ao ler uma
@@ -330,15 +307,9 @@ const CORRECOES = { O: '0', I: '1', L: '1', U: 'V' };
 
 /**
  * Dígito verificador por soma ponderada módulo 32 (mesma ideia do CPF e do
- * ISBN).
- *
- * A detecção de erro de um caractere é PARCIAL, e vale registrar por quê: os
- * pesos são `corpo.length + 1 - i`, ou seja 8, 7, 6, 5, 4, 3, 2. Um peso par
- * divide 32, então existe uma troca cujo efeito na soma é múltiplo de 32 e
- * passa despercebida; um peso ímpar é coprimo com 32 e pega toda troca simples.
- * Medido em `testes/teste_paridade_front.py` e `testes/teste_modelo.py`: cerca
- * de 5% das trocas de um caractere não são detectadas. Pesos todos ímpares
- * levariam isso a zero — ao custo de invalidar os códigos já emitidos.
+ * ISBN). A detecção é PARCIAL — cerca de 5% das trocas de um caractere passam,
+ * porque os pesos são pares e 32 os divide. A aritmética disso e o custo de
+ * corrigir estão em `backend/modelo.py`, em `digito_verificador`.
  */
 function digitoVerificador(corpo) {
   let soma = 0;
@@ -365,22 +336,13 @@ function formatarCodigo(corpo) {
   return `MS-${corpo.slice(0, 4)}-${corpo.slice(4, 8)}`;
 }
 
-/**
- * Prefixo obrigatório do código de rastreio.
- *
- * Todo código emitido aqui começa com MS — é a marca do estado no identificador,
- * e é o que separa uma etiqueta do e-Trilha MS de qualquer outra sequência de 8
- * caracteres que apareça num QR.
- */
+/** Prefixo obrigatório do código de rastreio. Ver `PREFIXO` em `backend/modelo.py`. */
 export const PREFIXO_CODIGO = 'MS';
 
 /**
  * Aceita o que o usuário digitar (minúsculas, sem hífen, com O no lugar de 0)
- * e devolve o código canônico, ou null se for inválido.
- *
- * Exige o prefixo MS: `MS-XXXX-XXXX`. O prefixo diz de qual sistema é a
- * etiqueta; o dígito verificador, se ela foi lida direito. Mesma regra em
- * `backend/modelo.py`, que é quem decide de fato.
+ * e devolve o código canônico, ou null se for inválido. Mesma regra de
+ * `normalizar_codigo` em `backend/modelo.py`, que é quem decide de fato.
  */
 export function normalizarCodigo(entrada) {
   if (!entrada) return null;
@@ -412,9 +374,7 @@ export const CONTORNO_MS = [
   [-57.7, -22.1], [-57.85, -21.6], [-57.75, -20.9], [-57.9, -20.3],
 ];
 
-/* ------------------------------------------------------------------ *
- * 5. Geolocalização
- * ------------------------------------------------------------------ */
+/* 5. Geolocalização */
 
 /** Distância em km entre duas coordenadas pela fórmula de Haversine. */
 export function distanciaKm(lat1, lon1, lat2, lon2) {
@@ -428,9 +388,7 @@ export function distanciaKm(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-/* ------------------------------------------------------------------ *
- * 6. Tipos de ponto de coleta
- * ------------------------------------------------------------------ */
+/* 6. Tipos de ponto de coleta */
 
 export const TIPOS_PONTO = {
   ecoponto: { rotulo: 'Ecoponto municipal', cor: '#2f8f5b' },

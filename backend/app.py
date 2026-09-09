@@ -31,13 +31,11 @@ import modelo
 
 RAIZ = Path(__file__).resolve().parent.parent
 
-# --------------------------------------------------------------------------- #
 # Quais arquivos o servidor entrega
 #
 # A lista é explícita de propósito. Um servidor que entrega qualquer arquivo da
 # pasta acabaria servindo também `backend/etrilha.db` (o banco inteiro, com os
 # hashes de senha) e a pasta `backup/`. Aqui, o que não está na lista não sai.
-# --------------------------------------------------------------------------- #
 
 # As páginas são nomeadas SEM `.html`: é o que aparece na barra de endereço
 # (`/registrar`, e não `/registrar.html`). A extensão é detalhe de como o arquivo
@@ -97,9 +95,7 @@ app.config.update(
 )
 
 
-# --------------------------------------------------------------------------- #
 # Conexão por requisição
-# --------------------------------------------------------------------------- #
 
 def com_banco(rota):
     """Abre uma conexão para a requisição e fecha ao final, mesmo com erro."""
@@ -126,19 +122,16 @@ def nao_encontrado(_erro):
     return "Página não encontrada.", 404
 
 
-# --------------------------------------------------------------------------- #
 # Identidade
 #
 # Registrar um aparelho passou a exigir conta, então não existe mais o
 # "visitante sem conta" que registrava e depois adotava os itens. Quem não
 # entrou só alcança a consulta por código, que não cria nem lista nada.
-# --------------------------------------------------------------------------- #
 
 def usuario_da_sessao() -> str | None:
     return session.get("usuario_id")
 
 
-# --------------------------------------------------------------------------- #
 # Autorização
 #
 # Ler é público; ESCREVER na cadeia de custódia não. Quem lê a etiqueta é quem
@@ -149,7 +142,6 @@ def usuario_da_sessao() -> str | None:
 # esconder o botão não impede um POST feito com curl. O papel é lido do banco a
 # cada requisição, e não guardado no cookie — assim, revogar o papel de alguém
 # tem efeito imediato, sem esperar a sessão dele expirar.
-# --------------------------------------------------------------------------- #
 
 def _conta_para_a_pagina() -> dict | None:
     """
@@ -214,9 +206,7 @@ def exige(*papeis: str, provisoria_ok: bool = False):
     return decorador
 
 
-# --------------------------------------------------------------------------- #
 # API — pontos de coleta
-# --------------------------------------------------------------------------- #
 
 @app.get("/api/pontos")
 @com_banco
@@ -224,9 +214,7 @@ def pontos(conexao):
     return jsonify(banco.listar_pontos(conexao))
 
 
-# --------------------------------------------------------------------------- #
 # API — itens e cadeia de custódia
-# --------------------------------------------------------------------------- #
 
 @app.get("/api/painel")
 @com_banco
@@ -326,9 +314,7 @@ def criar_evento(conexao, codigo, conta):
     return jsonify(evento), 201
 
 
-# --------------------------------------------------------------------------- #
 # API — conta (opcional)
-# --------------------------------------------------------------------------- #
 
 @app.get("/api/sessao")
 @com_banco
@@ -435,13 +421,11 @@ def meus_itens(conexao, conta):
     return jsonify(banco.itens_do_dono(conexao, conta["id"]))
 
 
-# --------------------------------------------------------------------------- #
 # API — administração das contas
 #
 # Toda rota daqui exige papel `admin`, verificado no servidor. A tela
 # `admin.html` some do menu para quem não é admin, mas é este decorador que
 # realmente fecha a porta.
-# --------------------------------------------------------------------------- #
 
 @app.get("/api/admin/usuarios")
 @com_banco
@@ -556,9 +540,7 @@ def admin_alteracoes(conexao, conta):
     )
 
 
-# --------------------------------------------------------------------------- #
 # API — demonstração
-# --------------------------------------------------------------------------- #
 
 @app.post("/api/demo/reiniciar")
 @com_banco
@@ -612,9 +594,7 @@ def saude(conexao):
     })
 
 
-# --------------------------------------------------------------------------- #
 # Entrega do front-end
-# --------------------------------------------------------------------------- #
 
 @app.get("/")
 def home():
@@ -684,7 +664,6 @@ def arquivo_publico(pasta, arquivo):
     return send_from_directory(RAIZ / pasta, arquivo)
 
 
-# --------------------------------------------------------------------------- #
 
 def ip_na_rede() -> str | None:
     """Descobre o IP desta máquina na rede local, para imprimir no terminal.

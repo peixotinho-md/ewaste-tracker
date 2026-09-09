@@ -12,9 +12,7 @@
 
 import { normalizarCodigo } from './model.js';
 
-/* ------------------------------------------------------------------ *
- * Geração
- * ------------------------------------------------------------------ */
+/* Geração */
 
 /**
  * O QR carrega a URL de rastreio, não só o código. Assim, quem apontar o app
@@ -49,9 +47,7 @@ export function desenharQR(elemento, codigo, opcoes) {
   }
 }
 
-/* ------------------------------------------------------------------ *
- * Interpretação do conteúdo lido
- * ------------------------------------------------------------------ */
+/* Interpretação do conteúdo lido */
 
 const PADRAO_CODIGO = /MS-?[0-9A-Z]{4}-?[0-9A-Z]{4}/i;
 
@@ -78,9 +74,7 @@ export function extrairCodigo(texto) {
   return achado ? normalizarCodigo(achado[0]) : null;
 }
 
-/* ------------------------------------------------------------------ *
- * Leitura pela câmera
- * ------------------------------------------------------------------ */
+/* Leitura pela câmera */
 
 /**
  * Leitor de QR pela câmera.

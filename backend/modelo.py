@@ -18,9 +18,7 @@ usados para exibição e não para decidir se uma gravação é aceita.
 import re
 import secrets
 
-# --------------------------------------------------------------------------- #
 # Etapas da cadeia de custódia
-# --------------------------------------------------------------------------- #
 
 ETAPAS = [
     {"id": "REGISTRADO",    "rotulo": "Registrado",    "sla_horas": 168},
@@ -73,9 +71,7 @@ def validar_transicao(etapa_atual: str, etapa_destino: str) -> None:
         )
 
 
-# --------------------------------------------------------------------------- #
 # Categorias aceitas
-# --------------------------------------------------------------------------- #
 
 # Peso médio em kg, usado quando o cliente não informa um peso válido.
 # A composição material completa fica no front-end (js/model.js).
@@ -141,7 +137,6 @@ def normalizar_peso(peso, categoria: str) -> float:
     return round(valor, 3)
 
 
-# --------------------------------------------------------------------------- #
 # Apagamento seguro de mídias de dados
 #
 # Um aparelho descartado não carrega só metal: carrega dados. Apagar um arquivo
@@ -169,7 +164,6 @@ def normalizar_peso(peso, categoria: str) -> float:
 #
 # É por isso que as combinações abaixo são validadas: não é burocracia de
 # formulário, é a diferença entre o dado estar destruído e apenas parecer que está.
-# --------------------------------------------------------------------------- #
 
 MIDIAS = {
     "magnetica": "Disco magnético (HDD)",
@@ -259,9 +253,7 @@ def validar_apagamento(categoria: str, midia, metodo) -> tuple[str, str]:
     return (midia, metodo)
 
 
-# --------------------------------------------------------------------------- #
 # Código de rastreio com dígito verificador
-# --------------------------------------------------------------------------- #
 
 # Base32 sem I, L, O e U: são os caracteres que as pessoas confundem ao ler uma
 # etiqueta suja ou riscada. Mesmo alfabeto usado em js/model.js.
@@ -340,11 +332,8 @@ def normalizar_codigo(entrada) -> str | None:
     return formatar_codigo(bruto)
 
 
-# --------------------------------------------------------------------------- #
 # Limites de tamanho dos campos livres
-# --------------------------------------------------------------------------- #
 
-# --------------------------------------------------------------------------- #
 # Papéis das contas
 #
 # Quem lê a etiqueta é quem ESCREVE na cadeia de custódia: cada leitura grava um
@@ -355,7 +344,6 @@ def normalizar_codigo(entrada) -> str | None:
 # a promoção a `operador` é ato de um `admin`, registrado na trilha de
 # administração. Esta verificação vive no servidor porque é lá que ela vale:
 # esconder um botão não impede ninguém de chamar a API com curl.
-# --------------------------------------------------------------------------- #
 
 PAPEIS = {
     "visitante": "Visitante",

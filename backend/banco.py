@@ -122,9 +122,7 @@ def novo_id(prefixo: str) -> str:
     return f"{prefixo}-{uuid.uuid4().hex[:12]}"
 
 
-# --------------------------------------------------------------------------- #
 # Criação e carga inicial
-# --------------------------------------------------------------------------- #
 
 def _tabelas_existem(conexao) -> bool:
     linha = conexao.execute(
@@ -289,12 +287,10 @@ def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
     return criadas
 
 
-# --------------------------------------------------------------------------- #
 # Conversão entre as linhas do banco (snake_case) e o JSON da API (camelCase)
 #
 # O front-end já foi escrito com os nomes em camelCase; manter a conversão aqui
 # evita mexer em todas as telas.
-# --------------------------------------------------------------------------- #
 
 def ponto_json(linha) -> dict:
     return {
@@ -371,9 +367,7 @@ def evento_json(linha) -> dict:
     }
 
 
-# --------------------------------------------------------------------------- #
 # Consultas
-# --------------------------------------------------------------------------- #
 
 def listar_pontos(conexao) -> list[dict]:
     linhas = conexao.execute("SELECT * FROM pontos ORDER BY municipio, nome").fetchall()
@@ -489,9 +483,7 @@ def itens_do_dono(conexao, usuario_id: str | None) -> list[dict]:
     return [item_json(l) for l in linhas]
 
 
-# --------------------------------------------------------------------------- #
 # Escritas
-# --------------------------------------------------------------------------- #
 
 def criar_item(conexao, *, categoria, marca, peso_kg, ponto_origem_id,
                responsavel, usuario_id) -> dict:
@@ -640,14 +632,12 @@ def obter_usuario(conexao, usuario_id: str) -> dict | None:
     return usuario_json(linha) if linha else None
 
 
-# --------------------------------------------------------------------------- #
 # Administração das contas
 #
 # Só um admin chega até aqui — quem verifica isso é `app.py`, antes de chamar
 # estas funções. O que este módulo garante são as regras que não podem depender
 # da tela: o sistema nunca fica sem administrador, e toda alteração deixa
 # rastro.
-# --------------------------------------------------------------------------- #
 
 def listar_usuarios(conexao) -> list[dict]:
     """
