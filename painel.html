@@ -86,10 +86,15 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import { calcularIndicadores, equivalencias, EQUIVALENCIAS } from './js/indicadores.js';
 import { iniciarPagina, aviso, confirmar, seloEtapa, formatarData, formatarMassa,
-         formatarNumero, formatarOuro, formatarDuracao, escapar } from './js/ui.js';
-import { MATERIAIS, categoria } from './js/model.js';
+         formatarNumero, formatarOuro, formatarDuracao, escapar , numero} from './js/ui.js';
+import {
+  MATERIAIS,
+  categoria,
+  calcularIndicadores,
+  equivalencias,
+  EQUIVALENCIAS,
+} from './js/model.js';
 
 await iniciarPagina();
 
@@ -105,27 +110,17 @@ async function desenhar() {
   const eq = equivalencias(ind.co2eKg);
 
   /* --- números principais --- */
-  document.getElementById('numeros').innerHTML = `
-    <div class="numero">
-      <div class="valor">${formatarMassa(ind.massaDesviadaKg)}</div>
-      <div class="rotulo">desviados do aterro</div>
-      <div class="nota">${ind.totalProcessados} de ${ind.totalItens} aparelhos concluídos</div>
-    </div>
-    <div class="numero">
-      <div class="valor">${formatarNumero(ind.taxaConclusao * 100, 0)}%</div>
-      <div class="rotulo">taxa de conclusão da cadeia</div>
-      <div class="nota">ciclo médio de ${formatarDuracao(ind.cicloMedioHoras)}</div>
-    </div>
-    <div class="numero">
-      <div class="valor">${formatarNumero(ind.co2eKg, 0)} kg</div>
-      <div class="rotulo">CO₂e evitado</div>
-      <div class="nota">≈ ${formatarNumero(eq.arvoresPorAno, 0)} árvores absorvendo por um ano</div>
-    </div>
-    <div class="numero ${ind.pendentes.length ? 'numero-alerta' : ''}">
-      <div class="valor">${ind.pendentes.length}</div>
-      <div class="rotulo">aparelhos atrasados</div>
-      <div class="nota">${ind.totalEmCurso} em curso · ${ind.totalPontos} pontos em ${ind.municipiosAtendidos} municípios</div>
-    </div>`;
+  document.getElementById('numeros').innerHTML = [
+    numero(formatarMassa(ind.massaDesviadaKg), 'desviados do aterro',
+           `${ind.totalProcessados} de ${ind.totalItens} aparelhos concluídos`),
+    numero(`${formatarNumero(ind.taxaConclusao * 100, 0)}%`, 'taxa de conclusão da cadeia',
+           `ciclo médio de ${formatarDuracao(ind.cicloMedioHoras)}`),
+    numero(`${formatarNumero(ind.co2eKg, 0)} kg`, 'CO₂e evitado',
+           `≈ ${formatarNumero(eq.arvoresPorAno, 0)} árvores absorvendo por um ano`),
+    numero(ind.pendentes.length, 'aparelhos atrasados',
+           `${ind.totalEmCurso} em curso · ${ind.totalPontos} pontos em ${ind.municipiosAtendidos} municípios`,
+           ind.pendentes.length ? 'numero-alerta' : ''),
+  ].join('');
 
   /* --- etapas --- */
   const maxEtapa = Math.max(1, ...ind.porEtapa.map((e) => e.quantidade));

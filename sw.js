@@ -32,7 +32,6 @@ const ARQUIVOS = [
   './css/app.css',
   './js/model.js',
   './js/store.js',
-  './js/indicadores.js',
   './js/qr.js',
   './js/ui.js',
   './vendor/qrcode.js',

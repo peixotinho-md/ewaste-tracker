@@ -21,10 +21,12 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import { calcularIndicadores, equivalencias } from './js/indicadores.js';
 import { iniciarPagina, aviso, escapar, formatarMassa, formatarNumero,
-         ligarTrocaDeSenha } from './js/ui.js';
-import { normalizarCodigo } from './js/model.js';
+         ligarTrocaDeSenha, ligarBuscaDeCodigo, ERRO_CODIGO , numero} from './js/ui.js';
+import {
+  calcularIndicadores,
+  equivalencias,
+} from './js/model.js';
 
 /* ------------------------------------------------------------------ *
  * A raiz do site tem dois rostos, e é a sessão que decide qual aparece:
@@ -160,14 +162,9 @@ function desenharHome() {
       </div>
     </section>`;
 
-  document.getElementById('form-busca').addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    const codigo = normalizarCodigo(document.getElementById('codigo').value);
-    if (!codigo) {
-      aviso('Código inválido. Ele começa com MS e tem 8 caracteres — como em MS-0000-0000.', 'erro');
-      return;
-    }
-    location.href = `rastrear?c=${encodeURIComponent(codigo)}`;
+  ligarBuscaDeCodigo({
+    formulario: 'form-busca', campo: 'codigo', erro: ERRO_CODIGO,
+    aoValidar: (codigo) => { location.href = `rastrear?c=${encodeURIComponent(codigo)}`; },
   });
 
   preencherNumeros();
@@ -178,27 +175,16 @@ async function preencherNumeros() {
   const ind = calcularIndicadores(dados.itens, dados.eventos, pontos);
   const eq = equivalencias(ind.co2eKg);
 
-  document.getElementById('numeros').innerHTML = `
-    <div class="numero">
-      <div class="valor">${formatarMassa(ind.massaDesviadaKg)}</div>
-      <div class="rotulo">desviados do aterro</div>
-      <div class="nota">${ind.totalProcessados} aparelhos com destinação comprovada</div>
-    </div>
-    <div class="numero">
-      <div class="valor">${ind.totalEmCurso}</div>
-      <div class="rotulo">aparelhos em trânsito</div>
-      <div class="nota">${formatarMassa(ind.massaEmCursoKg)} sendo rastreados agora</div>
-    </div>
-    <div class="numero">
-      <div class="valor">${formatarNumero(ind.co2eKg, 0)} kg</div>
-      <div class="rotulo">de CO₂e evitados</div>
-      <div class="nota">equivale a ${formatarNumero(eq.kmDeCarro, 0)} km de carro</div>
-    </div>
-    <div class="numero">
-      <div class="valor">${formatarNumero(ind.taxaConclusao * 100, 0)}%</div>
-      <div class="rotulo">chegaram ao fim da cadeia</div>
-      <div class="nota">${ind.pendentes.length} parado(s) além do prazo</div>
-    </div>`;
+  document.getElementById('numeros').innerHTML = [
+    numero(formatarMassa(ind.massaDesviadaKg), 'desviados do aterro',
+           `${ind.totalProcessados} aparelhos com destinação comprovada`),
+    numero(ind.totalEmCurso, 'aparelhos em trânsito',
+           `${formatarMassa(ind.massaEmCursoKg)} sendo rastreados agora`),
+    numero(`${formatarNumero(ind.co2eKg, 0)} kg`, 'de CO₂e evitados',
+           `equivale a ${formatarNumero(eq.kmDeCarro, 0)} km de carro`),
+    numero(`${formatarNumero(ind.taxaConclusao * 100, 0)}%`, 'chegaram ao fim da cadeia',
+           `${ind.pendentes.length} parado(s) além do prazo`),
+  ].join('');
 
   document.getElementById('qtd-pontos').textContent = ind.totalPontos;
   document.getElementById('qtd-municipios').textContent = ind.municipiosAtendidos;

@@ -21,7 +21,7 @@
 <script type="module">
 import * as store from './js/store.js';
 import { iniciarPagina, aviso, cartaoItem, seloPapel, escapar, formatarMassa,
-         formatarNumero, ligarTrocaDeSenha } from './js/ui.js';
+         formatarNumero, ligarTrocaDeSenha , numero} from './js/ui.js';
 import { ETAPA_FINAL, co2eEvitado } from './js/model.js';
 
 await iniciarPagina();
@@ -86,20 +86,11 @@ async function telaLogado(usuario) {
     </section>
 
     <section class="grade grade-3" style="margin-bottom:1.25rem">
-      <div class="numero">
-        <div class="valor">${itens.length}</div>
-        <div class="rotulo">aparelhos enviados</div>
-        <div class="nota">${concluidos.length} com destinação comprovada</div>
-      </div>
-      <div class="numero">
-        <div class="valor">${formatarMassa(massa)}</div>
-        <div class="rotulo">de e-waste encaminhado</div>
-      </div>
-      <div class="numero">
-        <div class="valor">${formatarNumero(co2e, 1)} kg</div>
-        <div class="rotulo">de CO₂e evitados por você</div>
-        <div class="nota">contando só o que já foi reciclado</div>
-      </div>
+      ${numero(itens.length, 'aparelhos enviados',
+               `${concluidos.length} com destinação comprovada`)}
+      ${numero(formatarMassa(massa), 'de e-waste encaminhado')}
+      ${numero(`${formatarNumero(co2e, 1)} kg`, 'de CO₂e evitados por você',
+               'contando só o que já foi reciclado')}
     </section>
 
     <section class="cartao">

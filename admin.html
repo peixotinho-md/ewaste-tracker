@@ -21,7 +21,7 @@
 <script type="module">
 import * as store from './js/store.js';
 import { iniciarPagina, aviso, confirmar, confirmarComSenha, seloPapel, seloEtapa,
-         escapar, formatarData, formatarMassa } from './js/ui.js';
+         escapar, formatarData, formatarMassa , numero} from './js/ui.js';
 import { ETAPAS, ETAPA_FINAL, categoria, estaPendente } from './js/model.js';
 
 await iniciarPagina();
@@ -99,21 +99,13 @@ async function desenhar() {
     </p>
 
     <section class="grade grade-3" style="margin-bottom:1.25rem">
-      <div class="numero">
-        <div class="valor">${itens.length}</div>
-        <div class="rotulo">aparelhos cadastrados</div>
-        <div class="nota">${itens.filter((i) => i.etapaAtual === ETAPA_FINAL).length} com destinação comprovada</div>
-      </div>
-      <div class="numero${atrasados().length ? ' numero-alerta' : ''}">
-        <div class="valor">${atrasados().length}</div>
-        <div class="rotulo">parados além do prazo</div>
-        <div class="nota">a etapa atual passou do tempo previsto</div>
-      </div>
-      <div class="numero">
-        <div class="valor">${usuarios.length}</div>
-        <div class="rotulo">contas cadastradas</div>
-        <div class="nota">${contagem('operador')} operador(es), ${contagem('admin')} admin(s)</div>
-      </div>
+      ${numero(itens.length, 'aparelhos cadastrados',
+               `${itens.filter((i) => i.etapaAtual === ETAPA_FINAL).length} com destinação comprovada`)}
+      ${numero(atrasados().length, 'parados além do prazo',
+               'a etapa atual passou do tempo previsto',
+               atrasados().length ? 'numero-alerta' : '')}
+      ${numero(usuarios.length, 'contas cadastradas',
+               `${contagem('operador')} operador(es), ${contagem('admin')} admin(s)`)}
     </section>
 
     ${secaoItens()}

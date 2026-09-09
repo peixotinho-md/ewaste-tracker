@@ -3,12 +3,11 @@
  * Cabeçalho, avisos, formatação e o componente de linha do tempo do rastreio.
  */
 
-import { ETAPAS, etapa as definicaoEtapa, indiceEtapa, categoria } from './model.js';
+import { ETAPAS, etapa as definicaoEtapa, indiceEtapa, categoria,
+         normalizarCodigo } from './model.js';
 import * as store from './store.js';
 
-/* ------------------------------------------------------------------ *
- * Formatação
- * ------------------------------------------------------------------ */
+/* Formatação */
 
 const fmtData = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -286,9 +285,52 @@ export function confirmarComSenha({ titulo, corpo = '', alerta = '',
   });
 }
 
-/* ------------------------------------------------------------------ *
- * Troca de senha
- * ------------------------------------------------------------------ */
+/* Busca por código de rastreio */
+
+/**
+ * A recusa de um código malformado, dita uma vez só.
+ *
+ * Estava copiada literalmente na home e no rastreio. Duas cópias de um texto
+ * que explica um formato é o começo de duas explicações diferentes do mesmo
+ * formato. O scanner usa mensagem própria, porque lá quem digita já tem a
+ * etiqueta na mão e o provável é erro de leitura, não desconhecimento.
+ */
+export const ERRO_CODIGO =
+  'Código inválido. Ele começa com MS e tem 8 caracteres — como em MS-0000-0000.';
+
+/**
+ * Liga um formulário de busca por código ao que a página faz com ele.
+ *
+ * Três telas pedem um código e reagem de formas diferentes: a home navega para
+ * o rastreio, o rastreio troca o conteúdo sem recarregar, e o scanner abre o
+ * painel do item. O que NÃO muda é o meio do caminho — normalizar o que foi
+ * digitado, recusar o que não passa no dígito verificador e explicar por quê.
+ *
+ * Era esse meio que estava escrito três vezes, com a mensagem de erro copiada
+ * literalmente em duas delas. Um código inválido aceito por engano vira uma
+ * consulta que não acha nada, e a pessoa conclui que o aparelho não existe.
+ *
+ * @param {string} formulario  id do <form>.
+ * @param {string} campo       id do <input> com o código.
+ * @param {string} erro        mensagem quando o código não passa.
+ * @param {Function} aoValidar recebe o código já normalizado.
+ */
+export function ligarBuscaDeCodigo({ formulario, campo, erro, aoValidar }) {
+  const alvo = document.getElementById(formulario);
+  if (!alvo) return;
+
+  alvo.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const codigo = normalizarCodigo(document.getElementById(campo).value);
+    if (!codigo) {
+      aviso(erro, 'erro');
+      return;
+    }
+    aoValidar(codigo);
+  });
+}
+
+/* Troca de senha */
 
 /**
  * Liga o formulário de troca de senha ao servidor.
@@ -379,6 +421,30 @@ export function seloEtapa(etapaId) {
   const def = definicaoEtapa(etapaId);
   if (!def) return '';
   return `<span class="selo selo-${etapaId.toLowerCase()}">${escapar(def.rotulo)}</span>`;
+}
+
+/**
+ * Bloco de indicador: um número grande, o que ele mede e uma nota opcional.
+ *
+ * A mesma marcação aparecia doze vezes em quatro telas — home, painel, conta e
+ * administração. Nenhuma delas repetia lógica, só a FORMA do bloco; e forma
+ * repetida à mão é forma que diverge, como já tinha acontecido com o rodapé.
+ * Mudar o desenho do indicador agora é mudar aqui.
+ *
+ * `valor` e `nota` chegam já compostos por quem chama — costumam trazer
+ * unidade e número formatado juntos, como "1,4 t" ou "≈ 12 árvores". Não são
+ * escapados, pelo mesmo motivo que `cartaoItem` não escapa o que monta: o
+ * conteúdo vem de dado do servidor passado pelos formatadores daqui, nunca de
+ * texto digitado por alguém. `classe` cobre o único bloco que muda de cor:
+ * o de atrasados, na administração.
+ */
+export function numero(valor, rotulo, nota = '', classe = '') {
+  return `
+    <div class="numero${classe ? ` ${classe}` : ''}">
+      <div class="valor">${valor}</div>
+      <div class="rotulo">${rotulo}</div>
+      ${nota ? `<div class="nota">${nota}</div>` : ''}
+    </div>`;
 }
 
 /** Linha resumida de um item, usada nas listagens da conta e do painel. */

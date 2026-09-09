@@ -29,7 +29,7 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import { iniciarPagina, aviso, seloEtapa, seloPapel, confirmar, formatarData,
+import { ligarBuscaDeCodigo, iniciarPagina, aviso, seloEtapa, seloPapel, confirmar, formatarData,
          formatarMassa, escapar } from './js/ui.js';
 import { normalizarCodigo, categoria, proximaEtapa, ETAPAS, ETAPA_FINAL,
          etapa as definicaoEtapa, exigeApagamento, metodosParaMidia,
@@ -223,14 +223,9 @@ function ligarCamera() {
  * ------------------------------------------------------------------ */
 
 function ligarEntradaManual() {
-  document.getElementById('form-manual').addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    const codigo = normalizarCodigo(document.getElementById('manual').value);
-    if (!codigo) {
-      aviso('Código inválido. Confira o prefixo MS e o dígito verificador.', 'erro');
-      return;
-    }
-    abrir(codigo);
+  ligarBuscaDeCodigo({
+    formulario: 'form-manual', campo: 'manual', aoValidar: abrir,
+    erro: 'Código inválido. Confira o prefixo MS e o dígito verificador.',
   });
 }
 

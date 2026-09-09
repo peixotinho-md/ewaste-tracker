@@ -68,7 +68,7 @@
 
 <script type="module">
 import * as store from './js/store.js';
-import { iniciarPagina, aviso, linhaDoTempo, seloEtapa, formatarData,
+import { ligarBuscaDeCodigo, ERRO_CODIGO, iniciarPagina, aviso, linhaDoTempo, seloEtapa, formatarData,
          formatarMassa, formatarNumero, formatarOuro, escapar } from './js/ui.js';
 import { normalizarCodigo, categoria, materiaisRecuperaveis, co2eEvitado,
          MATERIAIS, ETAPA_FINAL, etapa as definicaoEtapa, estaPendente,
@@ -80,15 +80,12 @@ await iniciarPagina();
 const entrada = document.getElementById('codigo');
 const alvo = document.getElementById('resultado');
 
-document.getElementById('form-busca').addEventListener('submit', (ev) => {
-  ev.preventDefault();
-  const codigo = normalizarCodigo(entrada.value);
-  if (!codigo) {
-    aviso('Código inválido. Ele começa com MS e tem 8 caracteres — como em MS-0000-0000.', 'erro');
-    return;
-  }
-  history.pushState({}, '', `?c=${encodeURIComponent(codigo)}`);
-  mostrar(codigo);
+ligarBuscaDeCodigo({
+  formulario: 'form-busca', campo: 'codigo', erro: ERRO_CODIGO,
+  aoValidar: (codigo) => {
+    history.pushState({}, '', `?c=${encodeURIComponent(codigo)}`);
+    mostrar(codigo);
+  },
 });
 
 window.addEventListener('popstate', () => carregarDaUrl());
