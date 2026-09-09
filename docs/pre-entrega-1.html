@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>Pré-Entrega 1 e-Trilha MS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+  /* ---------------------------------------------------------------
+     Paleta herdada do próprio e-Trilha MS (css/app.css): os neutros
+     puxam para o verde, e não para o cinza puro, para que o documento
+     e o sistema que ele descreve pareçam a mesma coisa.
+     --------------------------------------------------------------- */
+  :root {
+    --tinta:        #16211a;
+    --tinta-media:  #47564c;
+    --tinta-fraca:  #77857c;
+    --fundo:        #f4f7f4;
+    --superficie:   #ffffff;
+    --borda:        #dde5df;
+    --borda-forte:  #b8c8bd;
+    --verde-700:    #1b5e33;
+    --verde-600:    #22773f;
+    --verde-500:    #2f9553;
+    --verde-050:    #eef6f0;
+    --terra:        #a0631d;
+    --terra-fundo:  #fbf3e7;
+    --sombra:       0 1px 2px rgba(16,56,31,.05), 0 8px 28px rgba(16,56,31,.06);
+
+    --serif: "Spectral", Georgia, "Times New Roman", serif;
+    --sans:  "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono:  "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --tinta:       #e6ede8;
+      --tinta-media: #a9b8ae;
+      --tinta-fraca: #7d8c83;
+      --fundo:       #0f1712;
+      --superficie:  #17211a;
+      --borda:       #2a3830;
+      --borda-forte: #3d5145;
+      --verde-700:   #6cc78c;
+      --verde-600:   #4fb271;
+      --verde-500:   #46b06b;
+      --verde-050:   #16281c;
+      --terra:       #d8a05a;
+      --terra-fundo: #2a2114;
+      --sombra:      0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --tinta:       #e6ede8;
+    --tinta-media: #a9b8ae;
+    --tinta-fraca: #7d8c83;
+    --fundo:       #0f1712;
+    --superficie:  #17211a;
+    --borda:       #2a3830;
+    --borda-forte: #3d5145;
+    --verde-700:   #6cc78c;
+    --verde-600:   #4fb271;
+    --verde-500:   #46b06b;
+    --verde-050:   #16281c;
+    --terra:       #d8a05a;
+    --terra-fundo: #2a2114;
+    --sombra:      0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--fundo);
+    color: var(--tinta);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 1.25rem 5rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .folha { max-width: 50rem; margin: 0 auto; }
+
+  /* ---------- Cabeçalho ---------- */
+
+  .capa {
+    padding: 3.5rem 0 2rem;
+    border-bottom: 2px solid var(--tinta);
+    margin-bottom: 2.5rem;
+  }
+  .eyebrow {
+    font-size: .78rem; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--verde-600);
+    display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin-bottom: 1.1rem;
+  }
+  .eyebrow span::after { content: ""; }
+  h1 {
+    font-family: var(--serif); font-weight: 700;
+    font-size: clamp(2.1rem, 1.4rem + 3vw, 3.2rem);
+    line-height: 1.08; letter-spacing: -.015em;
+    margin: 0 0 .5rem; text-wrap: balance;
+  }
+  .subtitulo {
+    font-family: var(--serif); font-style: italic;
+    font-size: clamp(1.1rem, 1rem + .6vw, 1.35rem);
+    color: var(--tinta-media); margin: 0 0 2rem; text-wrap: balance;
+  }
+  .ficha {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1.1rem 2rem;
+  }
+  .ficha div { display: grid; gap: .15rem; align-content: start; }
+  .ficha dt {
+    font-size: .72rem; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--tinta-fraca);
+  }
+  .ficha dd { margin: 0; font-size: .95rem; }
+
+  /* ---------- Sumário ---------- */
+
+  .sumario {
+    background: var(--superficie); border: 1px solid var(--borda);
+    padding: 1.25rem 1.5rem; margin-bottom: 3rem;
+  }
+  .sumario h2 {
+    font-family: var(--sans); font-size: .72rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--tinta-fraca); margin: 0 0 .7rem;
+  }
+  .sumario ol {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; gap: .3rem;
+    counter-reset: sum;
+  }
+  .sumario li { counter-increment: sum; }
+  .sumario a {
+    color: var(--tinta); text-decoration: none;
+    display: flex; gap: .7rem; align-items: baseline;
+    padding: .12rem 0; border-radius: 3px;
+  }
+  .sumario a::before {
+    content: counter(sum) ".";
+    font-family: var(--serif); font-weight: 600;
+    color: var(--verde-600); min-width: 1.1rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .sumario a:hover { color: var(--verde-600); text-decoration: underline; }
+
+  /* ---------- Seções: a numeração vive na margem ---------- */
+
+  section { margin-bottom: 3.25rem; scroll-margin-top: 1.5rem; }
+
+  h2.secao {
+    font-family: var(--serif); font-weight: 700;
+    font-size: clamp(1.45rem, 1.2rem + 1.1vw, 1.95rem);
+    line-height: 1.2; letter-spacing: -.01em;
+    margin: 0 0 1.4rem; padding-bottom: .6rem;
+    border-bottom: 1px solid var(--borda-forte);
+    display: flex; gap: .8rem; align-items: baseline;
+    text-wrap: balance;
+  }
+  h2.secao .n {
+    font-size: .82em; color: var(--verde-600);
+    font-variant-numeric: tabular-nums; flex: none;
+  }
+
+  h3 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: 1.18rem; line-height: 1.3;
+    margin: 2rem 0 .6rem; color: var(--tinta);
+    text-wrap: balance;
+  }
+  h3:first-of-type { margin-top: 0; }
+
+  h4 {
+    font-family: var(--sans); font-size: .76rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--verde-600); margin: 1.6rem 0 .5rem;
+  }
+
+  p { margin: 0 0 1.05rem; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  a { color: var(--verde-600); }
+
+  ul, ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+  li::marker { color: var(--verde-500); }
+
+  code, .cod {
+    font-family: var(--mono); font-size: .86em;
+    background: var(--verde-050); padding: .08em .35em;
+    border-radius: 3px; color: var(--verde-700);
+  }
+
+  /* ---------- As três barreiras: o miolo do argumento ---------- */
+
+  .barreiras { display: grid; gap: 0; margin: 1.5rem 0 1.2rem; }
+  .barreira {
+    border-left: 3px solid var(--verde-500);
+    padding: .1rem 0 .1rem 1.25rem;
+    margin-bottom: 1.4rem;
+  }
+  .barreira:last-child { margin-bottom: 0; }
+  .barreira .rotulo {
+    font-family: var(--sans); font-size: .74rem; font-weight: 700;
+    letter-spacing: .11em; text-transform: uppercase;
+    color: var(--verde-600); display: block; margin-bottom: .25rem;
+  }
+  .barreira .nome {
+    font-family: var(--serif); font-size: 1.15rem; font-weight: 600;
+    display: block; margin-bottom: .4rem;
+  }
+  .barreira p:last-child { margin-bottom: 0; }
+
+  /* ---------- Tabelas: regra de topo, de cabeçalho e de base ---------- */
+
+  .tabela-caixa { overflow-x: auto; margin: 1.4rem 0; }
+  table {
+    border-collapse: collapse; width: 100%;
+    font-size: .93rem; line-height: 1.45;
+  }
+  thead th {
+    font-family: var(--sans); font-size: .72rem; font-weight: 700;
+    letter-spacing: .09em; text-transform: uppercase;
+    color: var(--tinta-media); text-align: left;
+    padding: .55rem .75rem; vertical-align: bottom;
+    border-top: 2px solid var(--tinta);
+    border-bottom: 1px solid var(--borda-forte);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: .6rem .75rem; vertical-align: top;
+    border-bottom: 1px solid var(--borda);
+  }
+  tbody tr:last-child td { border-bottom: 2px solid var(--tinta); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ref {
+    font-family: var(--mono); font-size: .82rem; font-weight: 600;
+    color: var(--verde-600); white-space: nowrap;
+  }
+  tfoot td {
+    padding: .7rem .75rem 0; font-size: .84rem;
+    color: var(--tinta-fraca); border: 0;
+  }
+  .total td { font-weight: 700; }
+
+  /* ---------- Pendências: status diferente, tratamento diferente ---------- */
+
+  .pendencias {
+    border: 1px dashed var(--terra);
+    background: var(--terra-fundo);
+    padding: 1.35rem 1.5rem; margin: 1.6rem 0;
+  }
+  .pendencias h4 { color: var(--terra); margin-top: 0; }
+  .pendencias ol { margin-bottom: 0; }
+  .pendencias li::marker { color: var(--terra); }
+
+  .aviso-fonte {
+    font-style: italic; color: var(--terra); font-size: .9em;
+  }
+
+  /* ---------- Objetivo geral em destaque ---------- */
+
+  .objetivo-geral {
+    background: var(--superficie); border: 1px solid var(--borda);
+    border-left: 3px solid var(--verde-500);
+    box-shadow: var(--sombra);
+    padding: 1.4rem 1.6rem; margin: 1.2rem 0 2rem;
+    font-family: var(--serif); font-size: 1.1rem; line-height: 1.55;
+  }
+  .objetivo-geral p:last-child { margin-bottom: 0; }
+
+  /* ---------- Dimensões da sustentabilidade ---------- */
+
+  .dimensao { margin-bottom: 2rem; }
+  .dimensao:last-of-type { margin-bottom: 0; }
+  .dimensao > h3 {
+    display: flex; align-items: baseline; gap: .7rem;
+    border-bottom: 1px solid var(--borda); padding-bottom: .4rem;
+  }
+  .ods {
+    display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0 0; padding: 0;
+    list-style: none;
+  }
+  .ods li {
+    font-size: .8rem; font-weight: 600; margin: 0;
+    border: 1px solid var(--borda-forte); color: var(--tinta-media);
+    padding: .25rem .6rem; border-radius: 100px;
+  }
+
+  /* ---------- Referências: recuo pendente, como manda a norma ---------- */
+
+  .referencias { display: grid; gap: 1rem; }
+  .referencias p {
+    margin: 0; padding-left: 1.6rem; text-indent: -1.6rem;
+    font-size: .95rem; line-height: 1.5;
+  }
+  .referencias a { word-break: break-word; }
+
+  .nota-metodo {
+    margin-top: 2.5rem; padding-top: 1.2rem;
+    border-top: 1px solid var(--borda);
+    font-size: .9rem; color: var(--tinta-media);
+  }
+
+  a:focus-visible, .sumario a:focus-visible {
+    outline: 2px solid var(--verde-500); outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+
+  /* ---------- Impressão: é isto que vira o PDF da entrega ---------- */
+
+  @media print {
+    body { background: #fff; color: #111; font-size: 10.5pt; padding: 0; }
+    .folha { max-width: none; }
+    .sumario { display: none; }
+    .capa { padding-top: 0; }
+    section { break-inside: auto; margin-bottom: 1.6rem; }
+    h2.secao, h3 { break-after: avoid; }
+    table, .barreira, .pendencias, .objetivo-geral { break-inside: avoid; }
+    .pendencias, .objetivo-geral { background: #fff; }
+    a { color: #111; text-decoration: none; }
+  }
+</style>
+
+<div class="folha">
+
+  <header class="capa">
+    <div class="eyebrow">
+      <span>DAC 262 TADS</span>
+      <span>Etapa 2</span>
+      <span>Entrega 04/09</span>
+      <span>Eixo 3 — Resíduos e Economia Circular</span>
+    </div>
+    <h1>Pré-Entrega 1: e-Trilha MS</h1>
+    <p class="subtitulo">Rastreabilidade de resíduos eletrônicos em Mato Grosso do Sul</p>
+
+    <dl class="ficha">
+      <div>
+        <dt>Curso</dt>
+        <dd>262 — Tecnologia em Análise e Desenvolvimento de Sistemas</dd>
+      </div>
+      <div>
+        <dt>Professor referência</dt>
+        <dd>Vitor Gabriel de Souza Farias — RF1440</dd>
+      </div>
+      <div>
+        <dt>Equipe</dt>
+        <dd>Rafael Dias (205220) · Vinicios Pereira (208618) · José Victor (204998) · Eder Maciel (205969) · Renato Peixoto (205683)</dd>
+      </div>
+    </dl>
+  </header>
+
+  <nav class="sumario" aria-label="Sumário">
+    <h2>Sumário</h2>
+    <ol>
+      <li><a href="#problema">O problema</a></li>
+      <li><a href="#evidencias">Evidências</a></li>
+      <li><a href="#objetivos">Objetivos</a></li>
+      <li><a href="#sustentabilidade">Relação com sustentabilidade</a></li>
+      <li><a href="#disciplinas">Articulação com as disciplinas</a></li>
+      <li><a href="#verificacao">Como verificar se a solução funciona</a></li>
+      <li><a href="#referencias">Referências iniciais</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 ------------------------------------------------------------ -->
+  <section id="problema">
+    <h2 class="secao"><span class="n">1</span> O problema</h2>
+
+    <h3>1.1 Qual é o problema</h3>
+    <p>Celulares, computadores, HDs, baterias e cabos são descartados no lixo comum ou ficam parados em gavetas, armários e almoxarifados sem destino definido. Quando vão para o aterro, contaminam solo e água com chumbo, mercúrio e cádmio; quando ficam parados, imobilizam cobre, alumínio, ouro e terras raras que voltariam à cadeia produtiva.</p>
+    <p>A leitura usual para no primeiro passo — “as pessoas não sabem onde descartar”. A investigação que fizemos aponta que <strong>a falta de informação sobre pontos de coleta é só uma das três barreiras</strong>, e não é a que trava os casos mais difíceis.</p>
+
+    <div class="barreiras">
+      <div class="barreira">
+        <span class="rotulo">Barreira 1</span>
+        <span class="nome">Acesso</span>
+        <p>Não se sabe onde entregar. Os pontos variam de município para município e não há uma lista pública consolidada por cidade e por tipo de aparelho aceito — um PEV de shopping recebe celular, mas não recebe geladeira.</p>
+      </div>
+      <div class="barreira">
+        <span class="rotulo">Barreira 2</span>
+        <span class="nome">Confiança</span>
+        <p>Mesmo quem entrega corretamente <strong>não tem como saber se o aparelho foi de fato reciclado</strong>. A Lei 12.305/2010 obriga a logística reversa e o Decreto 10.240/2020 fixa metas para as empresas — mas nenhum dos dois dá ao cidadão qualquer comprovação do destino final. Sem prova, entregar no ponto certo e jogar no lixo comum são, do ponto de vista de quem descarta, experiências idênticas.</p>
+      </div>
+      <div class="barreira">
+        <span class="rotulo">Barreira 3</span>
+        <span class="nome">Segurança dos dados</span>
+        <p>Aparelhos com memória não volátil saem de casa e da empresa <strong>com dados dentro</strong>. Apagar um arquivo pelo sistema operacional remove apenas o ponteiro que diz onde ele começa e termina: até que algo seja gravado por cima, o conteúdo continua recuperável com ferramenta forense comum. Sob a LGPD, isso é risco jurídico para a empresa e risco pessoal para o cidadão — e é uma <strong>causa concreta do aparelho que fica na gaveta</strong>: o dono prefere o risco de não descartar ao risco de entregar dados a um desconhecido.</p>
+      </div>
+    </div>
+
+    <p>O problema, portanto, não é apenas logístico: é de <strong>rastreabilidade e prova</strong>.</p>
+
+    <h3>1.2 Onde o problema ocorre — recorte territorial</h3>
+    <p>Mato Grosso do Sul, com foco em <strong>Campo Grande</strong> e extensão aos demais municípios acima de 80 mil habitantes — exatamente o limiar a partir do qual o Decreto 10.240/2020 torna obrigatória a instalação de pontos de recebimento.</p>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Município (Censo 2022)</th>
+            <th scope="col" class="num">População</th>
+            <th scope="col" class="num">Pontos exigidos</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Campo Grande</td><td class="num">897.938</td><td class="num">~36</td></tr>
+          <tr><td>Dourados</td><td class="num">243.368</td><td class="num">~10</td></tr>
+          <tr><td>Três Lagoas</td><td class="num">132.152</td><td class="num">~5</td></tr>
+          <tr><td>Corumbá</td><td class="num">~96.000</td><td class="num">~4</td></tr>
+          <tr><td>Ponta Porã</td><td class="num">92.017</td><td class="num">~4</td></tr>
+          <tr class="total"><td>Total</td><td class="num">1.461.475</td><td class="num">~59</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td colspan="3">Cálculo dos autores, aplicando a regra de <strong>1 ponto de recebimento a cada 25 mil habitantes</strong> (Decreto 10.240/2020) à população do Censo 2022 do IBGE. Não é número oficial: é a ordem de grandeza da obrigação legal, e serve de parâmetro para medir a lacuna.</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <p>MS tem <strong>2.757.013 habitantes</strong> (Censo 2022). O estado concentra atividade de TI corporativa em Campo Grande e indústria em Três Lagoas — esta com crescimento populacional de 29,83% na década —, o que produz sucata de equipamento de forma contínua e previsível.</p>
+
+    <h3>1.3 Quem é afetado</h3>
+    <ul>
+      <li><strong>Moradores urbanos</strong> com eletrônicos obsoletos e sem destino definido;</li>
+      <li><strong>Pequenas e médias empresas de TI</strong>, que geram sucata continuamente (servidores, no-breaks, impressoras, HDs, cabeamento) e respondem pela LGPD sobre os dados que saem junto com o equipamento;</li>
+      <li><strong>Cooperativas e recicladoras</strong>, que precisam de volume e previsibilidade para viabilizar a operação;</li>
+      <li><strong>Órgãos públicos municipais e estaduais</strong>, responsáveis pela gestão de resíduos e hoje sem instrumento de acompanhamento por aparelho;</li>
+      <li><strong>Fabricantes e importadores</strong>, obrigados por lei a comprovar metas de logística reversa.</li>
+    </ul>
+
+    <h3>1.4 Quais são as consequências</h3>
+    <h4>Ambientais</h4>
+    <p>Metais pesados em solo e água; perda de materiais recicláveis para o aterro. O e-waste é a corrente de resíduo que mais cresce no mundo.</p>
+    <h4>Econômicas</h4>
+    <p>Cobre, alumínio, ouro e terras raras deixam a cadeia produtiva. No Brasil, com cerca de 3% de coleta formal, a fração recuperada é marginal.</p>
+    <h4>Sociais e jurídicas</h4>
+    <p>Dados pessoais saem de casa e da empresa dentro de aparelhos descartados, e a empresa fica exposta a sanção da LGPD — multa de até 2% do faturamento, limitada a R$ 50 milhões por infração. As metas do Decreto 10.240/2020, por sua vez, tornam-se difíceis de comprovar sem rastro por aparelho.</p>
+
+    <h3>1.5 Como o problema é tratado atualmente</h3>
+    <ul>
+      <li><strong>O marco legal existe e é exigente.</strong> A PNRS (Lei 12.305/2010) obriga a logística reversa de eletroeletrônicos. O Decreto 10.240/2020 a regulamenta, com meta de <strong>17% do peso colocado no mercado</strong> recebendo destinação ambientalmente adequada até o fim do quinto ano de operação (2025), em <strong>400 municípios</strong> acima de 80 mil habitantes, com previsão de cerca de <strong>5.000 pontos de recebimento</strong> no país.</li>
+      <li><strong>Entidades gestoras operam a coleta</strong> (Green Eletron, ABREE), com pontos em varejo e locais parceiros.</li>
+      <li><strong>O que falta.</strong> Nenhum desses instrumentos entrega a quem descarta: <em>(a)</em> uma lista local consolidada e filtrável de onde entregar cada tipo de aparelho; <em>(b)</em> qualquer comprovação do que aconteceu com o aparelho depois da entrega; ou <em>(c)</em> garantia de que os dados do dispositivo foram destruídos. O controle existe <strong>para o regulador</strong> — agregado e a posteriori; não existe <strong>para o cidadão</strong> — individualizado e verificável.</li>
+    </ul>
+
+    <h3>1.6 Onde a tecnologia pode contribuir</h3>
+    <p>Exatamente na lacuna acima. A parte do problema que software resolve bem é <strong>registrar, tornar consultável e tornar difícil de falsificar</strong> o caminho de um objeto físico entre organizações que não confiam umas nas outras — o mesmo problema de cadeia de custódia já resolvido em logística e em perícia.</p>
+  </section>
+
+  <!-- 2 ------------------------------------------------------------ -->
+  <section id="evidencias">
+    <h2 class="secao"><span class="n">2</span> Evidências</h2>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Evidência</th>
+            <th scope="col">Fonte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="ref">E1</td><td>Foram gerados <strong>62 milhões de toneladas</strong> de e-waste no mundo em 2022 — média de 7,8 kg por habitante.</td><td>Global E-waste Monitor 2024 (ITU/UNITAR)</td></tr>
+          <tr><td class="ref">E2</td><td>Apenas <strong>22,3%</strong> dessa massa foi documentada como formalmente coletada e reciclada de modo ambientalmente adequado.</td><td>Global E-waste Monitor 2024</td></tr>
+          <tr><td class="ref">E3</td><td>A geração de e-waste cresce <strong>cinco vezes mais rápido</strong> que a reciclagem documentada; projeção de <strong>82 Mt em 2030</strong>.</td><td>UNITAR (2024)</td></tr>
+          <tr><td class="ref">E4</td><td>O Brasil gerou <strong>2,4 milhões de toneladas</strong> em 2022 — maior gerador da América Latina e 5º do mundo.</td><td>Global E-waste Monitor 2024, via imprensa nacional</td></tr>
+          <tr><td class="ref">E5</td><td>No Brasil, apenas cerca de <strong>3%</strong> do e-waste é coletado e reciclado formalmente.</td><td>idem</td></tr>
+          <tr><td class="ref">E6</td><td>A PNRS obriga a logística reversa de eletroeletrônicos desde 2010.</td><td>Lei 12.305/2010, art. 33</td></tr>
+          <tr><td class="ref">E7</td><td>Meta de <strong>17% até 2025</strong>, em <strong>400 municípios</strong> acima de 80 mil habitantes, com <strong>1 ponto por 25 mil habitantes</strong> e cerca de 5.000 pontos previstos.</td><td>Decreto 10.240/2020</td></tr>
+          <tr><td class="ref">E8</td><td><strong>Cinco municípios de MS</strong> superam 80 mil habitantes e estão sob essa obrigação; o estado tem 2.757.013 habitantes.</td><td>IBGE, Censo 2022</td></tr>
+          <tr><td class="ref">E9</td><td>Um arquivo “apagado” permanece recuperável até ser sobrescrito: o sistema remove o ponteiro, não o conteúdo.</td><td>Fundamento de sistemas de arquivos; ver NIST SP 800-88</td></tr>
+          <tr><td class="ref">E10</td><td>A LGPD responsabiliza pelo dado em todo o ciclo de vida, inclusive no descarte; multa de até 2% do faturamento, limitada a R$ 50 mi por infração.</td><td>Lei 13.709/2018</td></tr>
+          <tr><td class="ref">E11</td><td>Estudo com 200 HDs usados comprados no mercado de segunda mão encontrou dados recuperáveis em cerca de <strong>dois terços</strong> deles.</td><td>Univ. de Hertfordshire (2019) — <span class="aviso-fonte">fonte primária a confirmar</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pendencias">
+      <h4>Lacunas de evidência a fechar até a Etapa 3</h4>
+      <p>Registramos como pendências, e não como fatos:</p>
+      <ol>
+        <li><strong>Quantos pontos de coleta de e-waste existem hoje em Campo Grande</strong> e nos demais municípios de MS acima de 80 mil habitantes — a comparar com os ~59 da tabela 1.2. Fontes a consultar: Green Eletron, ABREE, IMASUL, SEMADUR/PMCG.</li>
+        <li><strong>Existência e conteúdo de política municipal ou estadual</strong> de logística reversa em MS.</li>
+        <li><strong>Confirmação da fonte primária de E11</strong>, e busca de estudo equivalente brasileiro.</li>
+        <li><strong>Dado primário:</strong> questionário curto na turma e em empresas de TI locais sobre onde está hoje o aparelho obsoleto e por que ainda não foi descartado. É a evidência que amarra a Barreira 3 ao contexto de MS.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 3 ------------------------------------------------------------ -->
+  <section id="objetivos">
+    <h2 class="secao"><span class="n">3</span> Objetivos</h2>
+
+    <h3>3.1 Objetivo geral</h3>
+    <div class="objetivo-geral">
+      <p>Desenvolver e demonstrar uma solução web que <strong>torne verificável o destino de resíduos eletrônicos em Mato Grosso do Sul</strong>, ligando quem descarta ao ponto de coleta e registrando, etapa por etapa, a cadeia de custódia do aparelho até a reciclagem — de modo que quem entregou possa <strong>comprovar</strong> o que aconteceu com ele, em vez de depender de confiança cega.</p>
+    </div>
+
+    <h3>3.2 Objetivos específicos</h3>
+    <ol>
+      <li><strong>Mapear</strong> os pontos de coleta de MS e disponibilizá-los com filtro por município e por tipo de resíduo aceito.</li>
+      <li><strong>Identificar</strong> cada aparelho entregue com um código único e um QR Code impresso em etiqueta, que acompanha o objeto por toda a cadeia.</li>
+      <li><strong>Registrar</strong> a passagem por cada etapa — registro, coleta, triagem, transporte, processamento, certificação —, com autoria e local carimbados pelo servidor, nunca informados pelo formulário.</li>
+      <li><strong>Impedir</strong> que uma etapa seja declarada fora de ordem, e que um registro já gravado seja alterado ou apagado.</li>
+      <li><strong>Emitir atestado de apagamento seguro</strong> na triagem, recusando método ineficaz para o tipo de mídia declarado.</li>
+      <li><strong>Abrir a consulta pública</strong> do histórico por código, sem exigir cadastro.</li>
+      <li><strong>Consolidar indicadores</strong> de massa desviada do aterro, materiais recuperados e gargalos da cadeia, para uso de gestores.</li>
+      <li><strong>Validar</strong> a solução por suíte de testes automatizados e por roteiro de demonstração reproduzível.</li>
+    </ol>
+  </section>
+
+  <!-- 4 ------------------------------------------------------------ -->
+  <section id="sustentabilidade">
+    <h2 class="secao"><span class="n">4</span> Relação com sustentabilidade</h2>
+
+    <p>O enunciado exige que a relação esteja <strong>na própria solução, e não apenas na justificativa</strong>. Abaixo, o mecanismo em cada dimensão — o que no sistema produz o efeito, e não o efeito genérico que se espera dele.</p>
+
+    <div class="dimensao">
+      <h3>Ambiental</h3>
+      <ul>
+        <li>Cada aparelho registrado e conduzido até a etapa final é <strong>massa desviada do aterro</strong>, contabilizada por peso. O painel converte essa massa em indicadores de material recuperado e de emissão evitada.</li>
+        <li>O sistema <strong>impede a declaração vazia</strong>: para um aparelho constar como reciclado, ele precisa ter passado, na ordem, por cada etapa anterior, cada uma assinada por uma conta com permissão. Uma máquina de estados recusa o salto. É a diferença entre <em>relatar</em> reciclagem e <em>comprovar</em> reciclagem.</li>
+        <li>O histórico é <strong>somente de acréscimo</strong>, garantido pelo próprio banco de dados: um registro de etapa não pode ser alterado nem apagado depois de gravado.</li>
+      </ul>
+    </div>
+
+    <div class="dimensao">
+      <h3>Social</h3>
+      <ul>
+        <li>A <strong>consulta pública por código não exige cadastro</strong>: quem tem a etiqueta na mão vê a trilha inteira. Fecha a assimetria em que o cidadão entrega e nunca mais sabe do aparelho.</li>
+        <li>O <strong>atestado de apagamento</strong> ataca a Barreira 3 diretamente: quem recebe declara qual era a mídia e como os dados foram destruídos, e o sistema recusa a combinação ineficaz. Reduz o risco que faz o aparelho ficar na gaveta e dá à empresa um documento para a prestação de contas da LGPD.</li>
+        <li>Funciona em <strong>celular e offline</strong>, porque a leitura da etiqueta acontece de pé, num galpão, onde a rede é ruim.</li>
+      </ul>
+    </div>
+
+    <div class="dimensao">
+      <h3>Econômica</h3>
+      <ul>
+        <li>Materiais de volta à cadeia produtiva — <strong>economia circular</strong> —, com registro de quanto e de onde.</li>
+        <li><strong>Previsibilidade de volume</strong> para cooperativas e recicladoras, que hoje operam sem visibilidade do que está a caminho.</li>
+        <li>Instrumento de <strong>comprovação de meta</strong> para quem responde pelo Decreto 10.240/2020, hoje apurada de forma agregada.</li>
+      </ul>
+    </div>
+
+    <div class="dimensao">
+      <h3>Objetivos de Desenvolvimento Sustentável</h3>
+      <p>Contribui diretamente para o <strong>ODS 12</strong> (consumo e produção responsáveis — meta 12.5, redução da geração de resíduos por reciclagem) e para o <strong>ODS 11</strong> (cidades e comunidades sustentáveis — meta 11.6, gestão de resíduos municipais), com apoio ao <strong>ODS 3</strong> pela redução da contaminação por metais pesados.</p>
+      <ul class="ods">
+        <li>ODS 12 · Consumo e produção responsáveis</li>
+        <li>ODS 11 · Cidades sustentáveis</li>
+        <li>ODS 3 · Saúde e bem-estar</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5 ------------------------------------------------------------ -->
+  <section id="disciplinas">
+    <h2 class="secao"><span class="n">5</span> Articulação com as disciplinas</h2>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Disciplina</th>
+            <th scope="col">Como aparece na solução</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Algoritmos e Programação</strong></td>
+            <td>Máquina de estados da cadeia de custódia; geração e validação do código de rastreio com dígito verificador; decodificação de QR Code.</td>
+          </tr>
+          <tr>
+            <td><strong>Arquitetura de Computadores</strong></td>
+            <td>Regra do atestado de apagamento: sobrescrita de setores é ineficaz em memória flash por causa do <em>wear leveling</em>, que redireciona a escrita para outro bloco físico. O sistema recusa essa combinação — é a arquitetura da mídia determinando a regra de negócio.</td>
+          </tr>
+          <tr>
+            <td><strong>Redes de Computadores</strong></td>
+            <td>Cliente/servidor sobre HTTP; sessão por cookie assinado; operação em rede local para leitura das etiquetas no ponto de coleta; funcionamento offline.</td>
+          </tr>
+          <tr>
+            <td><strong>Sistemas Operacionais</strong></td>
+            <td>Concorrência e transações: duas leituras simultâneas da mesma etiqueta não podem gravar a mesma etapa duas vezes; controle de acesso por papel; persistência em disco.</td>
+          </tr>
+          <tr>
+            <td><strong>Projeto de Extensão em Sustentabilidade e Diversidade</strong></td>
+            <td>Definição do problema, público beneficiado e indicadores do painel.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 ------------------------------------------------------------ -->
+  <section id="verificacao">
+    <h2 class="secao"><span class="n">6</span> Como verificar se a solução funciona</h2>
+    <p>Antecipando a questão 8 do enunciado, os critérios de validação já definidos:</p>
+    <ul>
+      <li><strong>Cenários de demonstração</strong> de ponta a ponta: registrar um aparelho, imprimir a etiqueta, ler o QR em cada etapa e consultar a trilha pública pelo código.</li>
+      <li><strong>Testes de recusa</strong>, que são os que provam a regra: pular etapa, retroceder, gravar sem permissão, declarar método de apagamento ineficaz para a mídia, alterar um registro já gravado. Todos devem ser recusados <strong>pelo servidor</strong>, inclusive quando a chamada não passa pela tela.</li>
+      <li><strong>Suíte automatizada</strong> executada a cada mudança.</li>
+      <li><strong>Indicadores</strong> do painel conferidos contra os dados de entrada.</li>
+    </ul>
+  </section>
+
+  <!-- 7 ------------------------------------------------------------ -->
+  <section id="referencias">
+    <h2 class="secao"><span class="n">7</span> Referências iniciais</h2>
+
+    <div class="referencias">
+      <p>BALDÉ, C. P. et al. <strong>The Global E-waste Monitor 2024</strong>. Genebra e Bonn: União Internacional de Telecomunicações (ITU) e Instituto das Nações Unidas para Formação e Pesquisa (UNITAR), 2024. Disponível em: <a href="https://ewastemonitor.info/the-global-e-waste-monitor-2024/">https://ewastemonitor.info/the-global-e-waste-monitor-2024/</a></p>
+
+      <p>UNITAR. <strong>Global E-waste Monitor 2024: Electronic Waste Rising Five Times Faster than Documented E-waste Recycling</strong>. Genebra, 2024. Disponível em: <a href="https://unitar.org/about/news-stories/press/global-e-waste-monitor-2024-electronic-waste-rising-five-times-faster-documented-e-waste-recycling">https://unitar.org/about/news-stories/press/global-e-waste-monitor-2024-electronic-waste-rising-five-times-faster-documented-e-waste-recycling</a></p>
+
+      <p>BRASIL. <strong>Lei nº 12.305, de 2 de agosto de 2010</strong>. Institui a Política Nacional de Resíduos Sólidos. Diário Oficial da União, Brasília, 3 ago. 2010.</p>
+
+      <p>BRASIL. <strong>Decreto nº 10.240, de 12 de fevereiro de 2020</strong>. Regulamenta a implementação de sistema de logística reversa de produtos eletroeletrônicos de uso doméstico e seus componentes. Diário Oficial da União, Brasília, 13 fev. 2020.</p>
+
+      <p>BRASIL. <strong>Lei nº 13.709, de 14 de agosto de 2018</strong>. Lei Geral de Proteção de Dados Pessoais (LGPD). Diário Oficial da União, Brasília, 15 ago. 2018.</p>
+
+      <p>IBGE. <strong>Censo Demográfico 2022</strong>. Rio de Janeiro: Instituto Brasileiro de Geografia e Estatística, 2023. Disponível em: <a href="https://www.ibge.gov.br/cidades-e-estados/ms.html">https://www.ibge.gov.br/cidades-e-estados/ms.html</a></p>
+
+      <p>KISSEL, R. et al. <strong>NIST Special Publication 800-88 Revision 1: Guidelines for Media Sanitization</strong>. Gaithersburg: National Institute of Standards and Technology, 2014.</p>
+
+      <p>ORGANIZAÇÃO DAS NAÇÕES UNIDAS. <strong>Transformando Nosso Mundo: a Agenda 2030 para o Desenvolvimento Sustentável</strong>. Nova York: ONU, 2015. (ODS 11 e 12.)</p>
+
+      <p>CORREIO BRAZILIENSE. <strong>Mundo gera 62 milhões de toneladas de lixo eletrônico em 2022, alerta relatório da ONU</strong>. Brasília, 2024.</p>
+    </div>
+
+    <p class="nota-metodo"><strong>Nota de método.</strong> As referências acima são as consultadas até esta etapa. Os itens registrados como pendentes na seção 2 — cobertura real de pontos de coleta em MS, política municipal ou estadual, e fonte primária da evidência E11 — serão incorporados na Etapa 3 (pesquisa de soluções existentes, requisitos e viabilidade), junto com o levantamento de dado primário.</p>
+  </section>
+
+</div>
+
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm; }
+  @media print {
+    /* Num documento entregue, o sumário é esperado — ao contrário da página web,
+       onde a navegação já está a um scroll de distância. */
+    .sumario { display: block !important; border: 0; border-top: 1px solid var(--borda);
+               border-bottom: 1px solid var(--borda); padding: .9rem 0; background: none;
+               break-inside: avoid; }
+    .capa { break-after: avoid; }
+    body { font-size: 10pt; line-height: 1.5; }
+    h2.secao { margin-top: .4rem; }
+    .referencias p { break-inside: avoid; }
+    tfoot td { color: #444; }
+  }
+</style>
+</body>
+</html>
