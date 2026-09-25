@@ -731,9 +731,8 @@ execução.</p>
         │
    store.js  ...... ÚNICA porta de dados  ──HTTP/JSON──▶  app.py  ..... rotas da API
         │                                                    │
-   model.js  ...... regras (validação de tela)          modelo.py  ... regras (validação real)
-   indicadores.js . cálculo dos indicadores             banco.py  .... SQL e transações
-   qr.js  ......... geração e leitura do QR
+   model.js  ...... regras e indicadores                modelo.py  ... regras (validação real)
+   qr.js  ......... geração e leitura do QR             banco.py  .... SQL e transações
                                                             │
                                                      SQLite (etrilha.db)
 </code></pre>
@@ -2022,7 +2021,7 @@ pessoas mexendo no mesmo código.</p>
 python -m pytest
 python -m pytest --cov=backend --cov-report=term-missing
 </code></pre>
-<p><strong>351 testes, 19 segundos, 94% do código do servidor</strong>, assim distribuídos:</p>
+<p><strong>366 testes, 21 segundos, 92% do código do servidor</strong>, assim distribuídos:</p>
 <table>
 <thead>
 <tr>
@@ -2045,7 +2044,7 @@ python -m pytest --cov=backend --cov-report=term-missing
 </tr>
 <tr>
 <td><code>testes/teste_api_admin.py</code></td>
-<td>Papéis, exclusão com re-autenticação, trilha de administração, último administrador</td>
+<td>Papéis, exclusão com re-autenticação, trilha de administração, último administrador e a <strong>conta de reserva</strong>: que ela não aparece na listagem, que as rotas a recusam como se não existisse, e que não conta como o admin que sobra</td>
 </tr>
 <tr>
 <td><code>testes/teste_api_contas.py</code></td>
@@ -2057,7 +2056,7 @@ python -m pytest --cov=backend --cov-report=term-missing
 </tr>
 <tr>
 <td><code>testes/teste_paginas.py</code></td>
-<td>Portão de autenticação no nível do HTML e a allowlist de arquivos entregues — a seção 9.9</td>
+<td>Portão de autenticação no nível do HTML, a allowlist de arquivos entregues (seção 9.9) e a recusa do leitor de QR a quem não pode gravar etapas</td>
 </tr>
 <tr>
 <td><code>testes/teste_paridade_front.py</code></td>
@@ -2083,7 +2082,7 @@ python -m pytest --cov=backend --cov-report=term-missing
 </tr>
 <tr>
 <td><code>backend/app.py</code></td>
-<td>89%</td>
+<td>84%</td>
 </tr>
 </tbody>
 </table>

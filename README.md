@@ -60,7 +60,7 @@ python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-São 351 testes em cerca de 19 segundos, cobrindo 94% do servidor. Cada teste
+São 366 testes em cerca de 21 segundos, cobrindo 92% do servidor. Cada teste
 trabalha numa **cópia temporária** do banco, então rodar a suíte não toca em
 `backend/etrilha.db` nem nas contas da demonstração. Para o número de cobertura:
 
@@ -211,9 +211,8 @@ troca o cadastro pela folha de etiquetas.
         │
    store.js  ...... ÚNICA porta de dados  ──HTTP/JSON──▶  app.py  ..... rotas da API
         │                                                    │
-   model.js  ...... regras (validação de tela)          modelo.py  ... regras (validação real)
-   indicadores.js . cálculo dos indicadores             banco.py  .... SQL e transações
-   qr.js  ......... geração e leitura do QR
+   model.js  ...... regras e indicadores                modelo.py  ... regras (validação real)
+   qr.js  ......... geração e leitura do QR             banco.py  .... SQL e transações
                                                             │
                                                      SQLite (etrilha.db)
 ```
@@ -288,11 +287,11 @@ backend/modelo.py   Regras impostas pelo servidor (etapas, código, categorias)
 backend/schema.sql  DDL, índices e gatilhos de somente-acréscimo
 dados/*.json        Pontos de coleta e itens de demonstração (fonte única)
 
-js/model.js       Etapas, categorias, composição material, código, Haversine, mapa
+js/model.js       Etapas, categorias, composição material, código, Haversine,
+                  mapa e o cálculo dos indicadores do painel (funções puras)
 js/store.js       Camada de dados — ÚNICA porta de acesso à API — conta e papéis
-js/indicadores.js Cálculo dos indicadores do painel (funções puras)
 js/qr.js          Geração e leitura de QR Code
-js/ui.js          Cabeçalho, avisos, formatação e linha do tempo
+js/ui.js          Cabeçalho, avisos, formatação, diálogos e linha do tempo
 
 vendor/qrcode.js  qrcode-generator (MIT) — geração
 vendor/jsqr.js    jsQR (Apache-2.0) — leitura, quando não há BarcodeDetector

@@ -319,9 +319,8 @@ execução.
         │
    store.js  ...... ÚNICA porta de dados  ──HTTP/JSON──▶  app.py  ..... rotas da API
         │                                                    │
-   model.js  ...... regras (validação de tela)          modelo.py  ... regras (validação real)
-   indicadores.js . cálculo dos indicadores             banco.py  .... SQL e transações
-   qr.js  ......... geração e leitura do QR
+   model.js  ...... regras e indicadores                modelo.py  ... regras (validação real)
+   qr.js  ......... geração e leitura do QR             banco.py  .... SQL e transações
                                                             │
                                                      SQLite (etrilha.db)
 ```
@@ -1081,24 +1080,24 @@ python -m pytest
 python -m pytest --cov=backend --cov-report=term-missing
 ```
 
-**351 testes, 19 segundos, 94% do código do servidor**, assim distribuídos:
+**366 testes, 21 segundos, 92% do código do servidor**, assim distribuídos:
 
 | Arquivo | Cobre |
 |---|---|
 | `testes/teste_modelo.py` | Máquina de estados, dígito verificador, peso, atestado de apagamento, papéis. Sem I/O e sem banco: é o módulo de regras isolado |
 | `testes/teste_api_autorizacao.py` | Matriz das 21 rotas × papéis. Verifica o RNF06 e a distinção entre **401** (falta entrar) e **403** (entrou e não pode) |
 | `testes/teste_api_itens.py` | Cadeia de custódia inteira pela API, e as duas regras de assinatura: o responsável e o ponto vêm da sessão, não do corpo |
-| `testes/teste_api_admin.py` | Papéis, exclusão com re-autenticação, trilha de administração, último administrador |
+| `testes/teste_api_admin.py` | Papéis, exclusão com re-autenticação, trilha de administração, último administrador e a **conta de reserva**: que ela não aparece na listagem, que as rotas a recusam como se não existisse, e que não conta como o admin que sobra |
 | `testes/teste_api_contas.py` | Cadastro, login, anti-enumeração de e-mail, fixação de sessão, troca de senha |
 | `testes/teste_banco_gatilhos.py` | Os seis gatilhos de somente-acréscimo, chaves estrangeiras e `CHECK` — o RNF07 |
-| `testes/teste_paginas.py` | Portão de autenticação no nível do HTML e a allowlist de arquivos entregues — a seção 9.9 |
+| `testes/teste_paginas.py` | Portão de autenticação no nível do HTML, a allowlist de arquivos entregues (seção 9.9) e a recusa do leitor de QR a quem não pode gravar etapas |
 | `testes/teste_paridade_front.py` | Compara as tabelas de `backend/modelo.py` com as de `js/model.js`, que a seção 9.2 duplica de propósito |
 
 | Módulo | Cobertura |
 |---|---|
 | `backend/modelo.py` | 100% |
 | `backend/banco.py` | 98% |
-| `backend/app.py` | 89% |
+| `backend/app.py` | 84% |
 
 O que falta em `app.py` é `main()`, a descoberta do IP na rede e a impressão das
 credenciais — código que só roda ao subir o servidor.
