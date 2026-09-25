@@ -26,5 +26,10 @@ htmlcov/
 docs/PRE-ENTREGA-*.pdf
 docs/RELATORIO-TECNICO.pdf
 
+# Capturas de tela soltas na raiz. A barra inicial ancora a regra AQUI: as
+# evidências de teste que a Pré-Entrega 3 exige vão para docs/ e continuam
+# versionadas — é justamente o material que precisa acompanhar o relatório.
+/*.png
+
 # Cópia da versão anterior: o histórico do git já cumpre esse papel
 backup/
