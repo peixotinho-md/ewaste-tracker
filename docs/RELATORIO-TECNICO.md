@@ -57,8 +57,18 @@ logística reversa é opaca entre o ponto de coleta e a recicladora.
 Estado de Mato Grosso do Sul. O recorte é estadual porque a estrutura de coleta é
 desigual: a capital concentra ecopontos e cooperativas, enquanto municípios do
 interior dependem de campanhas pontuais.
-> **[PREENCHER]** Levantar quantos dos 79 municípios de MS têm ponto de coleta de
-> e-waste cadastrado, e citar a fonte (prefeituras, IMASUL, Green Eletron).
+Levantamento em Campo Grande (setembro de 2026): a rede **Green Eletron**, gestora
+do sistema nacional de logística reversa, mantém **8 pontos** na capital; a
+prefeitura opera **5 ecopontos**, que recebem eletroeletrônicos junto com entulho,
+móveis e podas; e a **AGEMS** tornou-se ponto de coleta em parceria com a Recic.LE.
+São cerca de **14 locais** — contra os **~36** que a regra do Decreto 10.240/2020
+(1 ponto por 25 mil habitantes) implicaria para os 897.938 habitantes da cidade.
+Cobertura de aproximadamente **39%**, e apenas 9 deles são específicos de
+eletroeletrônicos.
+
+> **[PREENCHER]** Estender o levantamento a Dourados, Três Lagoas, Corumbá e Ponta
+> Porã — os outros quatro municípios de MS acima de 80 mil habitantes, também
+> alcançados pelo Decreto.
 
 **3. Quem é afetado?**
 - Moradores urbanos com eletrônicos obsoletos sem destino;
@@ -73,8 +83,21 @@ interior dependem de campanhas pontuais.
   valor de mercado e evitariam mineração primária;
 - *Sociais:* perda de renda para cooperativas de catadores e exposição de
   trabalhadores a resíduos perigosos em desmontagem informal.
-> **[PREENCHER]** Buscar estimativa de geração de e-waste em MS (t/ano) — Global
-> E-waste Monitor traz o dado nacional; verificar Plano Estadual de Resíduos Sólidos.
+**Quanto isso representa em MS.** Não há medição de e-waste por estado. O que se
+pode afirmar é o rateio do dado nacional por habitante, e é assim que deve ser
+lido — estimativa, não medição:
+
+| | |
+|---|---|
+| Brasil, 2022 (Global E-waste Monitor 2024) | 2.443.000 t |
+| População do Brasil (Censo 2022) | 203.080.756 hab |
+| Geração por habitante | **12,0 kg/hab/ano** |
+| População de MS (Censo 2022) | 2.757.013 hab |
+| **Estimativa para MS** | **~33.200 t/ano** |
+| **Estimativa para Campo Grande** | **~10.800 t/ano** |
+
+Aplicando a taxa nacional de coleta formal (cerca de 3%), algo em torno de
+**32.200 t/ano** em MS não teriam destinação comprovada.
 
 **5. Como o problema é tratado atualmente?**
 - Ecopontos municipais e pontos de entrega voluntária, divulgados de forma
@@ -84,9 +107,20 @@ interior dependem de campanhas pontuais.
 
 Nenhum desses instrumentos oferece **rastreabilidade por item**: a informação para
 por "recebemos o material".
-> **[PREENCHER]** Descrever o que existe hoje especificamente em MS e, se possível,
-> conversar com um ecoponto ou cooperativa para relatar como o registro é feito
-> na prática (planilha? papel? nada?).
+**O que existe em MS.** O **Plano Estadual de Resíduos Sólidos (PERS/MS)**,
+gerido pelo IMASUL, organiza a política em 9 programas e 139 metas e ações — e um
+dos três programas que concentram mais de 80% do investimento previsto é
+justamente a **implementação de um sistema de informações de gestão**, que é a
+lacuna que este projeto endereça. No campo da logística reversa, o estado
+estruturou sistemas próprios para **baterias de chumbo-ácido** (parceria IBER,
+Semagro e IMASUL) e para **embalagens de óleo lubrificante** (Instituto Jogue
+Limpo); para eletroeletrônicos, a operação em MS é a da rede nacional
+Green Eletron e da ABREE, sem instrumento estadual específico. O **ICMS
+Ecológico** é o mecanismo que premia municípios pela gestão adequada de resíduos.
+
+> **[PREENCHER]** Visitar um ecoponto ou cooperativa e relatar como o registro é
+> feito na prática — planilha, papel ou nada. É o dado que fecha o argumento de
+> que a rastreabilidade por item não existe hoje.
 
 **6. Onde a tecnologia poderá contribuir?**
 Na etapa que hoje não tem registro nenhum: o percurso entre a entrega e a
@@ -118,8 +152,10 @@ sem conexão e conferência manual dos indicadores do painel.
   uma barreira concreta e resolvível com tecnologia;
 - O tema tem aplicação direta no contexto profissional de TI, área que gera
   e-waste constantemente: HDs, impressoras, servidores e cabeamento.
-> **[PREENCHER]** Acrescentar uma evidência local: notícia, dado da prefeitura,
-> foto de descarte irregular em MS ou depoimento de cooperativa.
+**Evidência local.** Em Mato Grosso do Sul, **47,8% dos resíduos sólidos ainda vão
+para lixões** e **menos de 1% do lixo doméstico recebe tratamento**. O problema
+que este projeto ataca — destinação sem comprovação — não é hipótese distante:
+é o caso da maior parte do que se descarta no estado.
 
 ---
 
@@ -168,8 +204,11 @@ comprovação da destinação final.
 
 **Lacuna identificada:** nenhuma das soluções acompanha o *item individual* de
 ponta a ponta nem devolve essa informação a quem entregou o aparelho.
-> **[PREENCHER]** Verificar se algum município de MS já usa aplicativo próprio de
-> coleta e comparar. Registrar as URLs consultadas nas Referências.
+**Em MS.** Campo Grande publica os ecopontos na Carta de Serviços ao Usuário e a
+concessionária CG Solurb atende por telefone; a Green Eletron mantém um
+localizador nacional de pontos. Nenhum dos dois acompanha o aparelho depois da
+entrega — são diretórios de endereços, não sistemas de rastreio. Não localizamos
+aplicativo municipal de MS que registre a destinação por item.
 
 ---
 
@@ -768,6 +807,30 @@ Marcos previstos no cronograma da DAC:
 | 9 | 29/10 | Entrega: MVP + Relatório Técnico |
 | 10 | 03–06/11 | Apresentação final |
 
+### 10.1 Cronograma interno
+
+O cronograma da DAC marca as entregas; este marca o trabalho entre elas. O que
+está concluído foi verificado pela suíte de testes e pelo roteiro da seção 11.
+
+| # | Frente | Prazo interno | Situação |
+|---|---|---|---|
+| 1 | Modelo de domínio, código de rastreio e máquina de estados | 21/08 | Concluído |
+| 2 | Telas públicas: consulta por código e trilha | 21/08 | Concluído |
+| 3 | Back-end, banco e API; cadeia de custódia gravada no servidor | 27/08 | Concluído |
+| 4 | Contas, papéis e administração | 31/08 | Concluído |
+| 5 | Atestado de apagamento seguro | 31/08 | Concluído |
+| 6 | Suíte de testes automatizados | 31/08 | Concluído — 366 testes |
+| 7 | Conta de reserva e recuperação de acesso pelo terminal | 09/09 | Concluído |
+| 8 | Levantamento de dados locais de MS | 25/09 | Parcial — Campo Grande feito; interior pendente |
+| 9 | Competência por etapa (RF21) | 16/10 | Não iniciado |
+| 10 | Teste em celular real, em campo | 16/10 | Não iniciado |
+| 11 | Decisão sobre o dígito verificador | 16/10 | Em aberto — ver Limitações |
+| 12 | Evidências de teste em imagem para o relatório | 23/10 | Não iniciado |
+| 13 | Consolidação do Relatório Técnico | 23/10 | Em andamento |
+
+O caminho crítico até 23/10 são os itens 9, 10 e 12: o primeiro é a limitação nº 1
+do projeto, e os outros dois são exigência explícita da Pré-Entrega 3.
+
 ---
 
 ## 11. Testes
@@ -1091,8 +1154,39 @@ O obstáculo real não é técnico, é de **adesão**: a solução só funciona 
 pontos de coleta, cooperativas e recicladoras registrarem as leituras. Isso exige
 articulação institucional com prefeituras e com a rede de logística reversa.
 
-> **[PREENCHER]** Estimar o custo por etiqueta e por mês de hospedagem, e indicar
-> qual órgão ou entidade seria o operador natural da plataforma em MS.
+**Custo estimado.** Ordens de grandeza, para dimensionar — não são cotações:
+
+| Item | Estimativa |
+|---|---|
+| Etiqueta adesiva com QR (papel couché, impressão a laser) | R$ 0,05 a R$ 0,15 por unidade |
+| Hospedagem (VPS básico, aplicação + SQLite) | R$ 30 a R$ 60 por mês |
+| Domínio `.ms.gov.br` ou `.org.br` | R$ 40 por ano |
+| Leitor de QR | R$ 0 — o celular que o operador já tem |
+
+O gasto relevante não é de infraestrutura: é a **articulação institucional**.
+
+**Quem operaria.** O candidato natural é o **IMASUL**, que já gere o PERS/MS e
+cujo plano prevê um sistema de informações de gestão. A **AGEMS**, como agência
+reguladora dos serviços públicos e já ponto de coleta, é a alternativa. No nível
+municipal, a SEMADUR e a concessionária CG Solurb operariam a ponta em Campo
+Grande. O **ICMS Ecológico** é o incentivo que já existe para o município aderir.
+
+---
+
+### 12.1 Riscos e mitigação
+
+Riscos do projeto, não do sistema. Probabilidade e impacto são julgamento da
+equipe, para ordenar o que merece atenção — não medida.
+
+| # | Risco | Prob. | Impacto | O que reduz |
+|---|---|---|---|---|
+| R1 | **Adesão**: pontos de coleta e recicladoras não registram as leituras, e a trilha fica vazia no meio | Alta | Alto | É o risco principal, e não é técnico. Reduz-se começando por um ponto só, com um operador só, e mostrando o certificado pronto antes de pedir adesão |
+| R2 | Dados locais de MS não chegam a tempo do relatório final | Média | Médio | Campo Grande já levantado; o interior é extensão do mesmo método, não trabalho novo |
+| R3 | Competência por etapa (RF21) não ser implementada até 29/10 | Média | Médio | Já está documentada como limitação nº 1, com o desenho definido. Se não entrar, entra como melhoria futura justificada |
+| R4 | Dígito verificador: corrigir invalida códigos já impressos | Baixa | Médio | A decisão está registrada e medida (≈5% de escape). Enquanto as etiquetas são de demonstração, o custo de corrigir só cresce |
+| R5 | Câmera do scanner não abrir na apresentação | Média | Alto | Exige `localhost` ou HTTPS. Mitigado: a digitação manual do código faz o mesmo caminho, e o roteiro prevê o QR ampliado em tela |
+| R6 | Perda de acesso à conta de administrador na banca | Baixa | Alto | Resolvido: conta de reserva e `--nova-senha` no terminal |
+| R7 | Indisponibilidade do servidor durante a demonstração | Baixa | Alto | Roda local, sem serviço externo; o service worker mantém as telas públicas de pé |
 
 ---
 
@@ -1207,15 +1301,60 @@ não um formulário.
 
 ## 16. Conclusão
 
-> **[PREENCHER]** Retomar a pergunta da DAC — *"Como a Tecnologia da Informação
-> pode contribuir para solucionar ou reduzir um problema real relacionado à
-> sustentabilidade?"* — e responder com base no que o protótipo demonstrou.
->
-> Argumento central sugerido: a contribuição da TI aqui não foi criar mais um
-> cadastro, e sim **produzir informação que antes não existia** — a prova de que
-> o aparelho chegou à reciclagem. Essa informação muda o comportamento de três
-> públicos ao mesmo tempo: dá retorno ao cidadão, dá conformidade à empresa e dá
-> ao gestor público a localização exata do gargalo.
+A DAC pergunta: *"Como a Tecnologia da Informação pode contribuir para
+solucionar ou reduzir um problema real relacionado à sustentabilidade?"*
+
+A resposta deste projeto é que **a contribuição da TI não foi criar mais um
+cadastro, e sim produzir informação que antes não existia** — a prova de que um
+aparelho específico chegou à reciclagem.
+
+O problema não era de logística. Pontos de coleta existem: levantamos 14 em
+Campo Grande, entre a rede Green Eletron, os ecopontos municipais e a AGEMS. A
+lei também existe desde 2010, e o Decreto 10.240/2020 fixou metas. O que não
+existia era **prova**. Quem entrega um celular no ecoponto não tem, hoje, nenhum
+meio de saber se ele foi reciclado — e, sem prova, entregar no lugar certo e
+jogar no lixo comum são, do ponto de vista de quem descarta, experiências
+idênticas. É essa indiferença que corrói a adesão.
+
+O protótipo demonstrou que fechar essa lacuna é um problema de software, e um
+problema tratável. Três mecanismos, cada um verificável:
+
+1. **Identidade que sobrevive ao trajeto.** Um código com dígito verificador,
+   impresso em QR, acompanha o objeto físico entre organizações que não
+   compartilham sistema nem confiança.
+2. **Registro que não pode ser fabricado nem desfeito.** A etapa só é aceita na
+   ordem correta, assinada por uma conta com permissão, com autoria e local
+   carimbados pelo servidor — nunca informados pelo formulário. Uma vez gravada,
+   nem a própria aplicação a altera: os gatilhos do banco recusam `UPDATE` e
+   `DELETE`. É a diferença entre *relatar* reciclagem e *comprovar* reciclagem.
+3. **Devolução da informação a quem descartou.** A consulta por código é
+   pública e não exige cadastro. Quem tem a etiqueta na mão vê a trilha inteira
+   e o certificado ao fim.
+
+O mesmo registro serve a três públicos de uma vez, e é isso que torna a solução
+viável sem depender da boa vontade de um só: dá **retorno** ao cidadão,
+**conformidade** à empresa — que ainda recebe o atestado de apagamento seguro
+exigido pela LGPD — e ao **gestor público** a localização exata do gargalo, em
+vez de um número agregado no fim do ano.
+
+Duas honestidades fecham o argumento. A primeira é que **o obstáculo restante não
+é técnico**: o custo material é desprezível — centavos por etiqueta, dezenas de
+reais por mês de hospedagem, e o leitor é o celular que o operador já tem —, mas
+o sistema só funciona se os pontos de coleta registrarem as leituras. É por isso
+que a adesão encabeça a matriz de riscos, e é por isso que o PERS/MS importa: o
+plano estadual já prevê, entre seus programas prioritários, a implementação de um
+sistema de informações de gestão. A lacuna que este projeto endereça já está
+reconhecida em política pública.
+
+A segunda é que **o que o protótipo não faz está declarado**, e não escondido: a
+competência por etapa, o HTTPS e a fila de gravação offline estão nas Limitações,
+com o desenho de cada uma. Um trabalho que só mostra o que funciona ensina menos
+do que um que diz onde para.
+
+Se há uma tese a levar deste projeto, é esta: em sustentabilidade, **a informação
+verificável é o insumo que falta com mais frequência do que a tecnologia**. O
+e-Trilha MS não recicla nada. Ele torna possível saber — e é o saber que muda o
+comportamento de quem entrega, de quem opera e de quem fiscaliza.
 
 ---
 
@@ -1229,7 +1368,15 @@ não um formulário.
 - FORTI, V. et al. **The Global E-waste Monitor.** UNITAR/UNU/ITU.
 - GREEN ELETRON. *Gestora para logística reversa de eletroeletrônicos.*
   Disponível em: <https://greeneletron.org.br>.
-- **[PREENCHER]** Plano Estadual / Municipal de Resíduos Sólidos de MS.
+- INSTITUTO DE MEIO AMBIENTE DE MATO GROSSO DO SUL. **Plano Estadual de Resíduos
+  Sólidos (PERS/MS)** e **Gestão de Resíduos Sólidos**. Campo Grande: IMASUL.
+  Disponível em: https://www.imasul.ms.gov.br/programas-e-projetos/gestao-de-residuos-solidos/
+- PREFEITURA MUNICIPAL DE CAMPO GRANDE. **Ecopontos — Carta de Serviços ao
+  Usuário**. Disponível em: https://cartadeservicos.campogrande.ms.gov.br/servicos/ecopontos/
+- GREEN ELETRON. **Ponto de Coleta** e **Saiba onde descartar aparelhos
+  eletrônicos e pilhas em Campo Grande**. Disponível em: https://greeneletron.org.br/ponto-de-coleta/
+- UNIVERSITY OF HERTFORDSHIRE; COMPARITECH. **Estudo com 200 discos rígidos de
+  segunda mão**. Hatfield, 2019.
 - **[PREENCHER]** Fonte dos percentuais de composição material por categoria de
   equipamento usados em `js/model.js`.
 - **[PREENCHER]** Fonte dos fatores de CO₂e evitado por material.

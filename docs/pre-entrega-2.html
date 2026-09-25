@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>Pré-Entrega 2 e-Trilha MS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+  :root {
+    --tinta:#16211a; --tinta-media:#47564c; --tinta-fraca:#77857c;
+    --fundo:#f4f7f4; --superficie:#ffffff; --borda:#dde5df; --borda-forte:#b8c8bd;
+    --verde-700:#1b5e33; --verde-600:#22773f; --verde-500:#2f9553; --verde-050:#eef6f0;
+    --terra:#a0631d; --terra-fundo:#fbf3e7;
+    --vermelho:#b23a34; --vermelho-fundo:#fbeceb;
+    --sombra:0 1px 2px rgba(16,56,31,.05), 0 8px 28px rgba(16,56,31,.06);
+    --serif:"Spectral",Georgia,"Times New Roman",serif;
+    --sans:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --tinta:#e6ede8; --tinta-media:#a9b8ae; --tinta-fraca:#7d8c83;
+      --fundo:#0f1712; --superficie:#17211a; --borda:#2a3830; --borda-forte:#3d5145;
+      --verde-700:#6cc78c; --verde-600:#4fb271; --verde-500:#46b06b; --verde-050:#16281c;
+      --terra:#d8a05a; --terra-fundo:#2a2114;
+      --vermelho:#e08b84; --vermelho-fundo:#2c1917;
+      --sombra:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --tinta:#e6ede8; --tinta-media:#a9b8ae; --tinta-fraca:#7d8c83;
+    --fundo:#0f1712; --superficie:#17211a; --borda:#2a3830; --borda-forte:#3d5145;
+    --verde-700:#6cc78c; --verde-600:#4fb271; --verde-500:#46b06b; --verde-050:#16281c;
+    --terra:#d8a05a; --terra-fundo:#2a2114;
+    --vermelho:#e08b84; --vermelho-fundo:#2c1917;
+    --sombra:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--fundo); color: var(--tinta); font-family: var(--sans);
+    font-size: 17px; line-height: 1.62; margin: 0; padding: 0 1.25rem 5rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .folha { max-width: 50rem; margin: 0 auto; }
+
+  .capa { padding: 3.5rem 0 2rem; border-bottom: 2px solid var(--tinta); margin-bottom: 2.5rem; }
+  .eyebrow {
+    font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--verde-600); display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin-bottom: 1.1rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(2.1rem,1.4rem + 3vw,3.2rem);
+    line-height: 1.08; letter-spacing: -.015em; margin: 0 0 .5rem; text-wrap: balance;
+  }
+  .subtitulo {
+    font-family: var(--serif); font-style: italic; font-size: clamp(1.1rem,1rem + .6vw,1.35rem);
+    color: var(--tinta-media); margin: 0 0 2rem; text-wrap: balance;
+  }
+  .ficha { display: grid; grid-template-columns: repeat(auto-fit,minmax(13rem,1fr)); gap: 1.1rem 2rem; }
+  .ficha div { display: grid; gap: .15rem; align-content: start; }
+  .ficha dt { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-fraca); }
+  .ficha dd { margin: 0; font-size: .95rem; }
+
+  .sumario { background: var(--superficie); border: 1px solid var(--borda); padding: 1.25rem 1.5rem; margin-bottom: 3rem; }
+  .sumario h2 { font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-fraca); margin: 0 0 .7rem; }
+  .sumario ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; counter-reset: sum; }
+  .sumario li { counter-increment: sum; margin: 0; }
+  .sumario a { color: var(--tinta); text-decoration: none; display: flex; gap: .7rem; align-items: baseline; padding: .12rem 0; }
+  .sumario a::before { content: counter(sum) "."; font-family: var(--serif); font-weight: 600; color: var(--verde-600); min-width: 1.1rem; font-variant-numeric: tabular-nums; }
+  .sumario a:hover { color: var(--verde-600); text-decoration: underline; }
+
+  section { margin-bottom: 3.25rem; scroll-margin-top: 1.5rem; }
+  h2.secao {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(1.45rem,1.2rem + 1.1vw,1.95rem);
+    line-height: 1.2; letter-spacing: -.01em; margin: 0 0 1.4rem; padding-bottom: .6rem;
+    border-bottom: 1px solid var(--borda-forte); display: flex; gap: .8rem; align-items: baseline; text-wrap: balance;
+  }
+  h2.secao .n { font-size: .82em; color: var(--verde-600); font-variant-numeric: tabular-nums; flex: none; }
+  h3 { font-family: var(--serif); font-weight: 600; font-size: 1.18rem; line-height: 1.3; margin: 2rem 0 .6rem; text-wrap: balance; }
+  h3:first-of-type { margin-top: 0; }
+  h4 { font-family: var(--sans); font-size: .76rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--verde-600); margin: 1.6rem 0 .5rem; }
+
+  p { margin: 0 0 1.05rem; }
+  a { color: var(--verde-600); }
+  ul, ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+  li::marker { color: var(--verde-500); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--verde-050); padding: .08em .35em; border-radius: 3px; color: var(--verde-700); }
+
+  .tabela-caixa { overflow-x: auto; margin: 1.4rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; line-height: 1.45; }
+  thead th {
+    font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--tinta-media); text-align: left;
+    padding: .55rem .7rem; vertical-align: bottom;
+    border-top: 2px solid var(--tinta); border-bottom: 1px solid var(--borda-forte); white-space: nowrap;
+  }
+  tbody td { padding: .6rem .7rem; vertical-align: top; border-bottom: 1px solid var(--borda); }
+  tbody tr:last-child td { border-bottom: 2px solid var(--tinta); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ref { font-family: var(--mono); font-size: .82rem; font-weight: 600; color: var(--verde-600); white-space: nowrap; }
+  tfoot td { padding: .7rem .7rem 0; font-size: .84rem; color: var(--tinta-fraca); border: 0; }
+  .total td { font-weight: 700; }
+
+  .selo { font-size: .74rem; font-weight: 700; letter-spacing: .04em; padding: .12rem .5rem; border-radius: 100px; white-space: nowrap; display: inline-block; }
+  .ok { background: var(--verde-050); color: var(--verde-700); border: 1px solid var(--verde-500); }
+  .parcial { background: var(--terra-fundo); color: var(--terra); border: 1px solid var(--terra); }
+  .pendente { background: transparent; color: var(--tinta-fraca); border: 1px solid var(--borda-forte); }
+
+  .destaque {
+    background: var(--superficie); border: 1px solid var(--borda); border-left: 3px solid var(--verde-500);
+    box-shadow: var(--sombra); padding: 1.4rem 1.6rem; margin: 1.2rem 0 2rem;
+    font-family: var(--serif); font-size: 1.08rem; line-height: 1.55;
+  }
+  .destaque p:last-child { margin-bottom: 0; }
+
+  .pendencias { border: 1px dashed var(--terra); background: var(--terra-fundo); padding: 1.35rem 1.5rem; margin: 1.6rem 0; }
+  .pendencias h4 { color: var(--terra); margin-top: 0; }
+  .pendencias ol, .pendencias ul { margin-bottom: 0; }
+  .pendencias li::marker { color: var(--terra); }
+
+  .placar { display: grid; grid-template-columns: repeat(auto-fit,minmax(9rem,1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .placar div { background: var(--superficie); border: 1px solid var(--borda); padding: .9rem 1rem; }
+  .placar .v { font-family: var(--serif); font-size: 1.9rem; font-weight: 700; line-height: 1; color: var(--verde-700); font-variant-numeric: tabular-nums; }
+  .placar .r { font-size: .8rem; color: var(--tinta-media); margin-top: .3rem; }
+
+  .referencias { display: grid; gap: 1rem; }
+  .referencias p { margin: 0; padding-left: 1.6rem; text-indent: -1.6rem; font-size: .95rem; line-height: 1.5; }
+  .referencias a { word-break: break-word; }
+  .nota-metodo { margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--borda); font-size: .9rem; color: var(--tinta-media); }
+
+  a:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  @media print {
+    body { background: #fff; color: #111; font-size: 10.5pt; padding: 0; }
+    .folha { max-width: none; }
+    .capa { padding-top: 0; }
+    section { break-inside: auto; margin-bottom: 1.6rem; }
+    h2.secao, h3 { break-after: avoid; }
+    table, .pendencias, .destaque, .placar { break-inside: avoid; }
+    .pendencias, .destaque, .placar div { background: #fff; }
+    a { color: #111; text-decoration: none; }
+  }
+</style>
+
+<div class="folha">
+
+  <header class="capa">
+    <div class="eyebrow">
+      <span>DAC 262 TADS</span><span>Etapa 5</span><span>Entrega 25/09</span><span>Eixo 3 — Resíduos e Economia Circular</span>
+    </div>
+    <h1>Pré-Entrega 2: e-Trilha MS</h1>
+    <p class="subtitulo">Proposta técnica consolidada, protótipo funcional e Relatório Técnico v0.3</p>
+    <dl class="ficha">
+      <div><dt>Curso</dt><dd>262 — Tecnologia em Análise e Desenvolvimento de Sistemas</dd></div>
+      <div><dt>Professor referência</dt><dd>Vitor Gabriel de Souza Farias — RF1440</dd></div>
+      <div><dt>Equipe</dt><dd>Rafael Dias (205220) · Vinicios Pereira (208618) · José Victor (204998) · Eder Maciel (205969) · Renato Peixoto (205683)</dd></div>
+    </dl>
+  </header>
+
+  <nav class="sumario" aria-label="Sumário">
+    <h2>Sumário</h2>
+    <ol>
+      <li><a href="#evolucao">O que mudou desde a Pré-Entrega 1</a></li>
+      <li><a href="#solucoes">Pesquisa de soluções existentes</a></li>
+      <li><a href="#requisitos">Requisitos</a></li>
+      <li><a href="#viabilidade">Viabilidade técnica e executiva</a></li>
+      <li><a href="#solucao">Solução, tecnologias e arquitetura</a></li>
+      <li><a href="#fluxos">Fluxos principais</a></li>
+      <li><a href="#disciplinas">Articulação com as disciplinas</a></li>
+      <li><a href="#sustentabilidade">Sustentabilidade na própria solução</a></li>
+      <li><a href="#cronograma">Cronograma interno</a></li>
+      <li><a href="#riscos">Riscos</a></li>
+      <li><a href="#validacao">Critérios de validação</a></li>
+      <li><a href="#prototipo">Protótipo e prova de conceito</a></li>
+      <li><a href="#relatorio">Estado do Relatório Técnico v0.3</a></li>
+      <li><a href="#referencias">Referências</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 -->
+  <section id="evolucao">
+    <h2 class="secao"><span class="n">1</span> O que mudou desde a Pré-Entrega 1</h2>
+
+    <p>A Pré-Entrega 1 registrou quatro lacunas de evidência como <em>pendências, e não como fatos</em>. <strong>Todas as quatro foram fechadas</strong> — e a última delas justificou o cuidado: ao buscar a fonte primária, descobriu-se que o número citado estava errado.</p>
+
+    <div class="destaque">
+      <p>O achado que mais muda o argumento: <strong>Campo Grande tem cerca de 14 pontos onde se pode entregar um eletroeletrônico</strong> — 8 da rede Green Eletron, 5 ecopontos municipais e o da AGEMS. A regra do Decreto 10.240/2020, de um ponto de recebimento a cada 25 mil habitantes, implicaria <strong>~36</strong> para os 897.938 habitantes da cidade. A cobertura é de <strong>39%</strong>, e apenas 9 dos 14 são específicos de eletroeletrônicos.</p>
+    </div>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Lacuna declarada em 04/09</th><th>Situação</th><th>O que se apurou</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Cobertura real de pontos de coleta em MS</td>
+            <td><span class="selo parcial">Parcial</span></td>
+            <td>Campo Grande levantada (14 pontos, 39% do exigido). Dourados, Três Lagoas, Corumbá e Ponta Porã seguem pendentes.</td>
+          </tr>
+          <tr>
+            <td>Política municipal ou estadual de logística reversa</td>
+            <td><span class="selo ok">Fechada</span></td>
+            <td>O PERS/MS existe, é gerido pelo IMASUL e tem 9 programas com 139 metas. Um dos três programas prioritários é <strong>implementar um sistema de informações de gestão</strong> — a própria lacuna que este projeto endereça. Para eletroeletrônicos não há instrumento estadual: só as redes nacionais.</td>
+          </tr>
+          <tr>
+            <td>Estimativa de geração de e-waste em MS</td>
+            <td><span class="selo ok">Fechada</span></td>
+            <td>Não existe medição por estado. Rateando o dado nacional por habitante: <strong>~33.200 t/ano</strong> em MS, <strong>~10.800 t/ano</strong> em Campo Grande.</td>
+          </tr>
+          <tr>
+            <td>Fonte primária do estudo dos 200 HDs (E11)</td>
+            <td><span class="selo ok">Fechada</span></td>
+            <td>Localizada — e a checagem <strong>corrigiu um erro</strong>. O estudo é da <strong>Universidade de Hertfordshire</strong>, a pedido da Comparitech (2019), com 200 discos de segunda mão: <strong>quase 60%</strong> ainda continham informação do dono anterior, e só <strong>26%</strong> haviam sido apagados corretamente. Os "dois terços" da Pré-Entrega 1 eram de outro estudo, sobre <em>pendrives</em>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>A evidência local que faltava</h3>
+    <p>Em Mato Grosso do Sul, <strong>47,8% dos resíduos sólidos ainda vão para lixões</strong> e <strong>menos de 1% do lixo doméstico recebe tratamento</strong>. O problema que o projeto ataca — destinação sem comprovação — é o caso da maior parte do que se descarta no estado, não uma hipótese distante.</p>
+  </section>
+
+  <!-- 2 -->
+  <section id="solucoes">
+    <h2 class="secao"><span class="n">2</span> Pesquisa de soluções existentes</h2>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Solução</th><th>O que faz</th><th>O que não resolve</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Green Eletron</strong></td><td>Gestora do sistema nacional de logística reversa; mantém PEVs em varejo e locais parceiros — 8 deles em Campo Grande — e um localizador nacional.</td><td>É um diretório de endereços. Não acompanha o aparelho depois da entrega nem devolve comprovação a quem entregou.</td></tr>
+          <tr><td><strong>ABREE</strong></td><td>Entidade gestora concorrente, com acordo de conscientização firmado com a capital de MS.</td><td>Mesma limitação: opera a coleta, não a rastreabilidade por item.</td></tr>
+          <tr><td><strong>Ecopontos municipais (CG Solurb)</strong></td><td>5 unidades em Campo Grande recebendo eletroeletrônicos junto com entulho, móveis e podas.</td><td>Recebimento genérico, sem registro por aparelho. A informação para em "recebemos o material".</td></tr>
+          <tr><td><strong>MTR / SINIR</strong></td><td>Manifesto de transporte de resíduos; rastreia movimentação entre empresas.</td><td>Instrumento de conformidade B2B, por lote e não por aparelho, sem interface para o cidadão.</td></tr>
+          <tr><td><strong>Sistemas internos de recicladoras</strong></td><td>Controlam lotes e pesagem.</td><td>Fechados: nem o cidadão nem o gestor público têm acesso.</td></tr>
+          <tr><td><strong>Logística reversa estadual de MS</strong></td><td>MS estruturou sistemas próprios para baterias de chumbo-ácido (IBER/Semagro/IMASUL) e embalagens de óleo lubrificante (Jogue Limpo).</td><td>Não alcança eletroeletrônicos, que dependem apenas das redes nacionais.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="destaque">
+      <p><strong>Lacuna confirmada.</strong> Nenhuma solução acompanha o <em>item individual</em> de ponta a ponta nem devolve essa informação a quem entregou o aparelho. Os instrumentos existentes servem ao regulador — agregados e a posteriori; não servem ao cidadão — individualizados e verificáveis.</p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="requisitos">
+    <h2 class="secao"><span class="n">3</span> Requisitos</h2>
+
+    <div class="placar">
+      <div><div class="v">26</div><div class="r">requisitos funcionais</div></div>
+      <div><div class="v">25</div><div class="r">implementados</div></div>
+      <div><div class="v">1</div><div class="r">pendente (RF21)</div></div>
+      <div><div class="v">7</div><div class="r">não funcionais</div></div>
+    </div>
+
+    <p>A lista completa, com o estado de cada item, está na seção 6 do Relatório Técnico. Os requisitos que sustentam a tese do projeto:</p>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>ID</th><th>Requisito</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td class="ref">RF02</td><td>Gerar código único com dígito verificador e QR Code</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF04</td><td>Ler QR pela câmera e registrar a etapa seguinte</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF06</td><td>Impedir pular etapas e retroceder</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF07</td><td>Consultar a trilha pelo código, sem login</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF08</td><td>Emitir certificado de destinação final</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF14</td><td>Exigir papel de operador para gravar, verificado no servidor</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF17</td><td>Carimbar assinatura e local a partir da sessão, não do formulário</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF20</td><td>Registrar em trilha somente de acréscimo quem alterou o quê</td><td><span class="selo ok">Implementado</span></td></tr>
+          <tr><td class="ref">RF21</td><td>Distinguir a etapa que cada operador pode registrar</td><td><span class="selo pendente">Pendente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>O RF21 é a limitação nº 1 do projeto e está documentada como tal: hoje o papel de operador permite registrar qualquer etapa, quando o desenho correto amarra papel, organização e etapa permitida.</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="viabilidade">
+    <h2 class="secao"><span class="n">4</span> Viabilidade técnica e executiva</h2>
+
+    <h3>Técnica</h3>
+    <p>Demonstrada, e não estimada: o protótipo já roda de ponta a ponta com tecnologias de navegador e Python, sem serviço pago e sem infraestrutura especial. O leitor de QR usa o hardware que o operador já tem no bolso. As tecnologias são as mesmas que a equipe estuda no semestre.</p>
+
+    <h3>Executiva — custo</h3>
+    <p>Ordens de grandeza para dimensionar, não cotações:</p>
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Item</th><th class="num">Estimativa</th></tr></thead>
+        <tbody>
+          <tr><td>Etiqueta adesiva com QR (papel couché, impressão a laser)</td><td class="num">R$ 0,05 – 0,15 / un.</td></tr>
+          <tr><td>Hospedagem (VPS básico, aplicação + banco)</td><td class="num">R$ 30 – 60 / mês</td></tr>
+          <tr><td>Domínio</td><td class="num">R$ 40 / ano</td></tr>
+          <tr><td>Leitor de QR</td><td class="num">R$ 0 — o celular do operador</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Executiva — quem operaria</h3>
+    <p>O candidato natural é o <strong>IMASUL</strong>, que já gere o PERS/MS e cujo plano prevê, entre os programas prioritários, exatamente um sistema de informações de gestão. A <strong>AGEMS</strong> é a alternativa: regula os serviços públicos e já é ponto de coleta. Na ponta municipal, SEMADUR e CG Solurb operariam em Campo Grande. O <strong>ICMS Ecológico</strong> é o incentivo que já existe para o município aderir.</p>
+
+    <div class="destaque">
+      <p><strong>O obstáculo real não é técnico, é de adesão.</strong> O custo material é desprezível; o sistema só funciona se pontos de coleta, cooperativas e recicladoras registrarem as leituras. É por isso que a adesão encabeça a lista de riscos.</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="solucao">
+    <h2 class="secao"><span class="n">5</span> Solução, tecnologias e arquitetura</h2>
+
+    <h3>A solução em uma frase</h3>
+    <p>Uma etiqueta com QR Code acompanha o aparelho por toda a cadeia; cada etapa é registrada lendo essa etiqueta, com autoria e local carimbados pelo servidor; e qualquer pessoa com o código consulta a trilha inteira, sem cadastro.</p>
+
+    <h3>Tecnologias</h3>
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Camada</th><th>Escolha</th><th>Por quê</th></tr></thead>
+        <tbody>
+          <tr><td>Front-end</td><td>HTML, CSS e JavaScript de módulos nativos, sem framework</td><td>Zero build. O que se lê no arquivo é o que roda no navegador — o que importa num trabalho que será avaliado lendo o código.</td></tr>
+          <tr><td>Back-end</td><td>Python com Flask</td><td>É a linguagem da disciplina de Algoritmos e Programação, e o servidor cabe em três arquivos legíveis.</td></tr>
+          <tr><td>Banco</td><td>SQLite com WAL e gatilhos</td><td>Um arquivo, sem servidor a instalar. Os gatilhos garantem no próprio banco que o histórico é somente de acréscimo.</td></tr>
+          <tr><td>Leitura de QR</td><td>jsQR, no navegador</td><td>A decodificação acontece no aparelho; a imagem da câmera não sai dele.</td></tr>
+          <tr><td>Offline</td><td>Service worker, rede primeiro e cache como plano B</td><td>A leitura da etiqueta acontece num galpão, onde a rede é ruim.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Arquitetura</h3>
+    <p>Cliente/servidor sobre HTTP. O navegador desenha; o servidor decide. A regra vale <strong>no servidor</strong>, e não na tela: esconder um botão é conveniência, e o <code>curl</code> recebe 401 ou 403 igual. O front fala com o back por uma única porta de dados (<code>js/store.js</code>) — nenhuma tela chama a API diretamente, o que permitiu trocar armazenamento local por servidor sem mexer em página nenhuma.</p>
+
+    <p>Três garantias estruturais, cada uma no lugar onde não pode ser contornada:</p>
+    <ul>
+      <li><strong>Máquina de estados</strong> — a transição de etapa é validada no servidor, dentro da transação. Não se declara "reciclado" sem ter passado pelas etapas anteriores.</li>
+      <li><strong>Histórico somente de acréscimo</strong> — gatilhos do SQLite recusam <code>UPDATE</code> e <code>DELETE</code> em eventos, apagamentos e trilha de administração. Nem a aplicação consegue reescrever a prova.</li>
+      <li><strong>Transação com <code>BEGIN IMMEDIATE</code></strong> — duas leituras simultâneas da mesma etiqueta não gravam a mesma etapa duas vezes.</li>
+    </ul>
+  </section>
+
+  <!-- 6 -->
+  <section id="fluxos">
+    <h2 class="secao"><span class="n">6</span> Fluxos principais</h2>
+
+    <h3>Fluxo 1 — do descarte à comprovação</h3>
+    <ol>
+      <li>A pessoa registra o aparelho: categoria, marca, peso e ponto de entrega. O servidor gera o código e grava o evento <code>REGISTRADO</code> na mesma transação.</li>
+      <li>A etiqueta é impressa e colada no aparelho.</li>
+      <li>Em cada etapa — coleta, triagem, transporte, processamento —, o operador lê o QR e confirma. O servidor carimba quem assinou e onde, a partir da sessão.</li>
+      <li>Na triagem, aparelho com memória exige <strong>atestado de apagamento</strong>: declara-se a mídia e o método, e o servidor recusa a combinação ineficaz.</li>
+      <li>Concluída a cadeia, sai o certificado de destinação final.</li>
+      <li>Em qualquer momento, quem tem o código consulta a trilha — sem conta.</li>
+    </ol>
+
+    <h3>Fluxo 2 — controle de acesso</h3>
+    <p>Sem conta: só a consulta por código. Visitante: registra e acompanha os próprios aparelhos. Operador: grava etapas, vinculado a um ponto. Administrador: gere contas e papéis. O papel é lido do banco a cada requisição, e não guardado no cookie — revogar vale na requisição seguinte.</p>
+
+    <h3>Fluxo 3 — recuperação de acesso</h3>
+    <p>Só um administrador promove outro, e a senha inicial é sorteada e mostrada uma vez. Para o dia em que ela se perder existe uma <strong>conta de reserva</strong>: administrador que não aparece na tela de administração e que nenhuma conta altera ou exclui por lá. O comando <code>python backend/app.py --nova-senha</code> sorteia uma senha nova sem tocar nos dados. O que a reserva faz continua na trilha de alterações — esconder a conta protege a chave, não apaga o rastro.</p>
+  </section>
+
+  <!-- 7 -->
+  <section id="disciplinas">
+    <h2 class="secao"><span class="n">7</span> Articulação com as disciplinas</h2>
+
+    <p>O enunciado exige demonstrar como os conhecimentos do semestre contribuem para a solução. Não é um anexo: cada disciplina decidiu uma escolha técnica concreta do sistema.</p>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Disciplina</th><th>A decisão que ela determinou</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Algoritmos e Programação</strong></td>
+            <td>A <strong>máquina de estados</strong> da cadeia de custódia, que recusa transição fora de ordem. O <strong>dígito verificador</strong> do código de rastreio, por soma ponderada módulo 32 — e a medição de que, com pesos pares, ≈5% das trocas de um caractere escapam, o que está documentado em vez de prometido.</td>
+          </tr>
+          <tr>
+            <td><strong>Arquitetura de Computadores</strong></td>
+            <td>A regra do <strong>atestado de apagamento</strong>. Sobrescrever setores destrói o dado num HD e não destrói numa memória flash, porque a <em>flash translation layer</em> remapeia blocos para distribuir o desgaste (<em>wear leveling</em>) e mantém reserva invisível ao sistema (<em>over-provisioning</em>). O sistema recusa essa combinação: é a arquitetura da mídia determinando a regra de negócio, e não o contrário.</td>
+          </tr>
+          <tr>
+            <td><strong>Redes de Computadores</strong></td>
+            <td>Cliente/servidor sobre HTTP, com sessão por <strong>cookie assinado</strong> e políticas <code>HttpOnly</code> e <code>SameSite</code>. O servidor escuta em <code>0.0.0.0</code> para que a leitura de etiqueta aconteça de qualquer aparelho da rede local — e é por isso que a ausência de HTTPS está registrada como limitação, não esquecida.</td>
+          </tr>
+          <tr>
+            <td><strong>Sistemas Operacionais</strong></td>
+            <td><strong>Concorrência e transações.</strong> Duas leituras simultâneas da mesma etiqueta não podem gravar a mesma etapa duas vezes: as escritas usam <code>BEGIN IMMEDIATE</code>, que toma o bloqueio na abertura e não no primeiro <code>INSERT</code>, serializando o "ler, decidir, gravar". O modo <strong>WAL</strong> permite consulta simultânea à escrita. O controle de acesso por papel é lido do banco a cada requisição, e não do cookie.</td>
+          </tr>
+          <tr>
+            <td><strong>Projeto de Extensão em Sustentabilidade e Diversidade</strong></td>
+            <td>A definição do problema em três barreiras, o público beneficiado, os indicadores do painel e a articulação com o PERS/MS e o ICMS Ecológico.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="sustentabilidade">
+    <h2 class="secao"><span class="n">8</span> Sustentabilidade na própria solução</h2>
+
+    <p>O enunciado é explícito: a relação com sustentabilidade deve estar <strong>na solução desenvolvida, e não somente na justificativa</strong> — "um sistema de cadastro genérico não será considerado sustentável apenas por utilizar esse termo em sua descrição". O que segue é o mecanismo, não o efeito esperado.</p>
+
+    <div class="destaque">
+      <p>A diferença entre <em>relatar</em> reciclagem e <strong>comprovar</strong> reciclagem é onde este sistema atua. Para um aparelho constar como reciclado, ele precisa ter passado, na ordem, por cada etapa anterior, cada uma assinada por uma conta com permissão — e o registro, depois de gravado, não pode ser alterado nem apagado, porque os gatilhos do banco recusam <code>UPDATE</code> e <code>DELETE</code>. A declaração vazia é impossível por construção, não por promessa.</p>
+    </div>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Dimensão</th><th>O que no sistema produz o efeito</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ambiental</strong></td><td>Cada aparelho conduzido ao fim da cadeia é massa desviada do aterro, contabilizada por peso e convertida em indicadores de material recuperado e CO₂e evitado. A máquina de estados impede que essa contagem seja inflada por declaração.</td></tr>
+          <tr><td><strong>Social</strong></td><td>A consulta pública por código não exige cadastro: quem tem a etiqueta vê a trilha inteira. O atestado de apagamento ataca a barreira que mantém o aparelho na gaveta — o medo de entregar dados —, e dá à empresa documento para a prestação de contas da LGPD.</td></tr>
+          <tr><td><strong>Econômica</strong></td><td>Materiais de volta à cadeia produtiva, com registro de quanto e de onde; previsibilidade de volume para cooperativas; e instrumento de comprovação de meta para quem responde pelo Decreto 10.240/2020, hoje apurada de forma agregada.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Contribui diretamente para o <strong>ODS 12</strong> (meta 12.5 — redução da geração de resíduos por reciclagem) e o <strong>ODS 11</strong> (meta 11.6 — gestão de resíduos municipais), com apoio ao <strong>ODS 3</strong> pela redução da contaminação por metais pesados. O tratamento completo está na seção 13 do Relatório Técnico.</p>
+  </section>
+
+  <!-- 9 -->
+  <section id="cronograma">
+    <h2 class="secao"><span class="n">9</span> Cronograma interno</h2>
+    <p>O cronograma da DAC marca as entregas; este marca o trabalho entre elas.</p>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>#</th><th>Frente</th><th>Prazo</th><th>Situação</th></tr></thead>
+        <tbody>
+          <tr><td class="ref">1</td><td>Modelo de domínio, código de rastreio e máquina de estados</td><td class="num">21/08</td><td><span class="selo ok">Concluído</span></td></tr>
+          <tr><td class="ref">2</td><td>Telas públicas: consulta por código e trilha</td><td class="num">21/08</td><td><span class="selo ok">Concluído</span></td></tr>
+          <tr><td class="ref">3</td><td>Back-end, banco e API; cadeia gravada no servidor</td><td class="num">27/08</td><td><span class="selo ok">Concluído</span></td></tr>
+          <tr><td class="ref">4</td><td>Contas, papéis e administração</td><td class="num">31/08</td><td><span class="selo ok">Concluído</span></td></tr>
+          <tr><td class="ref">5</td><td>Atestado de apagamento seguro</td><td class="num">31/08</td><td><span class="selo ok">Concluído</span></td></tr>
+          <tr><td class="ref">6</td><td>Suíte de testes automatizados</td><td class="num">31/08</td><td><span class="selo ok">366 testes</span></td></tr>
+          <tr><td class="ref">7</td><td>Conta de reserva e recuperação de acesso</td><td class="num">09/09</td><td><span class="selo ok">Concluído</span></td></tr>
+          <tr><td class="ref">8</td><td>Levantamento de dados locais de MS</td><td class="num">25/09</td><td><span class="selo parcial">Parcial</span></td></tr>
+          <tr><td class="ref">9</td><td>Competência por etapa (RF21)</td><td class="num">16/10</td><td><span class="selo pendente">Não iniciado</span></td></tr>
+          <tr><td class="ref">10</td><td>Teste em celular real, em campo</td><td class="num">16/10</td><td><span class="selo pendente">Não iniciado</span></td></tr>
+          <tr><td class="ref">11</td><td>Decisão sobre o dígito verificador</td><td class="num">16/10</td><td><span class="selo parcial">Em aberto</span></td></tr>
+          <tr><td class="ref">12</td><td>Evidências de teste em imagem</td><td class="num">23/10</td><td><span class="selo pendente">Não iniciado</span></td></tr>
+          <tr><td class="ref">13</td><td>Consolidação do Relatório Técnico</td><td class="num">23/10</td><td><span class="selo parcial">Em andamento</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>Caminho crítico até 23/10:</strong> os itens 9, 10 e 12. O primeiro é a limitação nº 1 do projeto; os outros dois são exigência explícita da Pré-Entrega 3, que pede o fluxo principal funcionando e as evidências dos testes.</p>
+  </section>
+
+  <!-- 8 -->
+  <section id="riscos">
+    <h2 class="secao"><span class="n">10</span> Riscos</h2>
+    <p>Riscos do projeto, não do sistema. Probabilidade e impacto são julgamento da equipe, para ordenar o que merece atenção — não medida.</p>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>#</th><th>Risco</th><th>Prob.</th><th>Imp.</th><th>O que reduz</th></tr></thead>
+        <tbody>
+          <tr><td class="ref">R1</td><td><strong>Adesão</strong>: pontos e recicladoras não registram as leituras, e a trilha fica vazia no meio</td><td>Alta</td><td>Alto</td><td>É o risco principal, e não é técnico. Começar por um ponto só, com um operador só, e mostrar o certificado pronto antes de pedir adesão.</td></tr>
+          <tr><td class="ref">R2</td><td>Dados locais do interior não chegam a tempo</td><td>Média</td><td>Médio</td><td>Campo Grande já levantada; o interior é extensão do mesmo método, não trabalho novo.</td></tr>
+          <tr><td class="ref">R3</td><td>RF21 não implementado até 29/10</td><td>Média</td><td>Médio</td><td>Já documentado como limitação, com o desenho definido. Se não entrar, vira melhoria futura justificada.</td></tr>
+          <tr><td class="ref">R4</td><td>Corrigir o dígito verificador invalida códigos impressos</td><td>Baixa</td><td>Médio</td><td>Decisão registrada e medida (≈5% de escape). Enquanto as etiquetas são de demonstração, o custo de corrigir só cresce.</td></tr>
+          <tr><td class="ref">R5</td><td>Câmera do scanner não abrir na apresentação</td><td>Média</td><td>Alto</td><td>Exige <code>localhost</code> ou HTTPS. Mitigado: a digitação manual faz o mesmo caminho, e o roteiro prevê o QR ampliado em tela.</td></tr>
+          <tr><td class="ref">R6</td><td>Perda de acesso à conta de administrador na banca</td><td>Baixa</td><td>Alto</td><td>Resolvido: conta de reserva e <code>--nova-senha</code> no terminal.</td></tr>
+          <tr><td class="ref">R7</td><td>Indisponibilidade do servidor durante a demonstração</td><td>Baixa</td><td>Alto</td><td>Roda local, sem serviço externo; o service worker mantém as telas públicas de pé.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="validacao">
+    <h2 class="secao"><span class="n">11</span> Critérios de validação</h2>
+
+    <p>O que define que a solução funciona, e como se verifica:</p>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Critério</th><th>Como se verifica</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>Um aparelho percorre a cadeia inteira e emite certificado</td><td>Roteiro de demonstração ponta a ponta: registrar, imprimir, ler o QR em cada etapa, consultar pelo código</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Etapa fora de ordem é recusada</td><td>Tentar pular e retroceder, pela tela e por <code>curl</code></td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Quem não tem papel não grava</td><td>Gravar sem sessão (401) e como visitante (403), inclusive por <code>curl</code></td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Registro gravado não pode ser alterado</td><td><code>UPDATE</code> e <code>DELETE</code> diretos no banco, recusados pelos gatilhos</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Método de apagamento ineficaz é recusado</td><td>Declarar sobrescrita de setores em memória flash</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Indicadores batem com os dados de entrada</td><td>Conferência manual contra a base de demonstração</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>A suíte passa a cada mudança</td><td><code>python -m pytest</code></td><td><span class="selo ok">366 testes</span></td></tr>
+          <tr><td>Funciona em celular real, em campo</td><td>Leitura de etiqueta impressa com aparelho na mão</td><td><span class="selo pendente">Não verificado</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>O último critério é o único ainda não verificado, e está no cronograma interno para 16/10. A verificação até aqui foi por inspeção de código e por teste automatizado — é justamente no celular, de pé num galpão, que o sistema será usado.</p>
+  </section>
+
+  <!-- 10 -->
+  <section id="prototipo">
+    <h2 class="secao"><span class="n">12</span> Protótipo e prova de conceito</h2>
+
+    <p>A Etapa 5 pede "protótipo inicial ou prova de conceito". O que existe está além disso: é um sistema funcional, com back-end, banco, controle de acesso e suíte de testes.</p>
+
+    <div class="placar">
+      <div><div class="v">8</div><div class="r">telas</div></div>
+      <div><div class="v">366</div><div class="r">testes passando</div></div>
+      <div><div class="v">18</div><div class="r">pontos de coleta na base</div></div>
+      <div><div class="v">11</div><div class="r">municípios de MS</div></div>
+    </div>
+
+    <h3>O que já funciona</h3>
+    <ul>
+      <li><strong>Registro e etiqueta</strong> — código com dígito verificador, QR na tela e folha de etiquetas para impressão.</li>
+      <li><strong>Leitura por câmera</strong> — decodificação no próprio aparelho, com digitação manual como alternativa.</li>
+      <li><strong>Cadeia de custódia</strong> — seis etapas, com transição validada no servidor e histórico somente de acréscimo.</li>
+      <li><strong>Atestado de apagamento</strong> — a validação recusa método ineficaz para a mídia declarada, aplicando arquitetura de hardware como regra de negócio.</li>
+      <li><strong>Consulta pública</strong> — trilha completa pelo código, sem cadastro, e certificado ao fim.</li>
+      <li><strong>Contas e papéis</strong> — visitante, operador e administrador, verificados no servidor, com trilha de auditoria das alterações.</li>
+      <li><strong>Painel de indicadores</strong> — massa desviada, material recuperado, CO₂e evitado, ciclo médio e gargalos.</li>
+      <li><strong>Funcionamento offline</strong> — service worker com rede primeiro e cache como plano B.</li>
+    </ul>
+
+    <h3>Como reproduzir</h3>
+    <p>O repositório está em <a href="https://github.com/peixotinho-md/ewaste-tracker">github.com/peixotinho-md/ewaste-tracker</a>. Subir e testar:</p>
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Passo</th><th>Comando</th></tr></thead>
+        <tbody>
+          <tr><td>Instalar</td><td><code>pip install -r requirements.txt</code></td></tr>
+          <tr><td>Subir</td><td><code>python backend/app.py</code></td></tr>
+          <tr><td>Testar</td><td><code>pip install -r requirements-dev.txt</code> e <code>python -m pytest</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>As contas iniciais são criadas na carga com senha sorteada, impressa uma vez no terminal. O roteiro completo de demonstração está em <code>docs/CREDENCIAIS-DEMO.md</code>.</p>
+
+    <div class="pendencias">
+      <h4>O que o protótipo ainda não faz</h4>
+      <ul>
+        <li><strong>Competência por etapa (RF21).</strong> O papel de operador permite registrar qualquer etapa. O desenho correto amarra papel, organização e etapa permitida — é a limitação nº 1.</li>
+        <li><strong>HTTPS.</strong> Em <code>localhost</code> nada sai da máquina, mas o servidor aceita conexões da rede local, e aí a ressalva vale.</li>
+        <li><strong>Fila de gravação offline.</strong> O cache serve a consulta; gravar exige rede.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section id="relatorio">
+    <h2 class="secao"><span class="n">13</span> Estado do Relatório Técnico v0.3</h2>
+
+    <p>O Relatório está em <code>docs/RELATORIO-TECNICO.md</code>, no repositório, com as <strong>17 seções exigidas pela DAC</strong> já estruturadas — da definição do problema às referências. Nesta etapa foram acrescentados o <strong>cronograma interno</strong> (10.1) e a <strong>matriz de riscos</strong> (12.1), e fechadas seis lacunas com o dado local levantado.</p>
+
+    <p>Restam <strong>10 marcadores</strong> de preenchimento, todos declarados no próprio documento. São, deliberadamente, os que dependem de trabalho de campo e não de pesquisa:</p>
+    <ul>
+      <li>Visitar um ecoponto ou cooperativa e relatar como o registro é feito hoje — planilha, papel ou nada. É o dado que fecha o argumento de que a rastreabilidade por item não existe.</li>
+      <li>Estender o levantamento de pontos a Dourados, Três Lagoas, Corumbá e Ponta Porã.</li>
+      <li>Anexar capturas de tela como evidência dos testes — exigência da Pré-Entrega 3.</li>
+      <li>Registrar a divisão do trabalho na equipe e as decisões que mudaram no caminho.</li>
+      <li>Confirmar as fontes dos percentuais de composição material e dos fatores de CO₂e.</li>
+    </ul>
+
+    <p>Declarar a lacuna e dizer como fechá-la é escolha metodológica, e não descuido: o enunciado exige um trabalho aplicado a uma realidade concreta, e preencher com número frágil seria o contrário disso.</p>
+  </section>
+
+  <!-- 12 -->
+  <section id="referencias">
+    <h2 class="secao"><span class="n">14</span> Referências</h2>
+
+    <div class="referencias">
+      <p>BALDÉ, C. P. et al. <strong>The Global E-waste Monitor 2024</strong>. Genebra e Bonn: ITU e UNITAR, 2024. Disponível em: <a href="https://ewastemonitor.info/the-global-e-waste-monitor-2024/">https://ewastemonitor.info/the-global-e-waste-monitor-2024/</a></p>
+
+      <p>BRASIL. <strong>Lei nº 12.305, de 2 de agosto de 2010</strong>. Institui a Política Nacional de Resíduos Sólidos. Diário Oficial da União, Brasília, 3 ago. 2010.</p>
+
+      <p>BRASIL. <strong>Decreto nº 10.240, de 12 de fevereiro de 2020</strong>. Regulamenta a implementação de sistema de logística reversa de produtos eletroeletrônicos de uso doméstico e seus componentes. Diário Oficial da União, Brasília, 13 fev. 2020.</p>
+
+      <p>BRASIL. <strong>Lei nº 13.709, de 14 de agosto de 2018</strong>. Lei Geral de Proteção de Dados Pessoais (LGPD). Diário Oficial da União, Brasília, 15 ago. 2018.</p>
+
+      <p>IBGE. <strong>Censo Demográfico 2022</strong>. Rio de Janeiro: Instituto Brasileiro de Geografia e Estatística, 2023. Disponível em: <a href="https://www.ibge.gov.br/cidades-e-estados/ms.html">https://www.ibge.gov.br/cidades-e-estados/ms.html</a></p>
+
+      <p>INSTITUTO DE MEIO AMBIENTE DE MATO GROSSO DO SUL. <strong>Plano Estadual de Resíduos Sólidos de Mato Grosso do Sul (PERS/MS)</strong> e <strong>Gestão de Resíduos Sólidos</strong>. Campo Grande: IMASUL. Disponível em: <a href="https://www.imasul.ms.gov.br/programas-e-projetos/gestao-de-residuos-solidos/">https://www.imasul.ms.gov.br/programas-e-projetos/gestao-de-residuos-solidos/</a></p>
+
+      <p>PREFEITURA MUNICIPAL DE CAMPO GRANDE. <strong>Ecopontos — Carta de Serviços ao Usuário</strong>. Campo Grande. Disponível em: <a href="https://cartadeservicos.campogrande.ms.gov.br/servicos/ecopontos/">https://cartadeservicos.campogrande.ms.gov.br/servicos/ecopontos/</a></p>
+
+      <p>GREEN ELETRON. <strong>Saiba onde descartar aparelhos eletrônicos e pilhas em Campo Grande</strong> e <strong>Ponto de Coleta</strong>. Disponível em: <a href="https://greeneletron.org.br/ponto-de-coleta/">https://greeneletron.org.br/ponto-de-coleta/</a></p>
+
+      <p>AGÊNCIA ESTADUAL DE REGULAÇÃO DE SERVIÇOS PÚBLICOS DE MS. <strong>AGEMS se torna ponto de coleta de recicláveis eletrônicos em parceria com a Recic.LE</strong>. Campo Grande: AGEMS.</p>
+
+      <p>ASSOCIAÇÃO BRASILEIRA DE RECICLAGEM DE ELETROELETRÔNICOS E ELETRODOMÉSTICOS. <strong>Capital de Mato Grosso do Sul se torna parceira da ABREE em ação de conscientização</strong>. Disponível em: <a href="https://abree.org.br/">https://abree.org.br/</a></p>
+
+      <p>UNIVERSITY OF HERTFORDSHIRE; COMPARITECH. <strong>Estudo com 200 discos rígidos de segunda mão</strong>. Hatfield, 2019. Quase 60% dos discos ainda continham informação do proprietário anterior; apenas 26% haviam sido apagados corretamente.</p>
+
+      <p>KISSEL, R. et al. <strong>NIST Special Publication 800-88 Revision 1: Guidelines for Media Sanitization</strong>. Gaithersburg: NIST, 2014.</p>
+
+      <p>ORGANIZAÇÃO DAS NAÇÕES UNIDAS. <strong>Transformando Nosso Mundo: a Agenda 2030 para o Desenvolvimento Sustentável</strong>. Nova York: ONU, 2015. (ODS 11 e 12.)</p>
+    </div>
+
+    <p class="nota-metodo"><strong>Nota de método.</strong> Os dados de cobertura de pontos de coleta em Campo Grande foram levantados em setembro de 2026 a partir das fontes acima; o número de ~36 pontos exigidos é cálculo dos autores, aplicando a regra do Decreto 10.240/2020 à população do Censo 2022. A estimativa de geração de e-waste em MS é rateio do dado nacional por habitante, e não medição. As lacunas que permanecem estão declaradas na seção 11 e no próprio Relatório Técnico.</p>
+  </section>
+
+</div>
+
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm; }
+  @media print {
+    .sumario { display: block !important; border: 0; border-top: 1px solid var(--borda);
+               border-bottom: 1px solid var(--borda); padding: .9rem 0; background: none;
+               break-inside: avoid; }
+    .capa { break-after: avoid; }
+    body { font-size: 10pt; line-height: 1.5; }
+    h2.secao { margin-top: .4rem; }
+    .referencias p { break-inside: avoid; }
+  }
+</style>
+</body></html>

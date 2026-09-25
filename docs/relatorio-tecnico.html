@@ -1,0 +1,2445 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório Técnico · e-Trilha MS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+  :root {
+    --tinta:#16211a; --tinta-media:#47564c; --tinta-fraca:#77857c;
+    --fundo:#f4f7f4; --superficie:#ffffff; --borda:#dde5df; --borda-forte:#b8c8bd;
+    --verde-700:#1b5e33; --verde-600:#22773f; --verde-500:#2f9553; --verde-050:#eef6f0;
+    --terra:#a0631d; --terra-fundo:#fbf3e7;
+    --vermelho:#b23a34; --vermelho-fundo:#fbeceb;
+    --sombra:0 1px 2px rgba(16,56,31,.05), 0 8px 28px rgba(16,56,31,.06);
+    --serif:"Spectral",Georgia,"Times New Roman",serif;
+    --sans:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --tinta:#e6ede8; --tinta-media:#a9b8ae; --tinta-fraca:#7d8c83;
+      --fundo:#0f1712; --superficie:#17211a; --borda:#2a3830; --borda-forte:#3d5145;
+      --verde-700:#6cc78c; --verde-600:#4fb271; --verde-500:#46b06b; --verde-050:#16281c;
+      --terra:#d8a05a; --terra-fundo:#2a2114;
+      --vermelho:#e08b84; --vermelho-fundo:#2c1917;
+      --sombra:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --tinta:#e6ede8; --tinta-media:#a9b8ae; --tinta-fraca:#7d8c83;
+    --fundo:#0f1712; --superficie:#17211a; --borda:#2a3830; --borda-forte:#3d5145;
+    --verde-700:#6cc78c; --verde-600:#4fb271; --verde-500:#46b06b; --verde-050:#16281c;
+    --terra:#d8a05a; --terra-fundo:#2a2114;
+    --vermelho:#e08b84; --vermelho-fundo:#2c1917;
+    --sombra:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--fundo); color: var(--tinta); font-family: var(--sans);
+    font-size: 17px; line-height: 1.62; margin: 0; padding: 0 1.25rem 5rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .folha { max-width: 50rem; margin: 0 auto; }
+
+  .capa { padding: 3.5rem 0 2rem; border-bottom: 2px solid var(--tinta); margin-bottom: 2.5rem; }
+  .eyebrow {
+    font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--verde-600); display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin-bottom: 1.1rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(2.1rem,1.4rem + 3vw,3.2rem);
+    line-height: 1.08; letter-spacing: -.015em; margin: 0 0 .5rem; text-wrap: balance;
+  }
+  .subtitulo {
+    font-family: var(--serif); font-style: italic; font-size: clamp(1.1rem,1rem + .6vw,1.35rem);
+    color: var(--tinta-media); margin: 0 0 2rem; text-wrap: balance;
+  }
+  .ficha { display: grid; grid-template-columns: repeat(auto-fit,minmax(13rem,1fr)); gap: 1.1rem 2rem; }
+  .ficha div { display: grid; gap: .15rem; align-content: start; }
+  .ficha dt { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-fraca); }
+  .ficha dd { margin: 0; font-size: .95rem; }
+
+  .sumario { background: var(--superficie); border: 1px solid var(--borda); padding: 1.25rem 1.5rem; margin-bottom: 3rem; }
+  .sumario h2 { font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-fraca); margin: 0 0 .7rem; }
+  .sumario ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; counter-reset: sum; }
+  .sumario li { counter-increment: sum; margin: 0; }
+  .sumario a { color: var(--tinta); text-decoration: none; display: flex; gap: .7rem; align-items: baseline; padding: .12rem 0; }
+  .sumario a::before { content: counter(sum) "."; font-family: var(--serif); font-weight: 600; color: var(--verde-600); min-width: 1.1rem; font-variant-numeric: tabular-nums; }
+  .sumario a:hover { color: var(--verde-600); text-decoration: underline; }
+
+  section { margin-bottom: 3.25rem; scroll-margin-top: 1.5rem; }
+  h2.secao {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(1.45rem,1.2rem + 1.1vw,1.95rem);
+    line-height: 1.2; letter-spacing: -.01em; margin: 0 0 1.4rem; padding-bottom: .6rem;
+    border-bottom: 1px solid var(--borda-forte); display: flex; gap: .8rem; align-items: baseline; text-wrap: balance;
+  }
+  h2.secao .n { font-size: .82em; color: var(--verde-600); font-variant-numeric: tabular-nums; flex: none; }
+  h3 { font-family: var(--serif); font-weight: 600; font-size: 1.18rem; line-height: 1.3; margin: 2rem 0 .6rem; text-wrap: balance; }
+  h3:first-of-type { margin-top: 0; }
+  h4 { font-family: var(--sans); font-size: .76rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--verde-600); margin: 1.6rem 0 .5rem; }
+
+  p { margin: 0 0 1.05rem; }
+  a { color: var(--verde-600); }
+  ul, ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+  li::marker { color: var(--verde-500); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--verde-050); padding: .08em .35em; border-radius: 3px; color: var(--verde-700); }
+
+  .tabela-caixa { overflow-x: auto; margin: 1.4rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; line-height: 1.45; }
+  thead th {
+    font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--tinta-media); text-align: left;
+    padding: .55rem .7rem; vertical-align: bottom;
+    border-top: 2px solid var(--tinta); border-bottom: 1px solid var(--borda-forte); white-space: nowrap;
+  }
+  tbody td { padding: .6rem .7rem; vertical-align: top; border-bottom: 1px solid var(--borda); }
+  tbody tr:last-child td { border-bottom: 2px solid var(--tinta); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ref { font-family: var(--mono); font-size: .82rem; font-weight: 600; color: var(--verde-600); white-space: nowrap; }
+  tfoot td { padding: .7rem .7rem 0; font-size: .84rem; color: var(--tinta-fraca); border: 0; }
+  .total td { font-weight: 700; }
+
+  .selo { font-size: .74rem; font-weight: 700; letter-spacing: .04em; padding: .12rem .5rem; border-radius: 100px; white-space: nowrap; display: inline-block; }
+  .ok { background: var(--verde-050); color: var(--verde-700); border: 1px solid var(--verde-500); }
+  .parcial { background: var(--terra-fundo); color: var(--terra); border: 1px solid var(--terra); }
+  .pendente { background: transparent; color: var(--tinta-fraca); border: 1px solid var(--borda-forte); }
+
+  .destaque {
+    background: var(--superficie); border: 1px solid var(--borda); border-left: 3px solid var(--verde-500);
+    box-shadow: var(--sombra); padding: 1.4rem 1.6rem; margin: 1.2rem 0 2rem;
+    font-family: var(--serif); font-size: 1.08rem; line-height: 1.55;
+  }
+  .destaque p:last-child { margin-bottom: 0; }
+
+  .pendencias { border: 1px dashed var(--terra); background: var(--terra-fundo); padding: 1.35rem 1.5rem; margin: 1.6rem 0; }
+  .pendencias h4 { color: var(--terra); margin-top: 0; }
+  .pendencias ol, .pendencias ul { margin-bottom: 0; }
+  .pendencias li::marker { color: var(--terra); }
+
+  .placar { display: grid; grid-template-columns: repeat(auto-fit,minmax(9rem,1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .placar div { background: var(--superficie); border: 1px solid var(--borda); padding: .9rem 1rem; }
+  .placar .v { font-family: var(--serif); font-size: 1.9rem; font-weight: 700; line-height: 1; color: var(--verde-700); font-variant-numeric: tabular-nums; }
+  .placar .r { font-size: .8rem; color: var(--tinta-media); margin-top: .3rem; }
+
+  .referencias { display: grid; gap: 1rem; }
+  .referencias p { margin: 0; padding-left: 1.6rem; text-indent: -1.6rem; font-size: .95rem; line-height: 1.5; }
+  .referencias a { word-break: break-word; }
+  .nota-metodo { margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--borda); font-size: .9rem; color: var(--tinta-media); }
+
+  a:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  @media print {
+    body { background: #fff; color: #111; font-size: 10.5pt; padding: 0; }
+    .folha { max-width: none; }
+    .capa { padding-top: 0; }
+    section { break-inside: auto; margin-bottom: 1.6rem; }
+    h2.secao, h3 { break-after: avoid; }
+    table, .pendencias, .destaque, .placar { break-inside: avoid; }
+    .pendencias, .destaque, .placar div { background: #fff; }
+    a { color: #111; text-decoration: none; }
+  }
+
+  /* Ajustes para um documento longo convertido de Markdown. */
+  h1 { font-family: var(--serif); font-size: 2.4rem; margin: 0 0 .4rem; }
+  h2 { font-family: var(--serif); font-weight: 700; font-size: 1.6rem; line-height: 1.2;
+       margin: 2.8rem 0 1.1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--borda-forte); }
+  h3 { font-family: var(--serif); font-size: 1.2rem; margin: 1.8rem 0 .5rem; }
+  h4 { font-family: var(--sans); font-size: .78rem; letter-spacing: .1em; text-transform: uppercase;
+       color: var(--verde-600); margin: 1.4rem 0 .4rem; }
+  blockquote { border-left: 3px solid var(--terra); background: var(--terra-fundo);
+               margin: 1.2rem 0; padding: .9rem 1.2rem; color: var(--tinta-media); font-size: .93rem; }
+  blockquote p:last-child { margin-bottom: 0; }
+  pre { background: var(--superficie); border: 1px solid var(--borda); padding: .9rem 1.1rem;
+        overflow-x: auto; font-size: .84rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: var(--tinta); }
+  hr { border: 0; border-top: 1px solid var(--borda); margin: 2.5rem 0; }
+  table { margin: 1.2rem 0; }
+  @page { size: A4; margin: 18mm 16mm 16mm; }
+  @media print { h2, h3 { break-after: avoid; } table, pre, blockquote { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="folha">
+<h1 id="relatorio-tecnico-de-projeto">Relatório Técnico de Projeto</h1>
+<h2 id="e-trilha-ms-rastreamento-de-residuos-eletronicos-por-qr-code">e-Trilha MS — rastreamento de resíduos eletrônicos por QR Code</h2>
+<p><strong>Curso:</strong> 262 — Tecnologia em Análise e Desenvolvimento de Sistemas
+<strong>Disciplinas articuladas:</strong> Algoritmos e Programação · Arquitetura de Computadores ·
+Redes de Computadores · Sistemas Operacionais · Projeto de Extensão em Sustentabilidade e Diversidade
+<strong>Professor de referência:</strong> Vitor Gabriel de Souza Farias — RF1440
+<strong>Eixo:</strong> 3 — Resíduos e Economia Circular</p>
+<p><strong>Equipe</strong></p>
+<table>
+<thead>
+<tr>
+<th>Nome</th>
+<th>RA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rafael Dias</td>
+<td>205220</td>
+</tr>
+<tr>
+<td>Vinicios Pereira</td>
+<td>208618</td>
+</tr>
+<tr>
+<td>José Victor</td>
+<td>204998</td>
+</tr>
+<tr>
+<td>Eder Maciel</td>
+<td>205969</td>
+</tr>
+<tr>
+<td>Renato Peixoto</td>
+<td>205683</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Como usar este documento.</strong> As seções já estão na ordem exigida pela DAC e
+preenchidas com o que o protótipo permite afirmar hoje. Onde aparece
+<strong>[PREENCHER]</strong>, falta um dado local que a equipe precisa levantar — é
+justamente isso que diferencia um trabalho genérico de um trabalho aplicado a
+uma realidade concreta, como o enunciado exige.</p>
+</blockquote>
+<hr />
+<h2 id="1-problema">1. Problema</h2>
+<p>O descarte inadequado de resíduos eletrônicos — celulares, computadores,
+baterias, cabos e eletrodomésticos — é um problema crescente no Brasil. Boa parte
+desses itens vai para o lixo comum ou fica parada em casas e empresas sem destino
+definido, por desconhecimento de onde descartar ou por falta de pontos de coleta
+acessíveis. O resultado é a contaminação do solo e da água por metais pesados
+(chumbo, mercúrio, cádmio) e o desperdício de materiais recicláveis valiosos
+(cobre, ouro, alumínio, terras raras) que poderiam voltar à cadeia produtiva.</p>
+<p>Há, porém, um segundo problema <strong>menos visível e não resolvido pelas soluções
+existentes</strong>: mesmo quem faz a coisa certa e entrega o aparelho num ponto de
+coleta <strong>não tem nenhuma prova de que ele foi realmente reciclado</strong>. Não existe
+rastreabilidade entre a entrega e a destinação final. Essa lacuna de confiança:</p>
+<ul>
+<li>desestimula o cidadão, que não vê consequência no próprio esforço;</li>
+<li>impede a empresa de comprovar conformidade com a Política Nacional de Resíduos
+  Sólidos;</li>
+<li>deixa o gestor público sem dados sobre onde a logística reversa trava.</li>
+</ul>
+<h3 id="11-as-oito-perguntas-de-caracterizacao">1.1 As oito perguntas de caracterização</h3>
+<p><strong>1. Qual é o problema?</strong>
+Resíduos eletrônicos são descartados de forma inadequada e, quando são entregues
+corretamente, não há rastreabilidade que comprove a destinação final. A cadeia de
+logística reversa é opaca entre o ponto de coleta e a recicladora.</p>
+<p><strong>2. Onde o problema ocorre?</strong>
+Estado de Mato Grosso do Sul. O recorte é estadual porque a estrutura de coleta é
+desigual: a capital concentra ecopontos e cooperativas, enquanto municípios do
+interior dependem de campanhas pontuais.
+Levantamento em Campo Grande (setembro de 2026): a rede <strong>Green Eletron</strong>, gestora
+do sistema nacional de logística reversa, mantém <strong>8 pontos</strong> na capital; a
+prefeitura opera <strong>5 ecopontos</strong>, que recebem eletroeletrônicos junto com entulho,
+móveis e podas; e a <strong>AGEMS</strong> tornou-se ponto de coleta em parceria com a Recic.LE.
+São cerca de <strong>14 locais</strong> — contra os <strong>~36</strong> que a regra do Decreto 10.240/2020
+(1 ponto por 25 mil habitantes) implicaria para os 897.938 habitantes da cidade.
+Cobertura de aproximadamente <strong>39%</strong>, e apenas 9 deles são específicos de
+eletroeletrônicos.</p>
+<blockquote>
+<p><strong>[PREENCHER]</strong> Estender o levantamento a Dourados, Três Lagoas, Corumbá e Ponta
+Porã — os outros quatro municípios de MS acima de 80 mil habitantes, também
+alcançados pelo Decreto.</p>
+</blockquote>
+<p><strong>3. Quem é afetado?</strong>
+- Moradores urbanos com eletrônicos obsoletos sem destino;
+- Pequenas e médias empresas de TI, que geram sucata continuamente (servidores,
+  impressoras, no-breaks, cabeamento);
+- Cooperativas e empresas de reciclagem, que precisam de volume e previsibilidade;
+- Órgãos públicos municipais responsáveis pela gestão de resíduos.</p>
+<p><strong>4. Quais são as consequências?</strong>
+- <em>Ambientais:</em> contaminação de solo e água por chumbo, mercúrio, cádmio e lítio;
+- <em>Econômicas:</em> perda de cobre, alumínio, aço, ouro e terras raras que teriam
+  valor de mercado e evitariam mineração primária;
+- <em>Sociais:</em> perda de renda para cooperativas de catadores e exposição de
+  trabalhadores a resíduos perigosos em desmontagem informal.
+<strong>Quanto isso representa em MS.</strong> Não há medição de e-waste por estado. O que se
+pode afirmar é o rateio do dado nacional por habitante, e é assim que deve ser
+lido — estimativa, não medição:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brasil, 2022 (Global E-waste Monitor 2024)</td>
+<td>2.443.000 t</td>
+</tr>
+<tr>
+<td>População do Brasil (Censo 2022)</td>
+<td>203.080.756 hab</td>
+</tr>
+<tr>
+<td>Geração por habitante</td>
+<td><strong>12,0 kg/hab/ano</strong></td>
+</tr>
+<tr>
+<td>População de MS (Censo 2022)</td>
+<td>2.757.013 hab</td>
+</tr>
+<tr>
+<td><strong>Estimativa para MS</strong></td>
+<td><strong>~33.200 t/ano</strong></td>
+</tr>
+<tr>
+<td><strong>Estimativa para Campo Grande</strong></td>
+<td><strong>~10.800 t/ano</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Aplicando a taxa nacional de coleta formal (cerca de 3%), algo em torno de
+<strong>32.200 t/ano</strong> em MS não teriam destinação comprovada.</p>
+<p><strong>5. Como o problema é tratado atualmente?</strong>
+- Ecopontos municipais e pontos de entrega voluntária, divulgados de forma
+  fragmentada;
+- Programas de logística reversa de fabricantes e a rede Green Eletron;
+- Campanhas pontuais de coleta em escolas, órgãos e empresas.</p>
+<p>Nenhum desses instrumentos oferece <strong>rastreabilidade por item</strong>: a informação para
+por "recebemos o material".
+<strong>O que existe em MS.</strong> O <strong>Plano Estadual de Resíduos Sólidos (PERS/MS)</strong>,
+gerido pelo IMASUL, organiza a política em 9 programas e 139 metas e ações — e um
+dos três programas que concentram mais de 80% do investimento previsto é
+justamente a <strong>implementação de um sistema de informações de gestão</strong>, que é a
+lacuna que este projeto endereça. No campo da logística reversa, o estado
+estruturou sistemas próprios para <strong>baterias de chumbo-ácido</strong> (parceria IBER,
+Semagro e IMASUL) e para <strong>embalagens de óleo lubrificante</strong> (Instituto Jogue
+Limpo); para eletroeletrônicos, a operação em MS é a da rede nacional
+Green Eletron e da ABREE, sem instrumento estadual específico. O <strong>ICMS
+Ecológico</strong> é o mecanismo que premia municípios pela gestão adequada de resíduos.</p>
+<blockquote>
+<p><strong>[PREENCHER]</strong> Visitar um ecoponto ou cooperativa e relatar como o registro é
+feito na prática — planilha, papel ou nada. É o dado que fecha o argumento de
+que a rastreabilidade por item não existe hoje.</p>
+</blockquote>
+<p><strong>6. Onde a tecnologia poderá contribuir?</strong>
+Na etapa que hoje não tem registro nenhum: o percurso entre a entrega e a
+destinação final. Uma etiqueta com identificador único, lida a cada passagem,
+transforma um processo opaco em uma cadeia de custódia auditável — e os registros
+acumulados viram indicadores de gestão.</p>
+<p><strong>7. Qual solução será desenvolvida?</strong>
+O <strong>e-Trilha MS</strong>: uma aplicação web em que o dispositivo é registrado, recebe um
+código único e uma etiqueta QR impressa, e tem sua passagem registrada por leitura
+do QR em cada etapa, até a emissão de um certificado de destinação final
+consultável publicamente.</p>
+<p><strong>8. Como será possível verificar se a solução funciona?</strong>
+Pelos testes descritos na seção 11: percurso completo de um aparelho pelas seis
+etapas, recusa de transições inválidas, consulta pública sem login, funcionamento
+sem conexão e conferência manual dos indicadores do painel.</p>
+<hr />
+<h2 id="2-justificativa">2. Justificativa</h2>
+<ul>
+<li>O e-waste é a categoria de resíduo que mais cresce no mundo, segundo o
+  <em>Global E-waste Monitor</em>;</li>
+<li>A Lei 12.305/2010 (Política Nacional de Resíduos Sólidos) exige logística
+  reversa para eletroeletrônicos, mas a adesão e a informação ao consumidor final
+  ainda são baixas;</li>
+<li>A falta de visibilidade sobre pontos de coleta e sobre o destino do material é
+  uma barreira concreta e resolvível com tecnologia;</li>
+<li>O tema tem aplicação direta no contexto profissional de TI, área que gera
+  e-waste constantemente: HDs, impressoras, servidores e cabeamento.
+<strong>Evidência local.</strong> Em Mato Grosso do Sul, <strong>47,8% dos resíduos sólidos ainda vão
+para lixões</strong> e <strong>menos de 1% do lixo doméstico recebe tratamento</strong>. O problema
+que este projeto ataca — destinação sem comprovação — não é hipótese distante:
+é o caso da maior parte do que se descarta no estado.</li>
+</ul>
+<hr />
+<h2 id="3-publico-beneficiado">3. Público beneficiado</h2>
+<table>
+<thead>
+<tr>
+<th>Público</th>
+<th>O que ganha</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cidadão</td>
+<td>Sabe onde entregar e recebe prova de que o aparelho foi reciclado</td>
+</tr>
+<tr>
+<td>PMEs de TI</td>
+<td>Comprovam conformidade com a PNRS ao descartar sucata</td>
+</tr>
+<tr>
+<td>Cooperativas e recicladoras</td>
+<td>Ganham previsibilidade de volume e registro do que processaram</td>
+</tr>
+<tr>
+<td>Gestores públicos municipais</td>
+<td>Enxergam volume, cobertura territorial e gargalos da logística reversa</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-objetivos">4. Objetivos</h2>
+<p><strong>Geral.</strong> Desenvolver uma solução tecnológica que dê rastreabilidade ao descarte
+de resíduos eletrônicos em Mato Grosso do Sul, do registro do aparelho até a
+comprovação da destinação final.</p>
+<p><strong>Específicos.</strong>
+1. Gerar identificador único e etiqueta QR para cada dispositivo descartado;
+2. Registrar a passagem do aparelho por cada etapa da cadeia por leitura do QR;
+3. Garantir que o histórico seja somente de acréscimo e que nenhuma etapa possa
+   ser pulada ou revertida;
+4. Permitir consulta pública do andamento pelo código, sem exigir cadastro;
+5. Mapear e tornar consultáveis os pontos de coleta do estado;
+6. Produzir indicadores de massa desviada do aterro, material recuperado, CO₂e
+   evitado e gargalos da cadeia;
+7. Permitir consulta sem conexão nos pontos de coleta;
+8. Garantir que as regras da cadeia sejam impostas pelo servidor e que o
+   histórico não possa ser alterado nem apagado;
+9. Assegurar que aparelhos com memória não volátil só sigam adiante com prova
+   de que os dados foram destruídos de forma compatível com a tecnologia da mídia.</p>
+<hr />
+<h2 id="5-pesquisa-de-solucoes-existentes">5. Pesquisa de soluções existentes</h2>
+<table>
+<thead>
+<tr>
+<th>Solução</th>
+<th>O que faz</th>
+<th>O que não resolve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Green Eletron</td>
+<td>Rede nacional de pontos de coleta de logística reversa</td>
+<td>Não dá rastreabilidade por item ao consumidor</td>
+</tr>
+<tr>
+<td>Aplicativos municipais de coleta seletiva</td>
+<td>Localizam pontos e informam horários</td>
+<td>Param na entrega; não acompanham a destinação</td>
+</tr>
+<tr>
+<td>Sistemas internos de recicladoras</td>
+<td>Controlam lotes e pesagem</td>
+<td>Fechados, sem acesso ao cidadão ou ao gestor público</td>
+</tr>
+<tr>
+<td>MTR / SINIR (manifesto de resíduos)</td>
+<td>Rastreiam transporte de resíduos entre empresas</td>
+<td>Instrumento de conformidade B2B, por lote, não por aparelho, e sem interface para o cidadão</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lacuna identificada:</strong> nenhuma das soluções acompanha o <em>item individual</em> de
+ponta a ponta nem devolve essa informação a quem entregou o aparelho.
+<strong>Em MS.</strong> Campo Grande publica os ecopontos na Carta de Serviços ao Usuário e a
+concessionária CG Solurb atende por telefone; a Green Eletron mantém um
+localizador nacional de pontos. Nenhum dos dois acompanha o aparelho depois da
+entrega — são diretórios de endereços, não sistemas de rastreio. Não localizamos
+aplicativo municipal de MS que registre a destinação por item.</p>
+<hr />
+<h2 id="6-requisitos">6. Requisitos</h2>
+<h3 id="61-funcionais">6.1 Funcionais</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requisito</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RF01</td>
+<td>Registrar dispositivo com categoria, marca, peso e ponto de entrega</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF02</td>
+<td>Gerar código único com dígito verificador e QR Code</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF03</td>
+<td>Emitir folha de etiquetas para impressão</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF04</td>
+<td>Ler QR pela câmera e registrar a etapa seguinte</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF05</td>
+<td>Aceitar digitação manual do código como alternativa à câmera</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF06</td>
+<td>Impedir pular etapas e retroceder</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF07</td>
+<td>Consultar a trilha pelo código, sem login</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF08</td>
+<td>Emitir certificado de destinação final</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF09</td>
+<td>Consultar pontos de coleta com filtro por município e tipo de resíduo</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF10</td>
+<td>Ordenar pontos pela distância até o usuário</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF11</td>
+<td>Exibir indicadores de massa, material recuperado, CO₂e, gargalo e pendências</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF12</td>
+<td>Conta obrigatória para registrar e listar, com cada usuário vendo só os próprios aparelhos</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF22</td>
+<td>Manter a consulta por código aberta a quem não tem conta, a partir de uma tela pública própria</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF23</td>
+<td>Criar o administrador inicial com senha sorteada, sem credencial escrita no código</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF26</td>
+<td>Exigir troca de senha no primeiro acesso, quando quem a definiu não foi o dono</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF24</td>
+<td>Recusar peso fora da faixa aceita em vez de substituí-lo em silêncio</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF25</td>
+<td>Exigir o prefixo <code>MS</code> na consulta por código</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF13</td>
+<td>Compartilhar dados entre dispositivos e usuários diferentes</td>
+<td>Implementado (API + SQLite)</td>
+</tr>
+<tr>
+<td>RF14</td>
+<td>Exigir conta de operador para registrar etapas, com o papel verificado no servidor</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF17</td>
+<td>Vincular o operador a um ponto de coleta e carimbar assinatura e local a partir da sessão</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF18</td>
+<td>Confirmar a mudança de etapa mostrando o que será gravado, antes de gravar</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF19</td>
+<td>Administrar contas: conceder e revogar papéis, vincular ponto e redefinir senha</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF20</td>
+<td>Registrar em trilha somente de acréscimo quem alterou o quê nas contas</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF21</td>
+<td>Distinguir a etapa que cada operador pode registrar (coleta, triagem, reciclagem)</td>
+<td><strong>Pendente — ver Limitações</strong></td>
+</tr>
+<tr>
+<td>RF15</td>
+<td>Exigir atestado de apagamento de dados na triagem de aparelhos com memória não volátil</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RF16</td>
+<td>Recusar método de apagamento incompatível com a tecnologia da mídia</td>
+<td>Implementado</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-nao-funcionais">6.2 Não funcionais</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requisito</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RNF01</td>
+<td>Consultar sem conexão com a internet</td>
+<td>Implementado (service worker)</td>
+</tr>
+<tr>
+<td>RNF02</td>
+<td>Rodar em navegador de celular e de desktop, sem instalação</td>
+<td>Implementado (PWA responsiva)</td>
+</tr>
+<tr>
+<td>RNF03</td>
+<td>Não depender de serviço externo pago ou de CDN</td>
+<td>Implementado (bibliotecas em <code>vendor/</code>)</td>
+</tr>
+<tr>
+<td>RNF04</td>
+<td>Interface em português e acessível por teclado</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RNF05</td>
+<td>Armazenamento seguro de credenciais</td>
+<td>Implementado (PBKDF2 com sal, no servidor)</td>
+</tr>
+<tr>
+<td>RNF06</td>
+<td>Regras de negócio impostas pelo servidor, não pela tela</td>
+<td>Implementado</td>
+</tr>
+<tr>
+<td>RNF07</td>
+<td>Histórico de eventos impossível de alterar ou apagar</td>
+<td>Implementado (gatilhos no banco)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-solucao-proposta">7. Solução proposta</h2>
+<p>O núcleo é uma <strong>cadeia de custódia</strong> de seis etapas, em que a etiqueta QR colada
+no aparelho funciona como identificador físico persistente:</p>
+<pre><code>REGISTRADO → COLETADO → EM_TRIAGEM → EM_TRANSPORTE → EM_RECICLAGEM → PROCESSADO
+   dono      ponto de     cooperativa   transporte     recicladora    certificado
+             coleta                                                   emitido
+</code></pre>
+<p>Três decisões de projeto sustentam a proposta:</p>
+<ol>
+<li><strong>O QR carrega a URL de rastreio, não só o código.</strong> Quem apontar o app de
+   câmera do próprio celular para a etiqueta já cai na página do aparelho, sem
+   precisar instalar nada.</li>
+<li><strong>O histórico é somente de acréscimo.</strong> Nenhum evento é apagado ou reescrito; a
+   etapa atual é apenas um espelho do último evento. É isso que dá credibilidade à
+   cadeia — e é por isso que retroceder é recusado: permitiria mascarar um extravio.</li>
+<li><strong>O prazo (SLA) de cada etapa é parte do modelo.</strong> Um item parado além do prazo
+   vira pendência automaticamente, sem ninguém precisar reportar. É assim que o
+   sistema aponta <em>onde</em> a logística reversa trava, em vez de só arquivar dados.</li>
+</ol>
+<hr />
+<h2 id="8-tecnologias-utilizadas">8. Tecnologias utilizadas</h2>
+<table>
+<thead>
+<tr>
+<th>Camada</th>
+<th>Escolha</th>
+<th>Por quê</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Interface</td>
+<td>HTML5, CSS3 e JavaScript (ES Modules)</td>
+<td>Sem build e sem framework: legível para quem está no 1º/2º semestre e sem etapa de compilação para dar errado na apresentação</td>
+</tr>
+<tr>
+<td>Servidor</td>
+<td>Python 3 com Flask</td>
+<td>Framework mínimo, de rotas explícitas; o mesmo processo entrega a API e as páginas, o que evita CORS e simplifica a demonstração</td>
+</tr>
+<tr>
+<td>Banco de dados</td>
+<td>SQLite</td>
+<td>Roda em processo, sem instalação nem configuração, e ainda assim oferece transações ACID, chaves estrangeiras e gatilhos de verdade</td>
+</tr>
+<tr>
+<td>Senhas</td>
+<td>PBKDF2 (<code>werkzeug.security</code>)</td>
+<td>Hash lento e com sal aleatório: testar senhas em massa deixa de ser viável</td>
+</tr>
+<tr>
+<td>Sessão</td>
+<td>Cookie assinado do Flask, <code>HttpOnly</code> e <code>SameSite=Lax</code></td>
+<td>O JavaScript da página não lê o cookie, o que limita o estrago de uma falha de XSS</td>
+</tr>
+<tr>
+<td>QR — geração</td>
+<td><code>qrcode-generator</code> (MIT), em <code>vendor/</code></td>
+<td>Gera SVG, que imprime nítido em qualquer tamanho</td>
+</tr>
+<tr>
+<td>QR — leitura</td>
+<td><code>BarcodeDetector</code> (API nativa) com <code>jsQR</code> (Apache-2.0) como alternativa</td>
+<td>O caminho nativo é mais rápido; a biblioteca cobre os navegadores sem suporte</td>
+</tr>
+<tr>
+<td>Offline</td>
+<td>Service Worker</td>
+<td>Pontos de coleta e galpões de triagem nem sempre têm conexão</td>
+</tr>
+<tr>
+<td>Mapa</td>
+<td>SVG desenhado pela própria aplicação</td>
+<td>Não depende de serviço externo de mapas nem de internet</td>
+</tr>
+<tr>
+<td>Testes</td>
+<td>pytest com o <em>test client</em> do Flask</td>
+<td>Exercita as rotas sem subir servidor nem abrir navegador; o banco de cada teste é uma cópia temporária, então a suíte não toca no banco de demonstração</td>
+</tr>
+</tbody>
+</table>
+<p>A única dependência para EXECUTAR é o Flask (<code>pip install -r requirements.txt</code>).
+O pytest fica em <code>requirements-dev.txt</code>, separado de propósito: quem só quer
+subir o sistema não instala ferramenta de teste. Nada é baixado em tempo de
+execução.</p>
+<hr />
+<h2 id="9-arquitetura-e-estrutura">9. Arquitetura e estrutura</h2>
+<h3 id="91-cliente-e-servidor">9.1 Cliente e servidor</h3>
+<pre><code>   NAVEGADOR                                    SERVIDOR (Flask)
+   ─────────                                    ────────────────
+   8 páginas HTML
+        │
+   ui.js  ......... cabeçalho, formatação, trilha
+        │
+   store.js  ...... ÚNICA porta de dados  ──HTTP/JSON──▶  app.py  ..... rotas da API
+        │                                                    │
+   model.js  ...... regras (validação de tela)          modelo.py  ... regras (validação real)
+   indicadores.js . cálculo dos indicadores             banco.py  .... SQL e transações
+   qr.js  ......... geração e leitura do QR
+                                                            │
+                                                     SQLite (etrilha.db)
+</code></pre>
+<p><strong>Regra de projeto:</strong> nenhuma tela conversa com o servidor diretamente; tudo
+passa por <code>js/store.js</code>. Foi essa regra que tornou a migração barata. Na versão
+anterior, o mesmo <code>store.js</code> lia e gravava no <code>localStorage</code>, e todas as suas
+funções já eram assíncronas justamente para que a troca não exigisse mexer nas
+telas. Quando o back-end entrou, <strong>só o corpo dessas funções mudou</strong> — de acesso
+local para <code>fetch</code>. Nenhuma das páginas precisou ser reescrita.</p>
+<h3 id="92-por-que-a-validacao-existe-dos-dois-lados">9.2 Por que a validação existe dos dois lados</h3>
+<p>As regras de etapa aparecem tanto em <code>js/model.js</code> quanto em <code>backend/modelo.py</code>.
+A duplicação é intencional, e o motivo é diferente em cada lado:</p>
+<ul>
+<li><strong>no navegador</strong>, para dar resposta imediata ao usuário;</li>
+<li><strong>no servidor</strong>, porque ele não pode confiar no cliente. Qualquer pessoa
+  consegue chamar a API por fora da tela, com <code>curl</code> ou pelo console do
+  navegador. A tela valida para ajudar; o servidor valida para valer.</li>
+</ul>
+<p>Só o que o servidor precisa impor está em Python. As tabelas de composição
+material e os fatores de CO₂e ficaram apenas no front-end, porque servem para
+exibição e não para decidir se uma gravação é aceita.</p>
+<h3 id="93-api-rest">9.3 API REST</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Rota</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/pontos</code></td>
+<td>Pontos de coleta — <strong>exige conta</strong></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/itens/&lt;codigo&gt;/rastreio</code></td>
+<td>Item + trilha + pontos resolvidos — <strong>público</strong></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/painel</code></td>
+<td>Conjunto dos indicadores: anônimo para conta comum, identificado para operador e admin — <strong>exige conta</strong></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/itens</code></td>
+<td>Registra aparelho, gera código e o evento <code>REGISTRADO</code> — <strong>exige conta</strong></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/itens/&lt;codigo&gt;/eventos</code></td>
+<td>Avança a etapa, valida a transição — <strong>exige operador</strong></td>
+</tr>
+<tr>
+<td><code>GET</code> / <code>POST</code> / <code>DELETE</code></td>
+<td><code>/api/sessao</code></td>
+<td>Usuário atual, entrar, sair</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/usuarios</code></td>
+<td>Criar conta</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/sessao/senha</code></td>
+<td>Troca a senha da própria conta, pedindo a atual — <strong>exige conta</strong></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/meus-itens</code></td>
+<td>Aparelhos da conta autenticada, e só dela</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/itens</code></td>
+<td>Aparelhos com etapa, ponto de entrada, dono e nº de leituras — <strong>exige admin</strong></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/usuarios</code></td>
+<td>Lista as contas com papel, ponto e nº de aparelhos — <strong>exige admin</strong></td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/admin/usuarios/&lt;id&gt;</code></td>
+<td>Altera papel, ponto vinculado e senha — <strong>exige admin</strong></td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/admin/usuarios/&lt;id&gt;</code></td>
+<td>Exclui a conta — <strong>exige admin e a senha dele no corpo</strong></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/alteracoes</code></td>
+<td>Trilha de administração — <strong>exige admin</strong></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/demo/reiniciar</code></td>
+<td>Recria o banco e sorteia senhas novas — <strong>exige admin</strong></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/saude</code></td>
+<td>Diagnóstico do servidor e do banco</td>
+</tr>
+</tbody>
+</table>
+<p>Uma rota some da lista por decisão de projeto: <strong>não existe <code>GET /api/itens</code></strong>.
+Devolver "todos os itens" seria entregar a qualquer conta os aparelhos de todo
+mundo, e é justamente o que o modelo de acesso recusa (seção 9.7). Quem precisa
+do conjunto recebe <code>/api/painel</code>, anonimizado; quem precisa do próprio recebe
+<code>/api/meus-itens</code>; quem precisa de um aparelho específico usa o código que tem
+em mãos.</p>
+<p>Os códigos de status carregam significado: <code>201</code> quando algo é criado, <code>400</code>
+quando uma regra de negócio é violada (com a mensagem já pronta para a tela),
+<code>401</code> quando falta autenticação, <code>403</code> quando a conta está autenticada mas não
+tem o papel exigido, e <code>404</code> quando o código não existe. A diferença entre 401 e
+403 não é decorativa: a tela usa a primeira para pedir login e a segunda para
+explicar que entrar de novo não resolveria.</p>
+<p>O <code>PATCH</code> de <code>/api/admin/usuarios/&lt;id&gt;</code> é parcial de propósito: só os campos
+presentes no corpo são alterados. <code>pontoId</code> ausente significa "não mexer";
+<code>pontoId</code> presente e vazio significa "desvincular do ponto" — sem essa
+distinção, salvar o papel de um operador apagaria o posto dele sem querer.</p>
+<h3 id="94-modelo-de-dados">9.4 Modelo de dados</h3>
+<table>
+<thead>
+<tr>
+<th>Tabela</th>
+<th>Colunas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pontos</code></td>
+<td><code>id</code>, <code>nome</code>, <code>tipo</code>, <code>municipio</code>, <code>endereco</code>, <code>lat</code>, <code>lng</code>, <code>aceita</code>, <code>horario</code>, <code>telefone</code></td>
+</tr>
+<tr>
+<td><code>usuarios</code></td>
+<td><code>id</code>, <code>nome</code>, <code>email</code> (UNIQUE), <code>senha_hash</code>, <code>criado_em</code>, <code>papel</code>, <code>ponto_id</code></td>
+</tr>
+<tr>
+<td><code>itens</code></td>
+<td><code>codigo</code> (PK), <code>categoria</code>, <code>marca</code>, <code>peso_kg</code>, <code>dono_id</code>, <code>ponto_origem_id</code>, <code>criado_em</code>, <code>atualizado_em</code>, <code>etapa_atual</code>, <code>demo</code></td>
+</tr>
+<tr>
+<td><code>eventos</code></td>
+<td><code>id</code>, <code>item_codigo</code>, <code>etapa</code>, <code>ponto_id</code>, <code>responsavel</code>, <code>observacao</code>, <code>em</code></td>
+</tr>
+<tr>
+<td><code>apagamentos</code></td>
+<td><code>item_codigo</code> (PK), <code>midia</code>, <code>metodo</code>, <code>responsavel</code>, <code>em</code></td>
+</tr>
+<tr>
+<td><code>alteracoes_conta</code></td>
+<td><code>id</code>, <code>alvo_id</code>, <code>alvo_nome</code>, <code>autor_id</code>, <code>autor_nome</code>, <code>acao</code>, <code>de</code>, <code>para</code>, <code>em</code></td>
+</tr>
+</tbody>
+</table>
+<p>Todo item tem dono: registrar exige conta. <code>dono_id</code> é o que separa "meus
+aparelhos" dos aparelhos de outra pessoa, e a listagem sai sempre desse filtro —
+"os itens do usuário X" não é uma chamada que a API aceite. Excluir a conta não
+apaga o aparelho (<code>ON DELETE SET NULL</code>): o histórico da cadeia de custódia vale
+por si, e o que se perde é justamente o vínculo com a pessoa.</p>
+<p><code>papel</code> tem <code>visitante</code> como padrão no próprio <code>CHECK</code> da coluna, e não no
+código: quem se cadastra pela tela não ganha poder de escrita, e mandar
+<code>"papel": "admin"</code> no JSON do cadastro não muda isso, porque o <code>INSERT</code> do
+cadastro nem escreve essa coluna. <code>ponto_id</code> amarra o operador ao local onde
+trabalha, e é dele que o servidor tira o ponto gravado no evento.</p>
+<h3 id="95-o-banco-garante-a-cadeia-de-custodia">9.5 O banco garante a cadeia de custódia</h3>
+<p>Não basta a aplicação prometer que não reescreve o histórico: um bug, um script
+de manutenção ou alguém com acesso ao banco poderiam apagar a prova de que um
+aparelho passou por uma etapa. Por isso a garantia está no <strong>próprio SQLite</strong>:</p>
+<pre><code class="language-sql">CREATE TRIGGER eventos_sem_update BEFORE UPDATE ON eventos
+BEGIN
+  SELECT RAISE(ABORT, 'O histórico de eventos é somente de acréscimo: alterar é proibido.');
+END;
+</code></pre>
+<p>Existe um gatilho equivalente para <code>DELETE</code>. <code>etapa_atual</code>, na tabela <code>itens</code>, é
+apenas um espelho do último evento, mantido para consulta rápida — a verdade
+continua sendo a tabela de eventos.</p>
+<h3 id="96-apagamento-seguro-onde-a-arquitetura-do-hardware-vira-regra-de-negocio">9.6 Apagamento seguro: onde a arquitetura do hardware vira regra de negócio</h3>
+<p>Um aparelho descartado não carrega só metal: carrega dados. É o caso direto do
+público que o próprio projeto identificou — as PMEs de TI que descartam "HDs,
+impressoras, servidores". Apagar um arquivo ou formatar <strong>não destrói o
+conteúdo</strong>: só marca o espaço como livre.</p>
+<p>E o método correto de destruição depende de <strong>como a mídia guarda o bit</strong>, o que
+é uma questão de arquitetura do hardware, não de software:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Disco magnético (HDD)</th>
+<th>Memória flash (SSD, NVMe, eMMC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Como o bit é guardado</td>
+<td>Orientação magnética de uma região do prato</td>
+<td>Carga elétrica presa numa célula</td>
+</tr>
+<tr>
+<td>Endereço lógico → físico</td>
+<td>Correspondência estável</td>
+<td><strong>Não há</strong>: a <em>flash translation layer</em> remapeia blocos o tempo todo</td>
+</tr>
+<tr>
+<td>Sobrescrever setores</td>
+<td>Funciona</td>
+<td><strong>Não funciona</strong> — o <em>wear leveling</em> deixa cópias em blocos remapeados, e há ainda a área de <em>over-provisioning</em>, invisível ao sistema operacional</td>
+</tr>
+<tr>
+<td>Desmagnetizar (degausser)</td>
+<td>Funciona</td>
+<td><strong>Não faz nada</strong> — não há magnetismo guardando o dado</td>
+</tr>
+<tr>
+<td>O que funciona em ambos</td>
+<td>Secure Erase, crypto-erase, destruição física</td>
+<td>Secure Erase (o próprio controlador apaga), crypto-erase, trituração</td>
+</tr>
+</tbody>
+</table>
+<p>Na etapa <code>EM_TRIAGEM</code>, aparelhos das categorias com memória não volátil
+(<code>celular</code>, <code>notebook</code>, <code>desktop</code>, <code>servidor</code>, <code>hd</code>, <code>impressora</code>) só avançam
+com um <strong>atestado de apagamento</strong>: tipo de mídia e método usado. O servidor
+recusa a combinação ineficaz, e a recusa explica o motivo técnico:</p>
+<pre><code>POST /api/itens/MS-YFFG-ZXBC/eventos
+  {&quot;etapa&quot;:&quot;EM_TRIAGEM&quot;,&quot;apagamento&quot;:{&quot;midia&quot;:&quot;flash&quot;,&quot;metodo&quot;:&quot;SOBRESCRITA&quot;}}
+
+HTTP 400  &quot;Sobrescrita de todos os setores&quot; não destrói os dados em memória
+          flash (ssd, nvme, emmc, cartão). Sobrescrever pelo endereço lógico
+          não alcança os blocos que o wear leveling remapeou nem a área de
+          over-provisioning: em memória flash, restam cópias legíveis do dado.
+</code></pre>
+<p>Multifuncionais entram na lista porque as corporativas guardam cópias
+digitalizadas em disco ou memória flash interna — é uma fonte de vazamento que
+costuma passar despercebida no descarte.</p>
+<p>O atestado é gravado na mesma transação do avanço de etapa (ou o item avança
+com a declaração, ou não avança), fica visível no rastreio público junto ao
+certificado, e a tabela <code>apagamentos</code> tem os mesmos gatilhos de
+somente-acréscimo dos eventos: uma vez declarado, não se altera.</p>
+<p>Isso liga o projeto a duas coisas ao mesmo tempo: <strong>Arquitetura de
+Computadores</strong>, de forma aplicada e não decorativa, e a <strong>LGPD</strong>, já que
+descartar mídia sem destruir o dado é incidente de segurança, não descuido.</p>
+<h3 id="97-autorizacao-quem-pode-escrever-na-cadeia">9.7 Autorização: quem pode escrever na cadeia</h3>
+<p>Ler a trilha de <strong>um</strong> código que se tem em mãos é público. Todo o resto exige
+conta. Quem lê a etiqueta é quem declara que o aparelho passou por uma etapa, e
+essa declaração assinada é o produto do sistema: aberta a qualquer um, não
+provaria nada. Três papéis dividem o acesso:</p>
+<table>
+<thead>
+<tr>
+<th>Papel</th>
+<th>Consultar por código</th>
+<th>Registrar o próprio aparelho</th>
+<th>Ver os aparelhos de outros</th>
+<th>Ler QR e avançar etapa</th>
+<th>Gerenciar contas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sem conta</td>
+<td>sim</td>
+<td>não</td>
+<td>não</td>
+<td>não</td>
+<td>não</td>
+</tr>
+<tr>
+<td>Visitante</td>
+<td>sim</td>
+<td>sim</td>
+<td>não</td>
+<td>não</td>
+<td>não</td>
+</tr>
+<tr>
+<td>Operador</td>
+<td>sim</td>
+<td>sim</td>
+<td>sim</td>
+<td>sim</td>
+<td>não</td>
+</tr>
+<tr>
+<td>Administrador</td>
+<td>sim</td>
+<td>sim</td>
+<td>sim</td>
+<td>sim</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table>
+<p>Cinco decisões sustentam esse controle:</p>
+<p><strong>A conta é a porta de entrada, e a consulta é a exceção declarada.</strong> A primeira
+tela oferece entrar, criar conta ou consultar um código; só a terceira dispensa
+cadastro, e leva a uma página que faz uma coisa só — transformar um código num
+link de rastreio. Quem entregou um celular no ecoponto tem a etiqueta na mão e
+não deveria precisar de cadastro para ver onde o aparelho está: é exatamente o
+que a Lei 12.305/2010 deixa em aberto e o projeto se propõe a fechar. A guarda
+das demais páginas está no servidor, que <strong>não entrega o arquivo</strong> sem sessão,
+em vez de servir a página e deixar o JavaScript decidir.</p>
+<p><strong>Nenhuma conta lista os aparelhos de outra.</strong> Não existe rota que devolva
+"todos os itens": <code>GET /api/meus-itens</code> filtra por <code>dono_id</code> a partir do cookie
+de sessão — o id do dono não é parâmetro, então não há chamada a montar para ver
+o que é dos outros —, e o painel de indicadores recebe um recorte <strong>anônimo</strong>,
+sem código, sem marca e sem dono, com uma referência sequencial que só serve
+para juntar cada evento ao seu item. Operador e administrador recebem os mesmos
+dados identificados, porque a função deles é agir sobre um aparelho específico.</p>
+<p><strong>A verificação é do servidor.</strong> As telas do operador e do administrador somem
+do menu de quem não tem o papel, mas esconder o botão não é segurança: o
+<code>POST /api/itens/&lt;codigo&gt;/eventos</code> responde <strong>401</strong> a quem não entrou e <strong>403</strong>
+a quem entrou sem permissão, inclusive para chamadas feitas por <code>curl</code>. A
+distinção entre os dois códigos é usada pela tela: 401 pede login, 403 explica
+que a conta não tem o papel — entrar de novo não resolveria.</p>
+<p>O leitor de QR vai um passo além e <strong>não é entregue</strong> a quem não pode operar:
+<code>/scanner</code> redireciona para a home. Nas outras páginas fechadas vale o contrário
+— a de administração, por exemplo, é servida a qualquer conta, porque sobra ali
+o que explicar a quem não tem permissão. No scanner não sobra nada: a página
+inteira é a ação recusada, e entregá-la só abriria uma câmera cujo resultado a
+API rejeita a cada leitura.</p>
+<p><strong>Senha definida por outra pessoa não vale como identidade.</strong> A conta nasce com
+<code>senha_provisoria = 1</code> nos dois casos em que o segredo foi escolhido por
+terceiros: a sorteada na carga inicial e a redefinida por um administrador.
+Enquanto a marca estiver de pé, o decorador <code>exige</code> recusa toda rota com 403,
+liberando apenas <code>POST /api/sessao/senha</code> — e a entrega das páginas prende a
+sessão na raiz, onde está o formulário. A marca cai quando o dono escolhe a
+própria senha.</p>
+<p>O raciocínio é o mesmo que sustenta a assinatura dos eventos: o sistema promete
+que cada leitura foi feita por quem diz ter sido. Uma senha que o administrador
+também conhece não sustenta essa promessa — ele poderia entrar como o operador e
+assinar por ele. Redefinir a <em>própria</em> senha não marca nada, porque aí quem
+escolheu é quem vai usar.</p>
+<p>A troca exige a senha atual mesmo já havendo sessão, pela mesma razão que o
+<code>sudo</code> pergunta a senha de quem já está logado: o cookie prova que alguém
+entrou, não que quem está no teclado agora é o dono. Numa máquina compartilhada,
+sem isso bastaria encontrar a sessão aberta para tomar a conta.</p>
+<p><strong>O papel é lido do banco a cada requisição</strong>, e não guardado no cookie de
+sessão. Guardá-lo no cookie seria mais rápido, mas revogar o papel de alguém só
+teria efeito quando a sessão dela expirasse. Do jeito que está, a revogação vale
+já na requisição seguinte — o que foi verificado em teste, com a sessão do
+operador aberta.</p>
+<p><strong>O servidor carimba a assinatura e o local.</strong> O nome do responsável vem da
+conta autenticada e o ponto vem do vínculo dela; os campos equivalentes no corpo
+da requisição são descartados. Sem isso, qualquer operador poderia assinar com o
+nome de outra pessoa ou registrar passagem por um local onde não trabalha — e a
+assinatura provaria apenas que alguém sabe digitar.</p>
+<p><strong>Conceder o papel também deixa rastro.</strong> Promover alguém a operador é dar poder
+de escrever no histórico dos aparelhos, então essa concessão precisa da mesma
+prestação de contas que ela protege. A tabela <code>alteracoes_conta</code> guarda quem
+alterou o quê, quando e por quem, com os mesmos gatilhos de somente-acréscimo
+dos eventos. Senha redefinida entra na trilha como fato — nunca o valor. O hash
+da senha não sai na API em nenhuma rota, nem para o administrador: ele não tem
+uso legítimo na tela, e vazá-lo daria material para ataque de dicionário fora do
+sistema.</p>
+<p>Duas regras de integridade completam:</p>
+<ul>
+<li><strong>o sistema nunca fica sem administrador</strong>: rebaixar o último admin é
+  recusado, e a contagem é feita <em>dentro</em> da transação, para que dois admins se
+  rebaixando ao mesmo tempo não deixem o sistema sem nenhum — é o mesmo motivo
+  do <code>BEGIN IMMEDIATE</code> da seção 9.8;</li>
+<li><strong>ninguém rebaixa a si mesmo</strong>, que é o caso mais comum de tiro no pé.</li>
+</ul>
+<h3 id="a-conta-de-reserva">A conta de reserva</h3>
+<p>As regras acima protegem contra o acidente, não contra a perda do segredo. Só um
+administrador promove outro — é o que impede a auto-promoção pelo formulário
+público —, e a senha do admin inicial é sorteada e mostrada <strong>uma vez</strong> no
+terminal. Perdida essa senha, o único caminho de volta seria recriar o banco,
+que apaga contas e aparelhos junto: um erro de operação custando a cadeia de
+custódia inteira.</p>
+<p>A carga cria então uma terceira conta, <code>reserva@etrilha.ms</code>, marcada com
+<code>reserva = 1</code> no banco. Ela é administrador e <strong>não aparece na tela de
+administração</strong>: <code>listar_usuarios()</code> a filtra, e <code>atualizar_usuario()</code> e
+<code>excluir_usuario()</code> a recusam por conta própria — com a <strong>mesma resposta</strong> que
+dariam a um id inexistente, porque uma mensagem específica ("essa conta não pode
+ser alterada") já contaria que ela existe. A filtragem na listagem sozinha seria
+cosmética; um id vindo de um backup ou de um log bastaria para contorná-la.</p>
+<p>Ela some da lista justamente para não ser o alvo fácil do acidente que deveria
+cobrir: um administrador descontrolado — ou alguém com a sessão dele — apagaria
+toda conta de admin que enxergasse. Pelo mesmo raciocínio, a reserva <strong>não conta</strong>
+como o administrador que sobra na regra do "último admin": se contasse, a regra
+deixaria rebaixar o último admin visível e a administração do dia a dia passaria
+a depender de uma conta que não aparece em tela nenhuma.</p>
+<p>O que ela <strong>não</strong> ganha é sigilo sobre o que faz: uma vez usada, suas ações
+entram em <code>alteracoes_conta</code> como as de qualquer outra conta. Esconder a conta é
+proteger a chave; um administrador cujos atos não deixassem rastro seria um
+backdoor, não uma reserva.</p>
+<p>Pelo mesmo motivo, a sessão da reserva é <strong>marcada em toda tela</strong>: uma faixa no
+topo diz o que fazer, e uma marca d'água diagonal fica ATRÁS do conteúdo
+enquanto a sessão durar — os cartões, o cabeçalho e o rodapé têm fundo opaco e a
+cobrem, de modo que ela aparece pelas frestas da página. Por cima do texto,
+qualquer opacidade que não atrapalhasse a leitura já a tornava invisível; por
+trás, ela pode ser vista sem disputar com nada. O risco que isso cobre não é técnico, é de hábito — a
+reserva não aparece em lista nenhuma, não pode ser excluída e nunca pede
+justificativa, o que a torna a conta mais cômoda do sistema. Uma administração
+que passasse a se apoiar nela ficaria sem a prestação de contas que a tela de
+administração existe para dar. São duas peças e não uma porque cumprem tempos
+diferentes: a faixa é lida uma vez e sai da vista ao rolar a página; a marca
+d'água ainda está lá dez minutos depois. A marca é <code>aria-hidden</code> — texto girado
+e repetido não ajuda quem usa leitor de tela, e para esse caso quem carrega o
+recado é a faixa — e não sai na impressão, onde cobriria os QR Codes da folha de
+etiquetas.</p>
+<h3 id="recuperacao-de-acesso">Recuperação de acesso</h3>
+<p>A reserva só resolve o problema se a senha dela própria for recuperável — senão
+é um segredo tão perdível quanto o que protege. O comando é do terminal:</p>
+<pre><code class="language-powershell">python backend/app.py --nova-senha admin@etrilha.ms
+</code></pre>
+<p>Sorteia, grava só o hash novo, imprime uma vez e sai sem subir o servidor. Sem
+e-mail, trata a conta de reserva. A senha nasce <code>senha_provisoria = 1</code> pela
+mesma regra da seção anterior: quem rodou o comando a leu.</p>
+<p>O lugar é deliberado. A interface não serve para isso — <code>/admin</code> exige estar
+logado como administrador, que é exatamente o que se perdeu. E o comando não
+abre nada que já não estivesse aberto: quem alcança o terminal do servidor
+alcança <code>backend/etrilha.db</code>, com todos os hashes dentro. O que ele muda é o
+custo do erro, que deixa de ser a demonstração inteira.</p>
+<p>A redefinição entra na trilha de administração com o autor nomeado como
+<code>terminal do servidor</code> — exceto a da reserva, cujo nome apareceria na tela de
+administração e denunciaria a conta que precisa não aparecer lá. Nesse caso o
+registro é a linha impressa no terminal de quem rodou o comando.</p>
+<h3 id="excluir-uma-conta-sem-apagar-o-que-ela-declarou">Excluir uma conta sem apagar o que ela declarou</h3>
+<p>A conta some; o que ela produziu, não. São três coisas distintas:</p>
+<ul>
+<li><strong>os aparelhos</strong> que ela registrou continuam cadastrados, com código e trilha
+  intactos — <code>dono_id</code> volta a <code>NULL</code>. Apagá-los junto seria destruir cadeia de
+  custódia por causa de um cadastro, invertendo a finalidade do sistema;</li>
+<li><strong>os eventos</strong> que ela assinou permanecem, porque <code>responsavel</code> sempre foi um
+  texto copiado no momento da leitura, e não uma referência à conta: quem
+  registrou a coleta continua nomeado no histórico depois de sair da equipe;</li>
+<li><strong>a trilha de administração</strong> continua legível, e a própria exclusão entra
+  nela.</li>
+</ul>
+<p>O terceiro ponto obrigou a mudar o esquema. Na primeira versão,
+<code>alteracoes_conta</code> tinha chave estrangeira para <code>usuarios</code>, e com
+<code>ON DELETE RESTRICT</code> o banco recusaria excluir qualquer conta que já tivesse
+sido promovida — enquanto <code>CASCADE</code> apagaria justamente o registro de que ela
+existiu. Nenhuma das duas serve: <strong>uma trilha de auditoria não pode depender da
+existência da linha que ela descreve.</strong> A solução foi copiar o nome de quem foi
+alterado e de quem alterou para dentro da própria linha e dispensar a chave
+estrangeira.</p>
+<p>A exclusão também é a única ação da tela que <strong>pede a senha de quem está
+agindo</strong>, mesmo com a sessão aberta. É o raciocínio do <code>sudo</code>: saber quem está
+logado não basta quando a máquina pode ter ficado sozinha no galpão e a ação não
+tem volta. Senha errada responde 403 com mensagem própria — a sessão continua
+válida, o que faltou foi a confirmação.</p>
+<p>O primeiro administrador nasce na carga inicial, fora da tela. Não poderia ser
+diferente: se a interface permitisse a auto-promoção, o controle não valeria
+nada. Num sistema real esse cadastro seria um comando de instalação.</p>
+<h3 id="971-confirmacao-antes-de-gravar">9.7.1 Confirmação antes de gravar</h3>
+<p>O histórico é somente de acréscimo, e o banco recusa <code>UPDATE</code> e <code>DELETE</code> em
+<code>eventos</code>: <strong>não existe desfazer</strong>. Num galpão de triagem com dezenas de
+aparelhos, ler o QR errado é fácil, e um clique a mais deixaria marca permanente
+na cadeia de custódia do aparelho errado.</p>
+<p>Por isso o clique não grava direto. Entre o botão e a gravação existe uma tela
+de confirmação que mostra <strong>o que será gravado</strong>: o código e a categoria do
+aparelho — que é o que pega o QR trocado —, a etapa atual e a de destino, o
+local, a assinatura e, quando for triagem, a mídia e o método de apagamento
+declarados. O aviso diz <em>por que</em> é definitivo, e não apenas que é.</p>
+<p>Três detalhes decorrem disso: o botão de voltar recebe o foco ao abrir, para que
+um Enter distraído corrija em vez de confirmar; o botão de confirmar é
+desabilitado durante a chamada, para que dois cliques não gravem dois eventos; e
+a confirmação não usa o <code>confirm()</code> do navegador, que aceita só texto puro, trava
+a página e tem cara de erro do sistema em vez de decisão consciente.</p>
+<h3 id="98-concorrencia">9.8 Concorrência</h3>
+<p>As escritas usam <code>BEGIN IMMEDIATE</code>, que toma o bloqueio de escrita já na
+abertura da transação, e não no primeiro <code>INSERT</code>. Isso importa porque as
+gravações aqui são do tipo "ler a etapa atual, decidir, gravar": sem o bloqueio
+antecipado, dois operadores lendo o mesmo QR ao mesmo tempo poderiam ambos ver
+<code>COLETADO</code> e gravar <code>EM_TRIAGEM</code> duas vezes. O banco opera em modo WAL, que
+permite leituras simultâneas às escritas.</p>
+<h3 id="99-superficie-exposta-pelo-servidor">9.9 Superfície exposta pelo servidor</h3>
+<p>A lista de arquivos que o servidor entrega é explícita (<code>PAGINAS</code>,
+<code>ARQUIVOS_RAIZ</code> e <code>PASTAS_PUBLICAS</code>, em <code>app.py</code>). Um servidor que entregasse
+qualquer arquivo da pasta acabaria servindo também <code>backend/etrilha.db</code> — o
+banco inteiro, com os hashes de senha — e a pasta <code>backup/</code>. O que não está na
+lista responde 404.</p>
+<p>As páginas são endereçadas <strong>sem a extensão</strong> (<code>/registrar</code>, e não
+<code>/registrar.html</code>): a extensão descreve como o arquivo está guardado no disco, o
+que não é assunto de quem digita o endereço. <code>arquivo_raiz()</code> resolve o nome
+para o arquivo e redireciona a forma antiga para a nova, de modo que cada tela
+tenha um endereço só — dois endereços para a mesma página se espalham por links,
+histórico e favoritos, e depois divergem. Pelo mesmo motivo <code>/index</code> redireciona
+para <code>/</code>.</p>
+<p>São <strong>oito páginas</strong>, e não uma por tela: três delas atendem dois estados da
+mesma tarefa, decididos pelo contexto e não por um arquivo a mais. <code>/</code> é a porta
+de entrada para quem não tem sessão e a home para quem tem — é o mesmo momento
+da visita, e quem já entrou não tem o que fazer numa tela que só oferece entrar.
+<code>/rastrear</code> recebe o código digitado ou lido pela câmera, porque as duas formas
+terminam na mesma trilha. <code>/registrar?imprimir</code> troca o cadastro pela folha de
+etiquetas, já que o cadastro é o que produz a etiqueta que a folha imprime.</p>
+<p>O mesmo ponto é onde a sessão é conferida: pedir uma página que exige conta sem
+ter sessão devolve um redirecionamento para a entrada, e o arquivo não sai do
+servidor. Entregar o HTML e deixar o JavaScript esconder o conteúdo mostraria a
+tela por um instante e dependeria de o script rodar.</p>
+<h3 id="991-alcance-do-servidor-na-rede">9.9.1 Alcance do servidor na rede</h3>
+<p>O servidor escuta em <code>0.0.0.0</code> e não em <code>127.0.0.1</code>, de modo que aparelhos da
+mesma rede local alcancem o sistema — é o que permite abrir o scanner no
+celular, onde ler um QR faz sentido. O endereço de rede é impresso na subida,
+junto com o de <code>localhost</code>.</p>
+<p>A escolha tem um custo que precisa ser dito: <strong>em rede pública, qualquer pessoa
+conectada alcança o sistema</strong>, e sem HTTPS a senha trafega em texto claro. Por
+isso o host é configurável por variável de ambiente (<code>HOST=127.0.0.1</code> fecha o
+servidor no loopback), e a mensagem de subida lembra que a câmera não abre pelo
+IP — <code>getUserMedia</code> exige contexto seguro, que por HTTP puro só existe em
+<code>localhost</code>.</p>
+<p>Num sistema real isso se resolveria com TLS e com o servidor atrás de um proxy;
+aqui, a variável de ambiente é a mitigação honesta para uma demonstração.</p>
+<h3 id="910-algoritmos-relevantes">9.10 Algoritmos relevantes</h3>
+<ul>
+<li><strong>Máquina de estados</strong> (<code>validar_transicao</code>): só aceita o passo imediatamente
+  seguinte; recusa retrocesso e salto de etapa, com mensagem explicando o motivo.
+  Roda no servidor, dentro da transação, sobre a etapa lida do banco — nunca
+  sobre o que o cliente afirmou ser a etapa atual.</li>
+<li><strong>Dígito verificador</strong> (<code>digito_verificador</code>): soma ponderada módulo 32 sobre um
+  alfabeto base32 <strong>sem os caracteres I, L, O e U</strong> — os que as pessoas confundem
+  ao ler uma etiqueta suja. A normalização ainda corrige <code>O→0</code>, <code>I→1</code>, <code>L→1</code> e
+  <code>U→V</code>. A detecção de erro de um caractere é <strong>parcial, e medida</strong>: os pesos são
+  8, 7, 6, 5, 4, 3, 2, e todo peso <strong>par</strong> divide o módulo 32, o que deixa passar
+  a troca cujo efeito na soma é múltiplo de 32. Nas posições de peso ímpar a
+  detecção é total; no conjunto, cerca de <strong>5% das trocas de um caractere
+  escapam</strong> (<code>testes/teste_modelo.py</code> mede e trava esse número). Pesos todos
+  ímpares seriam coprimos com 32 e levariam a brecha a zero — ao custo de mudar
+  o dígito de todo código já emitido. Ver limitação nº 7.</li>
+<li><strong>Prefixo obrigatório</strong> (<code>normalizar_codigo</code>): o código só é aceito começando
+  por <code>MS</code>, como em <code>MS-XXXX-XXXX</code>. São duas verificações com papéis distintos —
+  o prefixo diz de qual sistema é a etiqueta, e recusa de imediato qualquer outra
+  sequência de 8 caracteres que apareça num QR; o dígito verificador diz se ela
+  foi lida ou digitada corretamente.</li>
+<li><strong>Validação do peso</strong> (<code>normalizar_peso</code>): aceita de 0,01 kg a 500 kg. Peso
+  ausente cai no peso médio da categoria — é o caso de quem não tem balança —,
+  mas peso presente e inválido é <strong>recusado</strong>, e não substituído em silêncio:
+  trocar um <code>11111111111</code> pela média daria por bom um número digitado errado, e
+  o peso é o que alimenta todo o cálculo de material recuperado e de CO₂e.</li>
+<li><strong>Validação do apagamento</strong> (<code>validar_apagamento</code>): confere se o método
+  declarado destrói o dado naquele tipo de mídia; a tabela de compatibilidade
+  vem da arquitetura da mídia, não de convenção (seção 9.6).</li>
+<li><strong>Haversine</strong> (<code>distanciaKm</code>): distância entre o usuário e cada ponto de coleta,
+  calculada no próprio aparelho — a localização não é enviada a lugar nenhum.</li>
+<li><strong>Detecção de gargalo</strong>: para cada etapa, média das durações <strong>encerradas</strong>
+  dividida pelo SLA. A etapa com a maior razão é o gargalo. Durações em aberto são
+  excluídas de propósito, pois ainda não terminaram e distorceriam a média.</li>
+<li><strong>Projeção cartográfica</strong>: equirretangular, com o eixo X comprimido por
+  <code>cos(latitude média)</code> para o estado não sair esticado.</li>
+</ul>
+<h3 id="911-articulacao-com-as-disciplinas">9.11 Articulação com as disciplinas</h3>
+<table>
+<thead>
+<tr>
+<th>Disciplina</th>
+<th>Contribuição concreta ao projeto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Algoritmos e Programação</strong></td>
+<td>Máquina de estados, dígito verificador, Haversine, agregações e ordenações do painel; e o controle de acesso por papel, com as regras de integridade que dependem de ler e decidir dentro da mesma transação (seção 9.7)</td>
+</tr>
+<tr>
+<td><strong>Arquitetura de Computadores</strong></td>
+<td>Duas contribuições, ambas viradas em código. (1) O <strong>atestado de apagamento</strong> (seção 9.6): a diferença entre disco magnético e memória flash — orientação magnética contra carga em célula, endereçamento estável contra <em>flash translation layer</em> com <em>wear leveling</em> — define quais métodos destroem o dado, e essa distinção virou uma regra que o servidor impõe. (2) A <strong>tabela de composição material</strong> sai da arquitetura real do hardware: ouro nos contatos e no encapsulamento dos circuitos integrados, cobre nas trilhas da placa e nos enrolamentos, alumínio nos dissipadores e no chassi, terras raras nos ímãs de HDs e alto-falantes — é o que permite estimar o que se recupera de cada aparelho</td>
+</tr>
+<tr>
+<td><strong>Redes de Computadores</strong></td>
+<td>Arquitetura cliente-servidor sobre HTTP; API REST com verbos e códigos de status, incluindo a distinção entre <strong>401</strong> (falta autenticar) e <strong>403</strong> (autenticado sem permissão); autenticação por cookie de sessão assinado, <code>HttpOnly</code> e <code>SameSite=Lax</code>; mesma origem para evitar CORS; e o QR transportando o identificador <strong>sem depender de rede</strong> no ponto de coleta</td>
+</tr>
+<tr>
+<td><strong>Sistemas Operacionais</strong></td>
+<td>Processo servidor escutando numa porta; navegador como ambiente de execução com sandbox e <strong>modelo de permissões</strong> para câmera e geolocalização (o app nunca fala direto com o dispositivo); service worker como processo em segundo plano; concorrência, bloqueio de arquivo e journaling (WAL) no SQLite. O controle de papéis é a mesma ideia de permissão do sistema operacional aplicada à aplicação: um sujeito autenticado, uma operação e uma decisão tomada por quem detém o recurso — não por quem pede</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-desenvolvimento">10. Desenvolvimento</h2>
+<blockquote>
+<p><strong>[PREENCHER]</strong> Registrar como o trabalho foi dividido na equipe, as decisões
+que mudaram no meio do caminho e as dificuldades encontradas. Vale colar
+capturas de tela da evolução entre as pré-entregas de 04/09, 25/09 e 23/10.</p>
+</blockquote>
+<p>Marcos previstos no cronograma da DAC:</p>
+<table>
+<thead>
+<tr>
+<th>Etapa</th>
+<th>Data</th>
+<th>Entrega</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>04/09</td>
+<td>Pré-entrega 1: problema, evidências, objetivos e referências</td>
+</tr>
+<tr>
+<td>5</td>
+<td>25/09</td>
+<td>Pré-entrega 2: proposta técnica + protótipo inicial + relatório v0.3</td>
+</tr>
+<tr>
+<td>8</td>
+<td>23/10</td>
+<td>Pré-entrega 3: fluxo principal funcionando + evidências de teste</td>
+</tr>
+<tr>
+<td>9</td>
+<td>29/10</td>
+<td>Entrega: MVP + Relatório Técnico</td>
+</tr>
+<tr>
+<td>10</td>
+<td>03–06/11</td>
+<td>Apresentação final</td>
+</tr>
+</tbody>
+</table>
+<h3 id="101-cronograma-interno">10.1 Cronograma interno</h3>
+<p>O cronograma da DAC marca as entregas; este marca o trabalho entre elas. O que
+está concluído foi verificado pela suíte de testes e pelo roteiro da seção 11.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Frente</th>
+<th>Prazo interno</th>
+<th>Situação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Modelo de domínio, código de rastreio e máquina de estados</td>
+<td>21/08</td>
+<td>Concluído</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Telas públicas: consulta por código e trilha</td>
+<td>21/08</td>
+<td>Concluído</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Back-end, banco e API; cadeia de custódia gravada no servidor</td>
+<td>27/08</td>
+<td>Concluído</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Contas, papéis e administração</td>
+<td>31/08</td>
+<td>Concluído</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Atestado de apagamento seguro</td>
+<td>31/08</td>
+<td>Concluído</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Suíte de testes automatizados</td>
+<td>31/08</td>
+<td>Concluído — 366 testes</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Conta de reserva e recuperação de acesso pelo terminal</td>
+<td>09/09</td>
+<td>Concluído</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Levantamento de dados locais de MS</td>
+<td>25/09</td>
+<td>Parcial — Campo Grande feito; interior pendente</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Competência por etapa (RF21)</td>
+<td>16/10</td>
+<td>Não iniciado</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Teste em celular real, em campo</td>
+<td>16/10</td>
+<td>Não iniciado</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Decisão sobre o dígito verificador</td>
+<td>16/10</td>
+<td>Em aberto — ver Limitações</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Evidências de teste em imagem para o relatório</td>
+<td>23/10</td>
+<td>Não iniciado</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Consolidação do Relatório Técnico</td>
+<td>23/10</td>
+<td>Em andamento</td>
+</tr>
+</tbody>
+</table>
+<p>O caminho crítico até 23/10 são os itens 9, 10 e 12: o primeiro é a limitação nº 1
+do projeto, e os outros dois são exigência explícita da Pré-Entrega 3.</p>
+<hr />
+<h2 id="11-testes">11. Testes</h2>
+<h3 id="111-roteiro-executado">11.1 Roteiro executado</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Cenário</th>
+<th>Resultado esperado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Registrar um notebook</td>
+<td>Código com dígito verificador válido e QR gerado</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Pré-visualizar a folha de etiquetas</td>
+<td>QR legível, um por aparelho selecionado</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Ler o QR e avançar as seis etapas</td>
+<td>Item chega a <code>PROCESSADO</code> e o certificado é emitido</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Tentar pular uma etapa</td>
+<td>Recusado, com o motivo exibido</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Tentar retroceder uma etapa</td>
+<td>Recusado, com o motivo exibido</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Consultar o código em janela anônima</td>
+<td>Trilha completa exibida sem login</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Digitar o código com erro de um caractere</td>
+<td>Rejeitado pelo dígito verificador</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Digitar o código em minúsculas, sem hífen e com <code>O</code> no lugar de <code>0</code></td>
+<td>Aceito e normalizado</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Filtrar pontos por município e por tipo de aparelho</td>
+<td>Lista e mapa refletem o filtro</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Conferir os indicadores do painel à mão</td>
+<td>Massa e contagens batem com os itens cadastrados</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Recarregar sem conexão</td>
+<td>Aplicação continua abrindo e consultando (service worker)</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Abrir no Firefox</td>
+<td>Leitura cai para o jsQR, pois não há <code>BarcodeDetector</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td>Registrar um item num navegador e consultá-lo em <strong>outro</strong></td>
+<td>O segundo navegador vê o item, a trilha e o responsável</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Chamar a API por fora da tela, com <code>curl</code>, pedindo uma etapa inválida</td>
+<td>Recusado com HTTP 400 e a mesma mensagem da interface</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Tentar <code>UPDATE</code> ou <code>DELETE</code> em <code>eventos</code> direto no SQLite</td>
+<td>Recusado pelos gatilhos do banco</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Pedir <code>backend/etrilha.db</code> pelo navegador</td>
+<td>HTTP 404 — não está na lista de arquivos servidos</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Concluir a triagem de um HD sem informar o atestado</td>
+<td>Recusado: a etapa não avança</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Declarar sobrescrita de setores em memória flash</td>
+<td>Recusado, com a explicação do <em>wear leveling</em></td>
+</tr>
+<tr>
+<td>19</td>
+<td>Declarar desmagnetização em memória flash</td>
+<td>Recusado: não há magnetismo guardando o dado</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Declarar ATA Secure Erase em memória flash</td>
+<td>Aceito; atestado aparece no rastreio público</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Avançar um monitor (sem mídia) para a triagem</td>
+<td>Aceito sem exigir atestado</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Tentar <code>UPDATE</code> ou <code>DELETE</code> na tabela <code>apagamentos</code></td>
+<td>Recusado pelos gatilhos</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Abrir <code>/scanner</code> sem estar logado</td>
+<td>A página não é entregue; redireciona para o login</td>
+</tr>
+<tr>
+<td>23a</td>
+<td>Abrir <code>/scanner</code> logado como visitante</td>
+<td>A aba não está no menu, e o endereço direto volta para a home</td>
+</tr>
+<tr>
+<td>24</td>
+<td>Gravar um evento por <code>curl</code>, sem sessão</td>
+<td>HTTP 401</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Gravar um evento logado como visitante</td>
+<td>HTTP 403</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Gravar um evento como operador, mandando outro nome e outro ponto no JSON</td>
+<td>Aceito, mas gravado com o nome da conta e o ponto vinculado a ela</td>
+</tr>
+<tr>
+<td>27</td>
+<td>Revogar o papel de um operador com a sessão dele aberta</td>
+<td>A gravação seguinte é recusada com 403, sem esperar a sessão expirar</td>
+</tr>
+<tr>
+<td>28</td>
+<td>Clicar em "Registrar" e conferir a tela de confirmação</td>
+<td>Mostra código, categoria, etapa de origem e destino, assinatura, local e o atestado</td>
+</tr>
+<tr>
+<td>29</td>
+<td>Cancelar na confirmação</td>
+<td>Nada é gravado; a etapa continua a mesma</td>
+</tr>
+<tr>
+<td>30</td>
+<td>Confirmar</td>
+<td>Evento gravado, assinado pela conta e no ponto dela</td>
+</tr>
+<tr>
+<td>31</td>
+<td>Abrir <code>admin.html</code> como operador</td>
+<td>Tela recusada, com a explicação do papel</td>
+</tr>
+<tr>
+<td>32</td>
+<td>Promover um visitante a operador pela tela de administração</td>
+<td>Papel alterado e alteração registrada na trilha</td>
+</tr>
+<tr>
+<td>33</td>
+<td>Rebaixar o único administrador</td>
+<td>Recusado: o sistema não pode ficar sem administrador</td>
+</tr>
+<tr>
+<td>34</td>
+<td>Rebaixar a si mesmo</td>
+<td>Recusado</td>
+</tr>
+<tr>
+<td>35</td>
+<td>Redefinir a senha de uma conta</td>
+<td>Senha antiga deixa de valer; a trilha registra o fato, não o valor</td>
+</tr>
+<tr>
+<td>36</td>
+<td>Tentar <code>UPDATE</code> ou <code>DELETE</code> em <code>alteracoes_conta</code></td>
+<td>Recusado pelos gatilhos</td>
+</tr>
+<tr>
+<td>37</td>
+<td>Procurar <code>senha_hash</code> na resposta da API de administração</td>
+<td>Ausente</td>
+</tr>
+<tr>
+<td>38</td>
+<td>Abrir o painel de uma conta na tela de administração</td>
+<td>Dados, aparelhos, histórico e ações aparecem sobre a tela, que escurece atrás</td>
+</tr>
+<tr>
+<td>39</td>
+<td>Excluir uma conta digitando a senha errada</td>
+<td>HTTP 403; a conta continua existindo</td>
+</tr>
+<tr>
+<td>40</td>
+<td>Excluir a própria conta</td>
+<td>Recusado</td>
+</tr>
+<tr>
+<td>41</td>
+<td>Excluir uma conta com a senha correta</td>
+<td>Conta removida; a tela informa quantos aparelhos ficaram sem dono</td>
+</tr>
+<tr>
+<td>42</td>
+<td>Consultar um aparelho da conta excluída</td>
+<td>Item, trilha e responsável dos eventos intactos, apenas sem dono</td>
+</tr>
+<tr>
+<td>43</td>
+<td>Ver a trilha depois da exclusão</td>
+<td>A conta excluída continua nomeada no registro</td>
+</tr>
+<tr>
+<td>43a</td>
+<td>Procurar a conta de reserva na lista da administração</td>
+<td>Ausente</td>
+</tr>
+<tr>
+<td>43b</td>
+<td>Alterar ou excluir a reserva pelo id</td>
+<td>Recusado, com a mesma resposta de um id inexistente</td>
+</tr>
+<tr>
+<td>43c</td>
+<td>Rebaixar o último admin visível, havendo a reserva</td>
+<td>Recusado: a reserva não conta como o administrador que sobra</td>
+</tr>
+<tr>
+<td>43d</td>
+<td>Rodar <code>--nova-senha</code> e entrar com o que ele imprimiu</td>
+<td>Login aceito, preso à troca de senha</td>
+</tr>
+<tr>
+<td>43e</td>
+<td>Navegar pelas telas com a sessão da reserva</td>
+<td>Marca d'água e faixa acompanham todas elas</td>
+</tr>
+<tr>
+<td>43f</td>
+<td>Imprimir a folha de etiquetas com a sessão da reserva</td>
+<td>A marca d'água não sai no papel</td>
+</tr>
+<tr>
+<td>44</td>
+<td>Listar todos os aparelhos como admin, com busca e filtro por etapa</td>
+<td>Lista filtra por texto, etapa e "só os atrasados"</td>
+</tr>
+<tr>
+<td>45</td>
+<td>Pedir <code>/registrar</code>, <code>/painel</code>, <code>/conta</code> ou <code>/admin</code> sem sessão</td>
+<td>HTTP 302 para a entrada; o HTML não é entregue</td>
+</tr>
+<tr>
+<td>46</td>
+<td>Pedir <code>/</code> e <code>/rastrear</code> sem sessão</td>
+<td>HTTP 200 — são as duas páginas públicas</td>
+</tr>
+<tr>
+<td>47</td>
+<td>Abrir <code>/registrar.html</code></td>
+<td>Redirecionado para <code>/registrar</code></td>
+</tr>
+<tr>
+<td>48</td>
+<td>Chamar <code>/api/painel</code> sem sessão</td>
+<td>HTTP 401</td>
+</tr>
+<tr>
+<td>49</td>
+<td>Chamar <code>/api/painel</code> como visitante</td>
+<td>Itens sem código, sem marca e sem dono; eventos sem responsável</td>
+</tr>
+<tr>
+<td>50</td>
+<td>Chamar <code>/api/painel</code> como operador</td>
+<td>Mesmos itens, agora identificados (<code>detalhado: true</code>)</td>
+</tr>
+<tr>
+<td>51</td>
+<td>Registrar um aparelho como visitante e pedir <code>/api/meus-itens</code> nas duas contas</td>
+<td>O dono vê 1 aparelho; a outra conta vê 0</td>
+</tr>
+<tr>
+<td>52</td>
+<td>Registrar mandando <code>"responsavel"</code> no JSON</td>
+<td>Ignorado: o evento é assinado com o nome da conta</td>
+</tr>
+<tr>
+<td>53</td>
+<td>Chamar <code>/api/demo/reiniciar</code> sem ser admin</td>
+<td>HTTP 403</td>
+</tr>
+<tr>
+<td>54</td>
+<td>Reiniciar a demonstração como admin</td>
+<td>Banco recriado e credenciais novas devolvidas na resposta</td>
+</tr>
+<tr>
+<td>55</td>
+<td>Subir o servidor com o banco já existente</td>
+<td>Nenhuma senha impressa; só o caminho do arquivo de credenciais</td>
+</tr>
+<tr>
+<td>56</td>
+<td>Enviar <code>pesoKg</code> igual a <code>11111111111</code>, <code>0</code>, <code>-5</code>, <code>501</code> e <code>abc</code></td>
+<td>Recusado com HTTP 400 e a mensagem correspondente</td>
+</tr>
+<tr>
+<td>57</td>
+<td>Digitar mais de 3 dígitos no campo de peso</td>
+<td>O campo corta a parte inteira em 3 dígitos</td>
+</tr>
+<tr>
+<td>58</td>
+<td>Consultar <code>8VNC5RQ1</code>, sem o prefixo</td>
+<td>Recusado: o código exige <code>MS</code></td>
+</tr>
+<tr>
+<td>59</td>
+<td>Consultar <code>MS-8VNC-5RQ1</code></td>
+<td>Aceito</td>
+</tr>
+<tr>
+<td>60</td>
+<td>Entrar com a senha sorteada da carga</td>
+<td>A sessão abre, mas toda rota responde 403 pedindo a troca</td>
+</tr>
+<tr>
+<td>61</td>
+<td>Pedir qualquer página com a senha provisória</td>
+<td>Redirecionado para a raiz, onde está o formulário</td>
+</tr>
+<tr>
+<td>62</td>
+<td>Trocar a senha informando a atual errada</td>
+<td>HTTP 403; a senha continua a mesma</td>
+</tr>
+<tr>
+<td>63</td>
+<td>Trocar a senha repetindo a atual</td>
+<td>Recusado: é justamente a atual que outra pessoa conhece</td>
+</tr>
+<tr>
+<td>64</td>
+<td>Trocar por uma senha de 3 caracteres</td>
+<td>Recusado pelo mínimo de 6</td>
+</tr>
+<tr>
+<td>65</td>
+<td>Trocar por uma senha válida</td>
+<td>A marca cai, a sessão destrava e a senha antiga deixa de valer</td>
+</tr>
+<tr>
+<td>66</td>
+<td>Criar conta pela tela</td>
+<td>Nasce sem a marca: quem escolheu a senha foi o dono</td>
+</tr>
+<tr>
+<td>67</td>
+<td>Admin redefine a senha de outra conta</td>
+<td>A conta passa a exigir troca no acesso seguinte</td>
+</tr>
+<tr>
+<td>68</td>
+<td>Admin redefine a própria senha</td>
+<td>Não exige troca — quem escolheu é quem vai usar</td>
+</tr>
+<tr>
+<td>69</td>
+<td>Trocar a senha sem sessão</td>
+<td>HTTP 401</td>
+</tr>
+<tr>
+<td>70</td>
+<td>Operador com senha provisória tenta gravar um evento</td>
+<td>HTTP 403; depois da troca, aceito</td>
+</tr>
+</tbody>
+</table>
+<h3 id="112-resultados-obtidos">11.2 Resultados obtidos</h3>
+<p><strong>Integração entre o gerador e o leitor de QR</strong> (cenário 1 a 3), verificada de
+ponta a ponta: o QR gerado no registro foi rasterizado e decodificado pelo mesmo
+<code>jsQR</code> que o scanner usa, o código extraído localizou o item e a etapa avançou.</p>
+<pre><code>PASSOU  codigo gerado e valido: MS-RJYM-60V4
+PASSOU  QR desenhado como SVG
+PASSOU  jsQR decodificou a imagem do QR
+PASSOU  conteudo lido == URL gerada
+PASSOU  extrairCodigo devolveu MS-RJYM-60V4
+PASSOU  store encontrou o item pelo codigo lido
+PASSOU  etapa avancou para COLETADO apos a leitura
+PASSOU  pular etapa foi recusado
+PASSOU  retroceder etapa foi recusado
+</code></pre>
+<p><strong>Regras impostas pelo servidor</strong> (cenário 14), chamando a API diretamente:</p>
+<pre><code>POST /api/itens/MS-H432-SQAX/eventos  {&quot;etapa&quot;:&quot;PROCESSADO&quot;}
+  HTTP 400  Não é possível pular etapas: depois de &quot;Coletado&quot; vem &quot;Em triagem&quot;.
+
+POST /api/itens/MS-H432-SQAX/eventos  {&quot;etapa&quot;:&quot;REGISTRADO&quot;}
+  HTTP 400  Não é possível retroceder de &quot;Coletado&quot; para &quot;Registrado&quot;.
+            O histórico é somente de acréscimo.
+</code></pre>
+<p><strong>Histórico imutável</strong> (cenário 15), direto no banco:</p>
+<pre><code>PASSOU  UPDATE em eventos bloqueado -&gt; O histórico de eventos é somente de acréscimo: alterar é proibido.
+PASSOU  DELETE em eventos bloqueado -&gt; O histórico de eventos é somente de acréscimo: apagar é proibido.
+</code></pre>
+<p><strong>Dados compartilhados</strong> (cenário 13): item criado numa sessão e avançado para
+<code>COLETADO</code>; um navegador com perfil limpo, sem nenhum cookie da primeira sessão,
+abriu <code>/rastrear</code> com o código e exibiu a trilha completa, incluindo o
+responsável registrado pela outra sessão.</p>
+<p><strong>Autorização</strong> (cenários 23 a 27), chamando a API por fora da tela e depois
+conferindo o que ficou gravado:</p>
+<pre><code>POST /api/itens/MS-0PRT-9CXE/eventos          sem sessão
+  HTTP 401  Esta ação exige uma conta de operador. Entre para continuar.
+
+POST /api/itens/MS-0PRT-9CXE/eventos          logado como visitante
+  HTTP 403  Sua conta não tem permissão para esta ação.
+
+POST /api/itens/MS-0PRT-9CXE/eventos          logado como operador
+      {&quot;responsavel&quot;:&quot;Fulano Falso&quot;,&quot;pontoId&quot;:&quot;pt-cg-shopping&quot;, ...}
+  HTTP 201
+  gravado -&gt;  responsavel: Operador do Ecoponto Região Norte
+              pontoId:     pt-cg-eco-norte
+</code></pre>
+<p>O nome e o ponto enviados no JSON foram descartados: o servidor gravou a conta
+autenticada e o ponto vinculado a ela. Em seguida, com a sessão do operador
+ainda aberta, o administrador rebaixou a conta a visitante — e a gravação
+seguinte, feita pelo mesmo cookie, foi recusada com HTTP 403.</p>
+<p><strong>Confirmação antes de gravar</strong> (cenários 28 a 30), dirigindo a tela do scanner
+por script, dentro do próprio navegador:</p>
+<pre><code>ETAPA no início: COLETADO
+diálogo aberto (modal): true
+mostra o código do aparelho: true
+mostra a etapa de origem e destino: true
+mostra quem assina: true
+mostra o método de apagamento: true
+avisa que é definitivo: true
+foco inicial está em: &quot;Voltar e corrigir&quot;
+ETAPA com o diálogo aberto: COLETADO
+ETAPA após cancelar:        COLETADO
+ETAPA após confirmar:       EM_TRIAGEM
+assinatura gravada: Operador do Ecoponto Região Norte
+local gravado:      pt-cg-eco-norte
+atestado gravado:   {&quot;midia&quot;:&quot;flash&quot;,&quot;metodo&quot;:&quot;SECURE_ERASE&quot;, ...}
+</code></pre>
+<p><strong>Administração de contas</strong> (cenários 31 a 37):</p>
+<pre><code>Maria antes:  papel=visitante  ponto=null
+select de ponto começa desabilitado (visitante): true
+ao escolher operador, o ponto libera: true
+papel durante o diálogo de confirmação: visitante
+papel após cancelar:                    visitante
+Maria depois: papel=operador   ponto=pt-do-eco
+trilha: ponto -&gt;pt-do-eco | papel visitante-&gt;operador  (por Administração e-Trilha MS)
+select do próprio admin desabilitado: true
+
+PATCH /api/admin/usuarios/&lt;o único admin&gt;  {&quot;papel&quot;:&quot;operador&quot;}
+  HTTP 400  Você não pode rebaixar a si mesmo. Peça a outro administrador.
+
+login com a senha antiga, após redefinição:  HTTP 401
+login com a senha nova:                      HTTP 200
+
+UPDATE em alteracoes_conta  -&gt;  recusado: a trilha é somente de acréscimo
+DELETE em alteracoes_conta  -&gt;  recusado: a trilha é somente de acréscimo
+</code></pre>
+<p>Nenhuma resposta de <code>/api/admin/*</code> contém <code>senha_hash</code> — a redefinição grava um
+hash novo, e a leitura da senha não existe em nenhuma rota.</p>
+<p><strong>Exclusão de conta</strong> (cenários 38 a 43):</p>
+<pre><code>DELETE /api/admin/usuarios/&lt;id&gt;   {&quot;senha&quot;:&quot;chutando&quot;}
+  HTTP 403  Senha incorreta. A conta não foi excluída.
+
+DELETE /api/admin/usuarios/&lt;o próprio admin&gt;   {&quot;senha&quot;: correta}
+  HTTP 400  Você não pode excluir a própria conta. Peça a outro administrador.
+
+DELETE /api/admin/usuarios/&lt;id&gt;   {&quot;senha&quot;: correta}
+  HTTP 200  {&quot;excluido&quot;:&quot;u-7b3af0cd9ddd&quot;,&quot;itensLiberados&quot;:1}
+
+GET /api/itens/MS-TBDJ-YM3Z/rastreio
+  item continua existindo, etapa REGISTRADO, donoId = null
+  1 evento preservado, responsável &quot;Registro do próprio dono&quot;
+
+GET /api/admin/alteracoes
+  exclusao  Marcos Teste  de=visitante  para=marcos@teste.ms  por Administração e-Trilha MS
+</code></pre>
+<p>Pela tela, com a senha errada o painel permanece aberto e a conta continua na
+lista; com a senha correta o painel fecha, a conta some e a trilha registra a
+exclusão nomeando quem foi excluído.</p>
+<blockquote>
+<p><strong>[PREENCHER]</strong> Anexar as evidências em imagem: capturas de tela de cada
+cenário, especialmente as mensagens de recusa dos cenários 4, 5, 7 e 14.</p>
+</blockquote>
+<h3 id="113-conferencia-manual-dos-indicadores">11.3 Conferência manual dos indicadores</h3>
+<p>Exemplo com o notebook de 1,9 kg dos dados de demonstração:</p>
+<table>
+<thead>
+<tr>
+<th>Material</th>
+<th>Fração</th>
+<th>Massa</th>
+<th>CO₂e evitado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alumínio</td>
+<td>21%</td>
+<td>0,399 kg</td>
+<td>3,59 kg</td>
+</tr>
+<tr>
+<td>Plástico</td>
+<td>31%</td>
+<td>0,589 kg</td>
+<td>1,00 kg</td>
+</tr>
+<tr>
+<td>Cobre</td>
+<td>9%</td>
+<td>0,171 kg</td>
+<td>0,60 kg</td>
+</tr>
+<tr>
+<td>Aço</td>
+<td>12%</td>
+<td>0,228 kg</td>
+<td>0,41 kg</td>
+</tr>
+<tr>
+<td>Ouro</td>
+<td>90 mg/kg</td>
+<td>171 mg</td>
+<td>2,14 kg</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td></td>
+<td><strong>≈ 7,9 kg CO₂e</strong></td>
+</tr>
+</tbody>
+</table>
+<p>O ouro responde por mais de um quarto do CO₂e evitado apesar de pesar 171 mg:
+produzir 1 kg de ouro primário movimenta toneladas de minério.</p>
+<h3 id="114-testes-automatizados">11.4 Testes automatizados</h3>
+<p>O roteiro de 11.1 é executado por uma pessoa, uma vez, e prova que o sistema
+funcionava naquele momento. A suíte automatizada prova que ele continua
+funcionando depois de cada alteração — que é o que faz falta num projeto de cinco
+pessoas mexendo no mesmo código.</p>
+<pre><code class="language-powershell">python -m pip install -r requirements.txt -r requirements-dev.txt
+python -m pytest
+python -m pytest --cov=backend --cov-report=term-missing
+</code></pre>
+<p><strong>351 testes, 19 segundos, 94% do código do servidor</strong>, assim distribuídos:</p>
+<table>
+<thead>
+<tr>
+<th>Arquivo</th>
+<th>Cobre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>testes/teste_modelo.py</code></td>
+<td>Máquina de estados, dígito verificador, peso, atestado de apagamento, papéis. Sem I/O e sem banco: é o módulo de regras isolado</td>
+</tr>
+<tr>
+<td><code>testes/teste_api_autorizacao.py</code></td>
+<td>Matriz das 21 rotas × papéis. Verifica o RNF06 e a distinção entre <strong>401</strong> (falta entrar) e <strong>403</strong> (entrou e não pode)</td>
+</tr>
+<tr>
+<td><code>testes/teste_api_itens.py</code></td>
+<td>Cadeia de custódia inteira pela API, e as duas regras de assinatura: o responsável e o ponto vêm da sessão, não do corpo</td>
+</tr>
+<tr>
+<td><code>testes/teste_api_admin.py</code></td>
+<td>Papéis, exclusão com re-autenticação, trilha de administração, último administrador</td>
+</tr>
+<tr>
+<td><code>testes/teste_api_contas.py</code></td>
+<td>Cadastro, login, anti-enumeração de e-mail, fixação de sessão, troca de senha</td>
+</tr>
+<tr>
+<td><code>testes/teste_banco_gatilhos.py</code></td>
+<td>Os seis gatilhos de somente-acréscimo, chaves estrangeiras e <code>CHECK</code> — o RNF07</td>
+</tr>
+<tr>
+<td><code>testes/teste_paginas.py</code></td>
+<td>Portão de autenticação no nível do HTML e a allowlist de arquivos entregues — a seção 9.9</td>
+</tr>
+<tr>
+<td><code>testes/teste_paridade_front.py</code></td>
+<td>Compara as tabelas de <code>backend/modelo.py</code> com as de <code>js/model.js</code>, que a seção 9.2 duplica de propósito</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Módulo</th>
+<th>Cobertura</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/modelo.py</code></td>
+<td>100%</td>
+</tr>
+<tr>
+<td><code>backend/banco.py</code></td>
+<td>98%</td>
+</tr>
+<tr>
+<td><code>backend/app.py</code></td>
+<td>89%</td>
+</tr>
+</tbody>
+</table>
+<p>O que falta em <code>app.py</code> é <code>main()</code>, a descoberta do IP na rede e a impressão das
+credenciais — código que só roda ao subir o servidor.</p>
+<p><strong>A suíte foi verificada contra si mesma.</strong> Cobertura alta não prova que um teste
+falharia se o código quebrasse, então cinco defeitos foram introduzidos de
+propósito, um a um, e a suíte pegou os cinco:</p>
+<table>
+<thead>
+<tr>
+<th>Defeito introduzido</th>
+<th>Teste que acusou</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cadastro deixa de forçar <code>visitante</code> no INSERT</td>
+<td><code>teste_cadastro_nasce_visitante_mesmo_pedindo_admin</code></td>
+</tr>
+<tr>
+<td><code>401</code> por falta de sessão vira <code>403</code></td>
+<td><code>teste_sem_sessao_responde_401</code></td>
+</tr>
+<tr>
+<td>O <code>responsavel</code> do evento passa a vir do corpo</td>
+<td><code>teste_responsavel_do_corpo_e_descartado</code></td>
+</tr>
+<tr>
+<td>Sobrescrita em memória flash passa a ser aceita</td>
+<td><code>teste_sobrescrita_em_flash_e_recusada_pela_api</code></td>
+</tr>
+<tr>
+<td>Gatilho <code>eventos_sem_delete</code> removido do esquema</td>
+<td><code>teste_delete_e_abortado_pelo_gatilho[eventos]</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="115-defeitos-encontrados-pela-suite">11.5 Defeitos encontrados pela suíte</h3>
+<p>Escrever os testes revelou três defeitos que a conferência manual não pegaria,
+porque nenhum deles quebra a tela:</p>
+<ol>
+<li><strong>Um código de rastreio em cada 1024 nascia inválido.</strong> <code>formatar_codigo</code>
+   removia um <code>MS</code> no início do corpo, o que era conveniência para aceitar o
+   código já prefixado. Como o corpo é sorteado num alfabeto de 32 caracteres,
+   ele começa com M e S uma vez a cada 1024 — e o código saía com 6 caracteres
+   em vez de 8. Isso ia para o banco como chave primária e para o QR impresso na
+   etiqueta: o aparelho nascia <strong>sem rastreio, de forma irreversível</strong>, e
+   qualquer leitura devolvia "código inválido". Corrigido nos dois lados
+   (<code>backend/modelo.py</code> e <code>js/model.js</code>): a função não remove mais o prefixo,
+   porque nenhum dos dois chamadores o envia.</li>
+<li><strong>O atestado de apagamento tinha uma saída vazia.</strong> Um notebook concluía a
+   triagem declarando mídia <code>sem_midia</code> e método <code>NAO_APLICAVEL</code> — exatamente o
+   atestado sem conteúdo que a validação da seção 9.6 existe para impedir. A
+   mensagem de recusa para esse caso já estava escrita no código e era
+   inalcançável, o que mostra que a intenção sempre foi recusá-lo. Como a tabela
+   <code>apagamentos</code> é somente de acréscimo, cada ocorrência ficaria gravada para
+   sempre.</li>
+<li><strong>A validação de e-mail do servidor era mais frouxa que a da tela.</strong> O
+   servidor aceitava <code>@dominio.ms</code>, sem parte local, que <code>js/store.js</code> recusa.
+   A verificação virou <code>modelo.validar_email</code>, com o mesmo padrão dos dois lados.</li>
+</ol>
+<hr />
+<h2 id="12-viabilidade">12. Viabilidade</h2>
+<p><strong>Técnica.</strong> O protótipo já funciona com tecnologias de navegador, sem
+dependência de serviço pago. O back-end previsto (API REST + banco relacional) é
+compatível com o que a equipe estuda no semestre e não exige infraestrutura
+especial. A leitura de QR usa hardware que os operadores já têm: o celular.</p>
+<p><strong>Executiva.</strong> O custo material é baixo — etiquetas adesivas e celulares comuns.
+O obstáculo real não é técnico, é de <strong>adesão</strong>: a solução só funciona se os
+pontos de coleta, cooperativas e recicladoras registrarem as leituras. Isso exige
+articulação institucional com prefeituras e com a rede de logística reversa.</p>
+<p><strong>Custo estimado.</strong> Ordens de grandeza, para dimensionar — não são cotações:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Estimativa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Etiqueta adesiva com QR (papel couché, impressão a laser)</td>
+<td>R$ 0,05 a R$ 0,15 por unidade</td>
+</tr>
+<tr>
+<td>Hospedagem (VPS básico, aplicação + SQLite)</td>
+<td>R$ 30 a R$ 60 por mês</td>
+</tr>
+<tr>
+<td>Domínio <code>.ms.gov.br</code> ou <code>.org.br</code></td>
+<td>R$ 40 por ano</td>
+</tr>
+<tr>
+<td>Leitor de QR</td>
+<td>R$ 0 — o celular que o operador já tem</td>
+</tr>
+</tbody>
+</table>
+<p>O gasto relevante não é de infraestrutura: é a <strong>articulação institucional</strong>.</p>
+<p><strong>Quem operaria.</strong> O candidato natural é o <strong>IMASUL</strong>, que já gere o PERS/MS e
+cujo plano prevê um sistema de informações de gestão. A <strong>AGEMS</strong>, como agência
+reguladora dos serviços públicos e já ponto de coleta, é a alternativa. No nível
+municipal, a SEMADUR e a concessionária CG Solurb operariam a ponta em Campo
+Grande. O <strong>ICMS Ecológico</strong> é o incentivo que já existe para o município aderir.</p>
+<hr />
+<h3 id="121-riscos-e-mitigacao">12.1 Riscos e mitigação</h3>
+<p>Riscos do projeto, não do sistema. Probabilidade e impacto são julgamento da
+equipe, para ordenar o que merece atenção — não medida.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Risco</th>
+<th>Prob.</th>
+<th>Impacto</th>
+<th>O que reduz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td><strong>Adesão</strong>: pontos de coleta e recicladoras não registram as leituras, e a trilha fica vazia no meio</td>
+<td>Alta</td>
+<td>Alto</td>
+<td>É o risco principal, e não é técnico. Reduz-se começando por um ponto só, com um operador só, e mostrando o certificado pronto antes de pedir adesão</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>Dados locais de MS não chegam a tempo do relatório final</td>
+<td>Média</td>
+<td>Médio</td>
+<td>Campo Grande já levantado; o interior é extensão do mesmo método, não trabalho novo</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>Competência por etapa (RF21) não ser implementada até 29/10</td>
+<td>Média</td>
+<td>Médio</td>
+<td>Já está documentada como limitação nº 1, com o desenho definido. Se não entrar, entra como melhoria futura justificada</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>Dígito verificador: corrigir invalida códigos já impressos</td>
+<td>Baixa</td>
+<td>Médio</td>
+<td>A decisão está registrada e medida (≈5% de escape). Enquanto as etiquetas são de demonstração, o custo de corrigir só cresce</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>Câmera do scanner não abrir na apresentação</td>
+<td>Média</td>
+<td>Alto</td>
+<td>Exige <code>localhost</code> ou HTTPS. Mitigado: a digitação manual do código faz o mesmo caminho, e o roteiro prevê o QR ampliado em tela</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>Perda de acesso à conta de administrador na banca</td>
+<td>Baixa</td>
+<td>Alto</td>
+<td>Resolvido: conta de reserva e <code>--nova-senha</code> no terminal</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>Indisponibilidade do servidor durante a demonstração</td>
+<td>Baixa</td>
+<td>Alto</td>
+<td>Roda local, sem serviço externo; o service worker mantém as telas públicas de pé</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="13-relacao-com-a-sustentabilidade">13. Relação com a sustentabilidade</h2>
+<p>A sustentabilidade está na <strong>mecânica da solução</strong>, não apenas na justificativa:</p>
+<ul>
+<li><strong>Ambiental</strong> — cada aparelho rastreado é massa que deixa de ir para o aterro.
+  O sistema quantifica o que foi recuperado (cobre, alumínio, aço, plástico,
+  vidro, terras raras e ouro) e converte em CO₂e evitado, comparando a reciclagem
+  com a produção primária. Também registra os contaminantes que o descarte comum
+  liberaria (chumbo, mercúrio, cádmio, lítio).</li>
+<li><strong>Econômica</strong> — devolve material valioso à cadeia produtiva e dá às cooperativas
+  previsibilidade de volume, além de permitir que empresas comprovem conformidade
+  com a PNRS.</li>
+<li><strong>Social</strong> — a consulta pública sem cadastro coloca cidadão e gestor com a mesma
+  informação, e a detecção de gargalos transforma reclamação difusa em dado
+  acionável.</li>
+</ul>
+<p>O que impede o projeto de ser "um cadastro que se diz sustentável" é justamente
+isso: <strong>o que a plataforma produz é prova de destinação e medida de impacto</strong>,
+não um formulário.</p>
+<hr />
+<h2 id="14-limitacoes">14. Limitações</h2>
+<ol>
+<li><strong>O papel não distingue as etapas.</strong> Escrever na cadeia já exige conta de
+   operador, o servidor carimba a assinatura e o ponto a partir da sessão, e a
+   concessão do papel fica registrada. Mas um operador vinculado a um ponto de
+   coleta ainda consegue registrar <code>EM_RECICLAGEM</code>. O desenho correto é o ponto
+   de coleta registrar <code>COLETADO</code>, a recicladora registrar <code>PROCESSADO</code> e
+   ninguém registrar pelo outro — o vínculo entre papel, organização e etapa
+   permitida é o que falta.</li>
+<li><strong>O credenciamento depende da confiança no administrador.</strong> Não há
+   verificação de pessoa física, contrato com a cooperativa nem segundo fator:
+   quem tem o papel de admin concede operador a quem quiser. A trilha de
+   administração registra quem concedeu o quê, o que permite auditar depois,
+   mas não impede antes. Num sistema real o credenciamento passaria pelo
+   cadastro do órgão ambiental.</li>
+<li><strong>Sem HTTPS.</strong> A senha e o cookie de sessão trafegam em texto claro. Em
+   <code>localhost</code> isso não é problema, porque nada sai da máquina; numa rede real,
+   é inaceitável. Em produção, o servidor entraria atrás de um proxy com TLS e o
+   cookie ganharia o atributo <code>Secure</code>.</li>
+<li><strong>Gravação exige conexão.</strong> A consulta funciona sem internet, com os últimos
+   dados que passaram pelo navegador, mas registrar um aparelho ou avançar uma
+   etapa precisa do servidor — que é quem valida a transição e grava a cadeia.
+   A tela mostra um erro claro em vez de fingir sucesso.</li>
+<li><strong>Servidor de desenvolvimento.</strong> O <code>app.run</code> do Flask atende um pedido por
+   vez e não é feito para produção; em uso real, entraria atrás de Gunicorn ou
+   equivalente.</li>
+<li><strong>Pontos de coleta fictícios</strong>, posicionados sobre coordenadas reais dos
+   municípios. Precisam ser levantados e validados em campo.</li>
+<li><strong>O dígito verificador não pega todo erro de um caractere.</strong> A soma
+   ponderada usa os pesos 8, 7, 6, 5, 4, 3, 2, e os pares dividem o módulo 32:
+   cerca de 5% das trocas de um caractere produzem outro código com o mesmo
+   dígito. Nas posições de peso ímpar a detecção é total. Pesos todos ímpares
+   fechariam a brecha, e a correção é de uma linha em cada lado
+   (<code>backend/modelo.py</code> e <code>js/model.js</code>) — o que custa é o resto: todo código já
+   emitido muda de dígito, o que invalidaria as etiquetas impressas e os dez
+   itens de <code>dados/itens-demo.json</code>. Vale fazer antes de qualquer etiqueta real
+   ser colada em aparelho. O número está medido e travado em
+   <code>testes/teste_modelo.py</code>, que falha se ele mudar.</li>
+<li><strong>Composição material e fatores de CO₂e são médias de referência</strong>, não
+   medições. Servem para ordem de grandeza, não para contabilidade ambiental
+   oficial. O painel abre a conta na própria tela — a origem do número, a
+   sequência do cálculo e o fator de cada material —, porque um total ambiental
+   que ninguém consegue conferir vale pouco. O peso, na outra ponta, é
+   <strong>declarado por quem registra</strong>: o sistema recusa valores fora da faixa
+   aceita, mas não tem como saber se o número corresponde ao aparelho. Numa
+   operação real a massa viria da balança da recicladora.</li>
+<li><strong>Mapa esquemático</strong>, com contorno simplificado do estado — é um recurso de
+   orientação, não uma base cartográfica.</li>
+<li><strong>Câmera exige contexto seguro</strong> (<code>localhost</code> ou HTTPS). Pelo celular na rede
+   local via HTTP puro, só a digitação manual funciona.</li>
+<li><strong>A cadeia depende de confiança nos operadores.</strong> O sistema garante que o
+   histórico não seja reescrito, mas não prova que a leitura corresponde a um
+   movimento físico real.</li>
+<li><strong>A interface móvel foi ajustada, não testada em campo.</strong> O CSS ganhou um
+   ponto de quebra em 640 px — menu que desliza na horizontal em vez de quebrar
+   em três linhas dentro de um cabeçalho fixo, alvos de toque de 44 px, margens
+   menores —, mas a verificação foi por inspeção, sem aparelho real na mão. E é
+   justamente no celular que o sistema é usado de pé, num galpão.</li>
+</ol>
+<hr />
+<h2 id="15-melhorias-futuras">15. Melhorias futuras</h2>
+<ol>
+<li><strong>Competência por etapa</strong> (prioridade): o papel de operador já existe e já é
+   verificado no servidor, com vínculo a um ponto de coleta. Falta amarrar a
+   etapa ao tipo de organização, de modo que só o ponto de coleta registre
+   <code>COLETADO</code> e só a recicladora registre <code>PROCESSADO</code>. É o que fecha a
+   limitação nº 1.</li>
+<li><strong>Credenciamento verificado</strong>: ligar a conta de operador ao cadastro da
+   organização no órgão ambiental, com segundo fator para quem escreve na
+   cadeia. Fecha a limitação nº 2.</li>
+<li><strong>HTTPS</strong>, com o cookie de sessão marcado como <code>Secure</code>. Também é o que
+   libera a leitura por câmera no celular, hoje bloqueada em HTTP puro.</li>
+<li><strong>Fila de gravações offline</strong>: registrar leituras sem conexão e sincronizar
+   quando a rede voltar, tratando os conflitos de transição na volta. É a
+   funcionalidade que mais mudaria o uso em galpões de triagem.</li>
+<li><strong>Assinatura digital do certificado</strong> de destinação, para valer como documento.</li>
+<li><strong>Pesagem real na triagem</strong>, substituindo a estimativa por categoria.</li>
+<li><strong>Integração com o SINIR/MTR</strong>, aproveitando o registro já existente de
+   transporte de resíduos.</li>
+<li><strong>Notificação ao dono</strong> a cada avanço de etapa.</li>
+<li><strong>Base cartográfica real</strong> com rotas até o ponto de coleta mais próximo.</li>
+<li><strong>Levantamento em campo</strong> dos pontos de coleta reais de MS, em parceria com as
+   prefeituras e a Green Eletron.</li>
+</ol>
+<hr />
+<h2 id="16-conclusao">16. Conclusão</h2>
+<p>A DAC pergunta: <em>"Como a Tecnologia da Informação pode contribuir para
+solucionar ou reduzir um problema real relacionado à sustentabilidade?"</em></p>
+<p>A resposta deste projeto é que <strong>a contribuição da TI não foi criar mais um
+cadastro, e sim produzir informação que antes não existia</strong> — a prova de que um
+aparelho específico chegou à reciclagem.</p>
+<p>O problema não era de logística. Pontos de coleta existem: levantamos 14 em
+Campo Grande, entre a rede Green Eletron, os ecopontos municipais e a AGEMS. A
+lei também existe desde 2010, e o Decreto 10.240/2020 fixou metas. O que não
+existia era <strong>prova</strong>. Quem entrega um celular no ecoponto não tem, hoje, nenhum
+meio de saber se ele foi reciclado — e, sem prova, entregar no lugar certo e
+jogar no lixo comum são, do ponto de vista de quem descarta, experiências
+idênticas. É essa indiferença que corrói a adesão.</p>
+<p>O protótipo demonstrou que fechar essa lacuna é um problema de software, e um
+problema tratável. Três mecanismos, cada um verificável:</p>
+<ol>
+<li><strong>Identidade que sobrevive ao trajeto.</strong> Um código com dígito verificador,
+   impresso em QR, acompanha o objeto físico entre organizações que não
+   compartilham sistema nem confiança.</li>
+<li><strong>Registro que não pode ser fabricado nem desfeito.</strong> A etapa só é aceita na
+   ordem correta, assinada por uma conta com permissão, com autoria e local
+   carimbados pelo servidor — nunca informados pelo formulário. Uma vez gravada,
+   nem a própria aplicação a altera: os gatilhos do banco recusam <code>UPDATE</code> e
+   <code>DELETE</code>. É a diferença entre <em>relatar</em> reciclagem e <em>comprovar</em> reciclagem.</li>
+<li><strong>Devolução da informação a quem descartou.</strong> A consulta por código é
+   pública e não exige cadastro. Quem tem a etiqueta na mão vê a trilha inteira
+   e o certificado ao fim.</li>
+</ol>
+<p>O mesmo registro serve a três públicos de uma vez, e é isso que torna a solução
+viável sem depender da boa vontade de um só: dá <strong>retorno</strong> ao cidadão,
+<strong>conformidade</strong> à empresa — que ainda recebe o atestado de apagamento seguro
+exigido pela LGPD — e ao <strong>gestor público</strong> a localização exata do gargalo, em
+vez de um número agregado no fim do ano.</p>
+<p>Duas honestidades fecham o argumento. A primeira é que <strong>o obstáculo restante não
+é técnico</strong>: o custo material é desprezível — centavos por etiqueta, dezenas de
+reais por mês de hospedagem, e o leitor é o celular que o operador já tem —, mas
+o sistema só funciona se os pontos de coleta registrarem as leituras. É por isso
+que a adesão encabeça a matriz de riscos, e é por isso que o PERS/MS importa: o
+plano estadual já prevê, entre seus programas prioritários, a implementação de um
+sistema de informações de gestão. A lacuna que este projeto endereça já está
+reconhecida em política pública.</p>
+<p>A segunda é que <strong>o que o protótipo não faz está declarado</strong>, e não escondido: a
+competência por etapa, o HTTPS e a fila de gravação offline estão nas Limitações,
+com o desenho de cada uma. Um trabalho que só mostra o que funciona ensina menos
+do que um que diz onde para.</p>
+<p>Se há uma tese a levar deste projeto, é esta: em sustentabilidade, <strong>a informação
+verificável é o insumo que falta com mais frequência do que a tecnologia</strong>. O
+e-Trilha MS não recicla nada. Ele torna possível saber — e é o saber que muda o
+comportamento de quem entrega, de quem opera e de quem fiscaliza.</p>
+<hr />
+<h2 id="17-referencias">17. Referências</h2>
+<blockquote>
+<p><strong>[PREENCHER]</strong> Completar com as datas de acesso e com as fontes locais
+levantadas pela equipe. Formatar conforme ABNT NBR 6023.</p>
+</blockquote>
+<ul>
+<li>BRASIL. <strong>Lei nº 12.305, de 2 de agosto de 2010.</strong> Institui a Política Nacional
+  de Resíduos Sólidos.</li>
+<li>FORTI, V. et al. <strong>The Global E-waste Monitor.</strong> UNITAR/UNU/ITU.</li>
+<li>GREEN ELETRON. <em>Gestora para logística reversa de eletroeletrônicos.</em>
+  Disponível em: <a href="https://greeneletron.org.br">https://greeneletron.org.br</a>.</li>
+<li>INSTITUTO DE MEIO AMBIENTE DE MATO GROSSO DO SUL. <strong>Plano Estadual de Resíduos
+  Sólidos (PERS/MS)</strong> e <strong>Gestão de Resíduos Sólidos</strong>. Campo Grande: IMASUL.
+  Disponível em: https://www.imasul.ms.gov.br/programas-e-projetos/gestao-de-residuos-solidos/</li>
+<li>PREFEITURA MUNICIPAL DE CAMPO GRANDE. <strong>Ecopontos — Carta de Serviços ao
+  Usuário</strong>. Disponível em: https://cartadeservicos.campogrande.ms.gov.br/servicos/ecopontos/</li>
+<li>GREEN ELETRON. <strong>Ponto de Coleta</strong> e <strong>Saiba onde descartar aparelhos
+  eletrônicos e pilhas em Campo Grande</strong>. Disponível em: https://greeneletron.org.br/ponto-de-coleta/</li>
+<li>UNIVERSITY OF HERTFORDSHIRE; COMPARITECH. <strong>Estudo com 200 discos rígidos de
+  segunda mão</strong>. Hatfield, 2019.</li>
+<li><strong>[PREENCHER]</strong> Fonte dos percentuais de composição material por categoria de
+  equipamento usados em <code>js/model.js</code>.</li>
+<li><strong>[PREENCHER]</strong> Fonte dos fatores de CO₂e evitado por material.</li>
+</ul>
+<h3 id="bibliotecas-de-terceiros">Bibliotecas de terceiros</h3>
+<ul>
+<li>ARASE, Kazuhiko. <strong>qrcode-generator.</strong> Licença MIT.</li>
+<li>WOLFE, Cosmo. <strong>jsQR.</strong> Licença Apache-2.0.</li>
+<li>PALLETS. <strong>Flask</strong> e <strong>Werkzeug.</strong> Licença BSD-3-Clause.</li>
+<li>KREKEL, Holger; e colaboradores. <strong>pytest.</strong> Licença MIT. Usado só em desenvolvimento; não entra em execução.</li>
+</ul>
+</div>
+</body></html>

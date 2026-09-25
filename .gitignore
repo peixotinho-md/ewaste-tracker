@@ -22,8 +22,9 @@ htmlcov/
 # gera — meio megabyte de binário entraria no histórico a cada regeração e
 # nunca mais sairia, e o git não sabe mostrar o que mudou entre dois PDFs.
 #
-#   chrome --headless --no-pdf-header-footer #          --print-to-pdf=docs/PRE-ENTREGA-1.pdf docs/pre-entrega-1.html
-docs/PRE-ENTREGA-1.pdf
+#   chrome --headless --no-pdf-header-footer #          --print-to-pdf=docs/PRE-ENTREGA-N.pdf docs/pre-entrega-N.html
+docs/PRE-ENTREGA-*.pdf
+docs/RELATORIO-TECNICO.pdf
 
 # Cópia da versão anterior: o histórico do git já cumpre esse papel
 backup/
