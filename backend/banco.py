@@ -610,7 +610,8 @@ def trocar_senha(conexao, usuario: dict, senha_hash: str) -> dict:
     """
     with transacao(conexao):
         conexao.execute(
-            "UPDATE usuarios SET senha_hash = ?, senha_provisoria = 0 WHERE id = ?",
+            "UPDATE usuarios SET senha_hash = ?, senha_provisoria = 0, "
+            "sessao_versao = sessao_versao + 1 WHERE id = ?",
             (senha_hash, usuario["id"]),
         )
         _registrar_alteracao(
@@ -630,6 +631,29 @@ def obter_usuario(conexao, usuario_id: str) -> dict | None:
         "SELECT * FROM usuarios WHERE id = ?", (usuario_id,)
     ).fetchone()
     return usuario_json(linha) if linha else None
+
+
+def obter_usuario_da_sessao(conexao, usuario_id: str, versao) -> dict | None:
+    """
+    A conta de um cookie de sessão, ou None se o cookie já não vale.
+
+    O cookie vale enquanto a `sessao_versao` que ele carrega for a da conta.
+    Toda troca de senha sobe o contador, e a sessão aberta antes dela deixa de
+    identificar alguém — é para isso, afinal, que se troca a senha.
+    """
+    linha = conexao.execute(
+        "SELECT * FROM usuarios WHERE id = ?", (usuario_id,)
+    ).fetchone()
+    if linha is None or linha["sessao_versao"] != versao:
+        return None
+    return usuario_json(linha)
+
+
+def versao_da_sessao(conexao, usuario_id: str) -> int:
+    """O valor que o cookie de uma sessão aberta agora precisa carregar."""
+    return conexao.execute(
+        "SELECT sessao_versao FROM usuarios WHERE id = ?", (usuario_id,)
+    ).fetchone()["sessao_versao"]
 
 
 # Administração das contas
@@ -815,7 +839,8 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
             # vai usar.
             provisoria = 0 if alvo_id == autor["id"] else 1
             conexao.execute(
-                "UPDATE usuarios SET senha_hash = ?, senha_provisoria = ? WHERE id = ?",
+                "UPDATE usuarios SET senha_hash = ?, senha_provisoria = ?, "
+                "sessao_versao = sessao_versao + 1 WHERE id = ?",
                 (senha_hash, provisoria, alvo_id),
             )
             # A trilha registra QUE houve redefinição, jamais o segredo.
@@ -855,7 +880,8 @@ def redefinir_senha(conexao, email: str) -> dict:
 
         senha = _sortear_senha()
         conexao.execute(
-            "UPDATE usuarios SET senha_hash = ?, senha_provisoria = 1 WHERE id = ?",
+            "UPDATE usuarios SET senha_hash = ?, senha_provisoria = 1, "
+            "sessao_versao = sessao_versao + 1 WHERE id = ?",
             (generate_password_hash(senha), alvo["id"]),
         )
         if not alvo["reserva"]:
