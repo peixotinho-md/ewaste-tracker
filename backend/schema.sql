@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 7;
+PRAGMA user_version = 8;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
@@ -77,7 +77,14 @@ CREATE TABLE usuarios (
   -- de administrador visível, e o sistema ficaria sem volta. O que a reserva
   -- FAZ, porém, continua na trilha de `alteracoes_conta` como o de qualquer
   -- outra conta: esconder a conta é proteger a chave, não apagar o rastro.
-  reserva INTEGER NOT NULL DEFAULT 0 CHECK (reserva IN (0, 1))
+  reserva INTEGER NOT NULL DEFAULT 0 CHECK (reserva IN (0, 1)),
+
+  -- Sobe a cada troca de senha, e o cookie de sessão carrega o valor da hora do
+  -- login. O cookie do Flask é assinado, mas fica no navegador: sem isto, uma
+  -- sessão aberta numa máquina esquecida — ou copiada por quem teve acesso a
+  -- ela — continuaria valendo depois de o dono trocar a senha justamente para
+  -- expulsá-la. Com o contador, a troca derruba toda sessão anterior.
+  sessao_versao INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_usuarios_papel ON usuarios (papel);

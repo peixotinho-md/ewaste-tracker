@@ -185,9 +185,17 @@ def entrar(cliente):
     `teste_api_contas.py`.
     """
     def _entrar(conta):
+        # A versão é lida do banco, como faz `_abrir_sessao`: sem ela o cookie
+        # não vale, e com um valor inventado o teste não diria nada sobre o login.
+        conexao = banco.conectar()
+        try:
+            versao = banco.versao_da_sessao(conexao, conta["id"])
+        finally:
+            conexao.close()
         with cliente.session_transaction() as sessao:
             sessao.clear()
             sessao["usuario_id"] = conta["id"]
+            sessao["versao"] = versao
         return conta
     return _entrar
 

@@ -109,6 +109,23 @@ def com_banco(rota):
     return envelope
 
 
+def corpo_json() -> dict:
+    """
+    O corpo JSON da requisição, que nesta API é sempre um objeto.
+
+    Corpo ausente ou ilegível vale como `{}`, e cada rota reclama do campo que
+    faltar. Mas JSON válido que não é objeto — `"x"`, `[1, 2]`, `42` — passava
+    por `get_json() or {}` e estourava no primeiro `.get()`, virando 500. Aqui
+    ele vira o 400 de qualquer outra entrada malformada.
+    """
+    corpo = request.get_json(silent=True)
+    if corpo is None:
+        return {}
+    if not isinstance(corpo, dict):
+        raise modelo.RegraViolada("O corpo da requisição precisa ser um objeto JSON.")
+    return corpo
+
+
 @app.errorhandler(modelo.RegraViolada)
 def erro_de_regra(erro):
     """Regra de negócio violada vira 400 com a mensagem pronta para a tela."""
@@ -151,19 +168,30 @@ def _conta_para_a_pagina() -> dict | None:
     recebem a delas de `com_banco`. É uma consulta por chave primária, e só
     para quem tem sessão.
     """
-    usuario_id = usuario_da_sessao()
-    if not usuario_id:
+    if not usuario_da_sessao():
         return None
     conexao = banco.conectar()
     try:
-        return banco.obter_usuario(conexao, usuario_id)
+        return conta_da_sessao(conexao)
     finally:
         conexao.close()
 
 
 def conta_da_sessao(conexao) -> dict | None:
+    """
+    A conta do cookie — se o cookie ainda vale.
+
+    Deixa de valer quando a conta some ou quando a senha dela mudou depois do
+    login (ver `sessao_versao` em schema.sql). Nesse caso o cookie é limpo aqui
+    mesmo, para o navegador parar de apresentá-lo.
+    """
     usuario_id = usuario_da_sessao()
-    return banco.obter_usuario(conexao, usuario_id) if usuario_id else None
+    if not usuario_id:
+        return None
+    conta = banco.obter_usuario_da_sessao(conexao, usuario_id, session.get("versao"))
+    if conta is None:
+        session.clear()
+    return conta
 
 
 #: Todos os papéis — para rotas que exigem apenas estar autenticado.
@@ -249,7 +277,7 @@ def rastreio(conexao, codigo):
 @exige(*QUALQUER_CONTA)
 def criar_item(conexao, conta):
     """Cadastra um aparelho em nome de quem está autenticado."""
-    corpo = request.get_json(silent=True) or {}
+    corpo = corpo_json()
 
     categoria = modelo.validar_categoria(corpo.get("categoria"))
     peso = modelo.normalizar_peso(corpo.get("pesoKg"), categoria)
@@ -294,7 +322,7 @@ def criar_evento(conexao, codigo, conta):
     if not canonico:
         return jsonify({"erro": "Código de rastreio inválido."}), 400
 
-    corpo = request.get_json(silent=True) or {}
+    corpo = corpo_json()
     ponto_id = conta["pontoId"] or (corpo.get("pontoId") or None)
 
     if ponto_id and not conexao.execute(
@@ -319,16 +347,13 @@ def criar_evento(conexao, codigo, conta):
 @app.get("/api/sessao")
 @com_banco
 def sessao_atual(conexao):
-    usuario_id = usuario_da_sessao()
-    if not usuario_id:
-        return jsonify({"usuario": None})
-    return jsonify({"usuario": banco.obter_usuario(conexao, usuario_id)})
+    return jsonify({"usuario": conta_da_sessao(conexao)})
 
 
 @app.post("/api/usuarios")
 @com_banco
 def cadastrar(conexao):
-    corpo = request.get_json(silent=True) or {}
+    corpo = corpo_json()
     nome = modelo.texto(corpo.get("nome"), "nome")
     email = modelo.texto(corpo.get("email"), "email")
     senha = str(corpo.get("senha") or "")
@@ -345,14 +370,14 @@ def cadastrar(conexao):
         conexao, nome=nome, email=email, senha_hash=generate_password_hash(senha)
     )
 
-    _abrir_sessao(usuario["id"])
+    _abrir_sessao(conexao, usuario["id"])
     return jsonify({"usuario": usuario}), 201
 
 
 @app.post("/api/sessao")
 @com_banco
 def entrar(conexao):
-    corpo = request.get_json(silent=True) or {}
+    corpo = corpo_json()
     linha = banco.buscar_usuario_por_email(conexao, corpo.get("email") or "")
     senha = str(corpo.get("senha") or "")
 
@@ -361,7 +386,7 @@ def entrar(conexao):
         return jsonify({"erro": "E-mail ou senha incorretos."}), 401
 
     usuario = banco.usuario_json(linha)
-    _abrir_sessao(usuario["id"])
+    _abrir_sessao(conexao, usuario["id"])
     return jsonify({"usuario": usuario})
 
 
@@ -371,15 +396,19 @@ def sair():
     return jsonify({"usuario": None})
 
 
-def _abrir_sessao(usuario_id: str) -> None:
+def _abrir_sessao(conexao, usuario_id: str) -> None:
     """
     Troca o identificador da sessão ao autenticar.
 
     Descartar a sessão anterior antes de gravar a nova evita fixação de sessão:
     um identificador obtido por terceiros antes do login deixa de valer depois dele.
+
+    `versao` amarra o cookie à senha em vigor: quando ela mudar, este cookie
+    deixa de valer (`conta_da_sessao`).
     """
     session.clear()
     session["usuario_id"] = usuario_id
+    session["versao"] = banco.versao_da_sessao(conexao, usuario_id)
     session.permanent = True
 
 
@@ -396,7 +425,7 @@ def trocar_senha(conexao, conta):
     não que quem está no teclado agora é o dono. Numa máquina compartilhada, sem
     isso bastaria a sessão aberta para trocar a senha e tomar a conta.
     """
-    corpo = request.get_json(silent=True) or {}
+    corpo = corpo_json()
     linha = banco.buscar_usuario_por_email(conexao, conta["email"])
 
     if not check_password_hash(linha["senha_hash"], str(corpo.get("senhaAtual") or "")):
@@ -410,6 +439,9 @@ def trocar_senha(conexao, conta):
         )
 
     usuario = banco.trocar_senha(conexao, conta, generate_password_hash(nova))
+    # A troca derruba toda sessão aberta com a senha antiga — menos esta, que
+    # acabou de provar conhecer as duas.
+    _abrir_sessao(conexao, conta["id"])
     return jsonify({"usuario": usuario})
 
 
@@ -451,7 +483,7 @@ def admin_atualizar_usuario(conexao, usuario_id, conta):
     Só estes três campos. Nome e e-mail são da pessoa, não do administrador —
     quem os altera é o dono da conta.
     """
-    corpo = request.get_json(silent=True) or {}
+    corpo = corpo_json()
 
     papel = modelo.validar_papel(corpo["papel"]) if "papel" in corpo else None
     senha_hash = (
@@ -476,6 +508,10 @@ def admin_atualizar_usuario(conexao, usuario_id, conta):
         conexao, usuario_id, autor=conta,
         papel=papel, ponto_id=ponto_id, senha_hash=senha_hash,
     )
+    # Redefinir a senha derruba as sessões da conta. Quando a conta é a do
+    # próprio admin, a sessão dele é renovada, como na troca pela conta.
+    if senha_hash and usuario_id == conta["id"]:
+        _abrir_sessao(conexao, conta["id"])
     return jsonify(atualizado)
 
 
@@ -494,7 +530,7 @@ def admin_excluir_usuario(conexao, usuario_id, conta):
     A resposta a uma senha errada é 403 com mensagem própria, e não o 401 do
     login: a sessão continua válida: o que faltou foi a confirmação.
     """
-    corpo = request.get_json(silent=True) or {}
+    corpo = corpo_json()
     linha = conexao.execute(
         "SELECT senha_hash FROM usuarios WHERE id = ?", (conta["id"],)
     ).fetchone()
