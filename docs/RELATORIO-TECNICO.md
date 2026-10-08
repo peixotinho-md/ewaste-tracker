@@ -241,7 +241,7 @@ aplicativo municipal de MS que registre a destinação por item.
 | RF18 | Confirmar a mudança de etapa mostrando o que será gravado, antes de gravar | Implementado |
 | RF19 | Administrar contas: conceder e revogar papéis, vincular ponto e redefinir senha | Implementado |
 | RF20 | Registrar em trilha somente de acréscimo quem alterou o quê nas contas | Implementado |
-| RF21 | Distinguir a etapa que cada operador pode registrar (coleta, triagem, reciclagem) | **Pendente — ver Limitações** |
+| RF21 | Distinguir a etapa que cada operador pode registrar (coleta, triagem, reciclagem) | Implementado — seção 9.7.2 |
 | RF15 | Exigir atestado de apagamento de dados na triagem de aparelhos com memória não volátil | Implementado |
 | RF16 | Recusar método de apagamento incompatível com a tecnologia da mídia | Implementado |
 
@@ -483,7 +483,7 @@ provaria nada. Três papéis dividem o acesso:
 |---|---|---|---|---|---|
 | Sem conta | sim | não | não | não | não |
 | Visitante | sim | sim | não | não | não |
-| Operador | sim | sim | sim | sim | não |
+| Operador | sim | sim | sim | só as etapas do seu ponto (9.7.2) | não |
 | Administrador | sim | sim | sim | sim | sim |
 
 Cinco decisões sustentam esse controle:
@@ -687,6 +687,54 @@ desabilitado durante a chamada, para que dois cliques não gravem dois eventos; 
 a confirmação não usa o `confirm()` do navegador, que aceita só texto puro, trava
 a página e tem cara de erro do sistema em vez de decisão consciente.
 
+### 9.7.2 Competência por etapa (RF21)
+
+O papel de operador diz que a conta **escreve** na cadeia; não diz **o quê**.
+Até a Pré-Entrega 2, o operador de um ecoponto conseguia registrar *Em
+reciclagem* e *Processado* de um aparelho que nunca saiu do ecoponto — e o
+certificado de destinação final saía assinado por quem não reciclou nada. Uma
+cadeia de custódia vale porque cada elo é declarado por quem estava com o
+aparelho naquele momento.
+
+A etapa passou a ser amarrada ao **tipo do ponto** onde é registrada
+(`modelo.COMPETENCIA`, espelhada em `js/model.js`):
+
+| Etapa | Quem registra |
+|---|---|
+| `COLETADO` | Ecoponto, PEV, loja/fabricante, cooperativa — quem recebe do público |
+| `EM_TRIAGEM` | Ecoponto, cooperativa — quem separa e apaga a mídia |
+| `EM_TRANSPORTE` | Ecoponto, cooperativa — quem fez a triagem despacha o lote |
+| `EM_RECICLAGEM` | Só a recicladora credenciada |
+| `PROCESSADO` | Só a recicladora credenciada, que emite o certificado |
+
+Quatro decisões de desenho:
+
+- **A verificação é do servidor, dentro da transação** (`banco.registrar_evento`)
+  e depois da máquina de estados: pular etapa continua respondendo 400 com o
+  motivo da transição, e a recusa por competência responde **403**, com
+  `"competencia": true` no corpo. A marca existe porque a tela trata 403 como
+  papel revogado e redesenha a página; este 403 não muda nada na conta.
+- **O operador não escolhe o local.** O ponto vem da conta. Operador sem ponto
+  não registra etapa nenhuma — se o corpo da requisição valesse, bastaria mandar
+  o id de uma recicladora para registrar a reciclagem.
+- **O admin também passa pela tabela.** Ele escolhe o local a cada registro, mas
+  só entre os pontos competentes, e o local passou a ser obrigatório: um elo sem
+  local não diz onde o aparelho estava.
+- **A tela não oferece o que o servidor recusaria.** O leitor de QR mostra, no
+  lugar do botão, quem registra a etapa seguinte; a faixa do topo diz quais
+  etapas o ponto da conta registra; e a administração mostra isso ao vincular um
+  operador a um ponto.
+
+A carga inicial passou a criar um segundo operador, `recicladora@etrilha.ms`,
+vinculado à Recicladora Cerrado Verde: sem ele, a demonstração do ciclo completo
+dependeria do admin. A versão do esquema subiu para 9, o que recria o banco da
+demonstração na próxima subida.
+
+`testes/teste_api_competencia.py` confere a matriz inteira pela API — cada tipo
+de ponto contra cada etapa — e os casos que a matriz não mostra (operador sem
+ponto, ponto mandado no corpo, admin, ordem das recusas). Com a verificação
+desligada de propósito, 19 testes falham.
+
 ### 9.8 Concorrência
 
 As escritas usam `BEGIN IMMEDIATE`, que toma o bloqueio de escrita já na
@@ -818,17 +866,20 @@ está concluído foi verificado pela suíte de testes e pelo roteiro da seção 
 | 3 | Back-end, banco e API; cadeia de custódia gravada no servidor | 27/08 | Concluído |
 | 4 | Contas, papéis e administração | 31/08 | Concluído |
 | 5 | Atestado de apagamento seguro | 31/08 | Concluído |
-| 6 | Suíte de testes automatizados | 31/08 | Concluído — 366 testes |
+| 6 | Suíte de testes automatizados | 31/08 | Concluído — 429 testes |
 | 7 | Conta de reserva e recuperação de acesso pelo terminal | 09/09 | Concluído |
 | 8 | Levantamento de dados locais de MS | 25/09 | Parcial — Campo Grande feito; interior pendente |
-| 9 | Competência por etapa (RF21) | 16/10 | Não iniciado |
+| 9 | Competência por etapa (RF21) | 16/10 | Concluído em 08/10 — seção 9.7.2 |
 | 10 | Teste em celular real, em campo | 16/10 | Não iniciado |
 | 11 | Decisão sobre o dígito verificador | 16/10 | Em aberto — ver Limitações |
-| 12 | Evidências de teste em imagem para o relatório | 23/10 | Não iniciado |
-| 13 | Consolidação do Relatório Técnico | 23/10 | Em andamento |
+| 12 | Evidências de teste em imagem para o relatório | 23/10 | Concluído em 08/10 — seção 11.2 |
+| 13 | Consolidação do Relatório Técnico | 23/10 | Versão preliminar completa; restam os marcadores de campo |
+| 14 | Correções da revisão do servidor (sessões e corpo JSON) | 27/09 | Concluído — 22 testes novos |
 
-O caminho crítico até 23/10 são os itens 9, 10 e 12: o primeiro é a limitação nº 1
-do projeto, e os outros dois são exigência explícita da Pré-Entrega 3.
+Estado em 08/10. Os itens 9 e 12 foram fechados: a competência por etapa e as
+capturas da seção 11.2. O caminho crítico até 29/10 passa a ser os itens 10 e 11:
+o teste com aparelho na mão e a decisão sobre o dígito verificador, que fica mais
+cara a cada código emitido.
 
 ---
 
@@ -915,6 +966,9 @@ do projeto, e os outros dois são exigência explícita da Pré-Entrega 3.
 | 68 | Admin redefine a própria senha | Não exige troca — quem escolheu é quem vai usar |
 | 69 | Trocar a senha sem sessão | HTTP 401 |
 | 70 | Operador com senha provisória tenta gravar um evento | HTTP 403; depois da troca, aceito |
+| 71 | Operador do ecoponto abre um item em transporte | A tela não oferece "Em reciclagem" e diz quem a registra |
+| 72 | O mesmo operador pede a reciclagem pela API, inclusive mandando o id da recicladora | HTTP 403 nas duas; a etapa não muda |
+| 73 | Operador da recicladora registra reciclagem e processado | Aceito; o certificado sai assinado pela recicladora |
 
 ### 11.2 Resultados obtidos
 
@@ -1048,8 +1102,64 @@ Pela tela, com a senha errada o painel permanece aberto e a conta continua na
 lista; com a senha correta o painel fecha, a conta some e a trilha registra a
 exclusão nomeando quem foi excluído.
 
-> **[PREENCHER]** Anexar as evidências em imagem: capturas de tela de cada
-> cenário, especialmente as mensagens de recusa dos cenários 4, 5, 7 e 14.
+**Evidências em imagem** (Pré-Entrega 3). Capturadas em 08/10/2026 no Google
+Chrome, dirigido por script (Playwright), contra o servidor em `localhost` com um
+banco criado só para isso. As imagens estão em `docs/evidencias-pe3/` e comentadas
+em `docs/pre-entrega-3.html`:
+
+| Figura | Cenário | O que mostra |
+|---|---|---|
+| `01-entrada-publica` | 46 | Porta de entrada sem sessão |
+| `02-troca-senha-obrigatoria` | 60 | Primeiro acesso preso à troca de senha |
+| `03-registro-formulario`, `04-registro-codigo-e-qr` | 1 | Registro de um notebook; código `MS-ZB5M-Z7WG` e QR |
+| `05-scanner-item-localizado` | 3 | Aparelho localizado pelo código, local vindo da conta |
+| `06-recusa-pular-etapa` | 4 | Recusa ao pular de *Registrado* para *Processado* |
+| `07-confirmacao-antes-de-gravar` | 28 | Diálogo de confirmação antes de gravar |
+| `08-triagem-atestado-apagamento` | 20 | Atestado de apagamento em memória flash |
+| `09-scanner-cadeia-concluida` | 3 | Cadeia concluída pela recicladora, sem próxima etapa |
+| `10a`, `10b`, `10c` | 6 | Rastreio sem conta: certificado, trilha, atestado e materiais |
+| `11-codigo-digito-invalido` | 7 | Código com um caractere trocado, recusado |
+| `12-painel-indicadores-topo` | 10 | Painel depois do percurso |
+| `13-rastreio-viewport-celular` | — | Rastreio em 390 px de largura (emulado, não é aparelho real) |
+| `14-rf21-etapa-nao-e-do-ponto` | 71 | Operador do ecoponto, item em transporte: a reciclagem não é oferecida |
+
+A captura `04` foi decodificada pelo `jsQR` e devolveu
+`http://127.0.0.1:8765/rastrear?c=MS-ZB5M-Z7WG`: o QR sobrevive à passagem pela
+tela. Na mesma sessão, pela API:
+
+```
+POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_TRANSPORTE"}   (já em PROCESSADO)
+  HTTP 400  Não é possível retroceder de "Processado" para "Em transporte".
+
+GET /api/itens/MS-ZB5M-Z7WA/rastreio   (um caractere trocado)
+  HTTP 400  Código de rastreio inválido.
+```
+
+**Concorrência** (seção 9.8): dez requisições disparadas juntas, por uma barreira
+de threads, pedindo `COLETADO` para o mesmo aparelho recém-registrado:
+
+```
+HTTP 201  x 1
+HTTP 400  x 9   O item já está em "Coletado".
+eventos COLETADO gravados: 1
+```
+
+**Competência por etapa** (cenários 71 a 73): com o item em transporte, o
+operador do ecoponto tentou registrar a reciclagem — pela tela não há botão, e
+pela API:
+
+```
+POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM"}
+  HTTP 403  "Em reciclagem" só pode ser registrada por recicladora credenciada.
+            Ecoponto Campo Grande — Região Norte é ecoponto municipal [...]
+
+POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM","pontoId":"pt-cg-recicladora"}
+  HTTP 403  (mesma recusa: o ponto vem da conta, não do corpo)
+```
+
+A conta da recicladora registrou as duas últimas etapas, e a trilha da captura
+`10b` mostra as duas organizações: coleta, triagem e transporte assinados pelo
+ecoponto; reciclagem e processamento, pela recicladora.
 
 ### 11.3 Conferência manual dos indicadores
 
@@ -1080,7 +1190,7 @@ python -m pytest
 python -m pytest --cov=backend --cov-report=term-missing
 ```
 
-**366 testes, 21 segundos, 92% do código do servidor**, assim distribuídos:
+**429 testes, cerca de 11 a 21 segundos conforme a máquina, 92% do código do servidor**, assim distribuídos:
 
 | Arquivo | Cobre |
 |---|---|
@@ -1088,7 +1198,9 @@ python -m pytest --cov=backend --cov-report=term-missing
 | `testes/teste_api_autorizacao.py` | Matriz das 21 rotas × papéis. Verifica o RNF06 e a distinção entre **401** (falta entrar) e **403** (entrou e não pode) |
 | `testes/teste_api_itens.py` | Cadeia de custódia inteira pela API, e as duas regras de assinatura: o responsável e o ponto vêm da sessão, não do corpo |
 | `testes/teste_api_admin.py` | Papéis, exclusão com re-autenticação, trilha de administração, último administrador e a **conta de reserva**: que ela não aparece na listagem, que as rotas a recusam como se não existisse, e que não conta como o admin que sobra |
-| `testes/teste_api_contas.py` | Cadastro, login, anti-enumeração de e-mail, fixação de sessão, troca de senha |
+| `testes/teste_api_contas.py` | Cadastro, login, anti-enumeração de e-mail, fixação de sessão, troca de senha e queda das outras sessões quando a senha muda |
+| `testes/teste_api_competencia.py` | Competência por etapa (RF21): a matriz tipo de ponto × etapa pela API, operador sem ponto, ponto mandado no corpo, admin e a ordem das recusas |
+| `testes/teste_api_corpo.py` | Corpo JSON que não é objeto (`"x"`, `[1, 2]`, `42`) recebe 400 com mensagem própria, e não 500 |
 | `testes/teste_banco_gatilhos.py` | Os seis gatilhos de somente-acréscimo, chaves estrangeiras e `CHECK` — o RNF07 |
 | `testes/teste_paginas.py` | Portão de autenticação no nível do HTML, a allowlist de arquivos entregues (seção 9.9) e a recusa do leitor de QR a quem não pode gravar etapas |
 | `testes/teste_paridade_front.py` | Compara as tabelas de `backend/modelo.py` com as de `js/model.js`, que a seção 9.2 duplica de propósito |
@@ -1181,7 +1293,7 @@ equipe, para ordenar o que merece atenção — não medida.
 |---|---|---|---|---|
 | R1 | **Adesão**: pontos de coleta e recicladoras não registram as leituras, e a trilha fica vazia no meio | Alta | Alto | É o risco principal, e não é técnico. Reduz-se começando por um ponto só, com um operador só, e mostrando o certificado pronto antes de pedir adesão |
 | R2 | Dados locais de MS não chegam a tempo do relatório final | Média | Médio | Campo Grande já levantado; o interior é extensão do mesmo método, não trabalho novo |
-| R3 | Competência por etapa (RF21) não ser implementada até 29/10 | Média | Médio | Já está documentada como limitação nº 1, com o desenho definido. Se não entrar, entra como melhoria futura justificada |
+| R3 | Competência por etapa (RF21) não ser implementada até 29/10 | — | — | **Encerrado**: implementada em 08/10 (seção 9.7.2) |
 | R4 | Dígito verificador: corrigir invalida códigos já impressos | Baixa | Médio | A decisão está registrada e medida (≈5% de escape). Enquanto as etiquetas são de demonstração, o custo de corrigir só cresce |
 | R5 | Câmera do scanner não abrir na apresentação | Média | Alto | Exige `localhost` ou HTTPS. Mitigado: a digitação manual do código faz o mesmo caminho, e o roteiro prevê o QR ampliado em tela |
 | R6 | Perda de acesso à conta de administrador na banca | Baixa | Alto | Resolvido: conta de reserva e `--nova-senha` no terminal |
@@ -1213,13 +1325,13 @@ não um formulário.
 
 ## 14. Limitações
 
-1. **O papel não distingue as etapas.** Escrever na cadeia já exige conta de
-   operador, o servidor carimba a assinatura e o ponto a partir da sessão, e a
-   concessão do papel fica registrada. Mas um operador vinculado a um ponto de
-   coleta ainda consegue registrar `EM_RECICLAGEM`. O desenho correto é o ponto
-   de coleta registrar `COLETADO`, a recicladora registrar `PROCESSADO` e
-   ninguém registrar pelo outro — o vínculo entre papel, organização e etapa
-   permitida é o que falta.
+1. **A competência é por tipo de ponto, não pelo trajeto do aparelho.** Desde a
+   Pré-Entrega 3, cada etapa só é registrada pelo tipo de organização que a
+   executa (seção 9.7.2): o ecoponto não registra a reciclagem. Mas qualquer
+   recicladora registra a reciclagem de qualquer aparelho em transporte, e não
+   só daquele que foi despachado para ela; e qualquer ecoponto registra a coleta
+   de um aparelho entregue em outro. Fechar isso exigiria registrar o destino
+   no despacho e conferi-lo na chegada.
 2. **O credenciamento depende da confiança no administrador.** Não há
    verificação de pessoa física, contrato com a cooperativa nem segundo fator:
    quem tem o papel de admin concede operador a quem quiser. A trilha de
@@ -1274,11 +1386,10 @@ não um formulário.
 
 ## 15. Melhorias futuras
 
-1. **Competência por etapa** (prioridade): o papel de operador já existe e já é
-   verificado no servidor, com vínculo a um ponto de coleta. Falta amarrar a
-   etapa ao tipo de organização, de modo que só o ponto de coleta registre
-   `COLETADO` e só a recicladora registre `PROCESSADO`. É o que fecha a
-   limitação nº 1.
+1. **Destino no despacho**: ao registrar `EM_TRANSPORTE`, informar a
+   recicladora de destino, e aceitar `EM_RECICLAGEM` só dela. A competência por
+   tipo de ponto já está implementada (seção 9.7.2); isto a estende ao trajeto
+   do aparelho e fecha a limitação nº 1.
 2. **Credenciamento verificado**: ligar a conta de operador ao cadastro da
    organização no órgão ambiental, com segundo fator para quem escreve na
    cadeia. Fecha a limitação nº 2.
@@ -1346,7 +1457,7 @@ sistema de informações de gestão. A lacuna que este projeto endereça já est
 reconhecida em política pública.
 
 A segunda é que **o que o protótipo não faz está declarado**, e não escondido: a
-competência por etapa, o HTTPS e a fila de gravação offline estão nas Limitações,
+o HTTPS, a fila de gravação offline e o dígito verificador estão nas Limitações,
 com o desenho de cada uma. Um trabalho que só mostra o que funciona ensina menos
 do que um que diz onde para.
 
