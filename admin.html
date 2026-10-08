@@ -382,19 +382,21 @@ async function abrirConta(usuario) {
       </select>
       ${usuario.souEu
         ? '<p class="dica">Você não altera o próprio papel — nem exclui a própria conta.</p>'
-        : `<p class="dica">${escapar(store.PAPEIS[usuario.papel]?.descricao ?? '')}</p>`}
+        : `<p class="dica" id="d-papel-descricao">${escapar(store.PAPEIS[usuario.papel]?.descricao ?? '')}</p>`}
     </div>
 
     <div class="campo">
-      <label for="d-ponto">Ponto de coleta vinculado</label>
+      <label for="d-ponto">De qual ponto de coleta é esta conta?
+        <span class="sutil">(obrigatório para operador)</span></label>
       <select id="d-ponto"${usuario.papel === 'operador' ? '' : ' disabled'}>
-        <option value="">Sem ponto — não registra nenhuma etapa</option>
+        <option value="">Escolha o ponto de coleta…</option>
         ${pontos.map((p) =>
           `<option value="${escapar(p.id)}"${p.id === usuario.pontoId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`
         ).join('')}
       </select>
-      <p class="dica">Só operadores usam este vínculo: é dele que sai o local gravado no evento,
-         e é o tipo do ponto que define quais etapas a conta registra.</p>
+      <p class="dica">O operador só registra etapas dos aparelhos que estiverem neste
+         ponto, e só as etapas que o tipo do ponto faz. É deste vínculo que sai o
+         local gravado em cada evento.</p>
       <p class="dica" id="d-competencia"></p>
     </div>
 
@@ -460,10 +462,13 @@ async function abrirConta(usuario) {
     dicaCompetencia.innerHTML = selPonto.disabled ? '' : ponto
       ? `${escapar(TIPOS_PONTO[ponto.tipo]?.rotulo ?? ponto.tipo)}: registra
          <strong>${etapasDoTipo(ponto.tipo).map((e) => escapar(e.rotulo)).join(', ')}</strong>.`
-      : 'Sem ponto, o operador não consegue registrar nenhuma etapa.';
+      : '<strong>Informe o ponto</strong> para salvar a conta como operador.';
   };
   selPonto.addEventListener('change', mostrarCompetencia);
   selPapel.addEventListener('change', () => {
+    // A descrição acompanha o papel escolhido, e não o atual.
+    const descricao = dialogo.querySelector('#d-papel-descricao');
+    if (descricao) descricao.textContent = store.PAPEIS[selPapel.value]?.descricao ?? '';
     selPonto.disabled = selPapel.value !== 'operador';
     if (selPonto.disabled) selPonto.value = '';
     mostrarCompetencia();
@@ -489,6 +494,12 @@ async function abrirConta(usuario) {
  * ------------------------------------------------------------------ */
 
 async function salvarPermissoes(botao, usuario, papel, pontoId, fechar) {
+  // O servidor também recusa; aqui é para a pessoa não perder a ida e a volta.
+  if (papel === 'operador' && !pontoId) {
+    aviso('Informe de qual ponto de coleta é este operador.', 'erro');
+    document.getElementById('d-ponto')?.focus();
+    return;
+  }
   const mudancas = {};
   if (papel !== usuario.papel) mudancas.papel = papel;
   if ((pontoId || null) !== (usuario.pontoId || null)) mudancas.pontoId = pontoId;

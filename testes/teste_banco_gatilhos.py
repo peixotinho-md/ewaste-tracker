@@ -51,7 +51,7 @@ def com_um_item(conexao):
     with banco.transacao(conexao):
         conexao.execute("UPDATE usuarios SET papel = 'admin' WHERE id = ?", (autor["id"],))
     banco.atualizar_usuario(conexao, alvo["id"], autor=banco.obter_usuario(conexao, autor["id"]),
-                            papel="operador")
+                            papel="operador", ponto_id="pt-cg-eco-norte")
 
     assert modelo.PRIMEIRA_ETAPA  # o módulo é usado acima; a linha documenta o import
     return item
@@ -94,6 +94,7 @@ def teste_o_INSERT_continua_livre(conexao, com_um_item):
     antes = conexao.execute("SELECT COUNT(*) AS n FROM eventos").fetchone()["n"]
     banco.registrar_evento(
         conexao, com_um_item["codigo"], etapa="EM_TRANSPORTE", ponto_id="pt-cg-eco-norte",
+        destino_id="pt-cg-recicladora",
         responsavel="Teste", observacao="",
     )
     depois = conexao.execute("SELECT COUNT(*) AS n FROM eventos").fetchone()["n"]

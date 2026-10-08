@@ -400,6 +400,7 @@ export function linhaDoTempo(rastreio) {
             <dl class="trilha-dados">
               <div><dt>Quando</dt><dd>${formatarData(ev.em)}</dd></div>
               ${local ? `<div><dt>Onde</dt><dd>${local}</dd></div>` : ''}
+              ${ev.destino ? `<div><dt>Encaminhado para</dt><dd>${escapar(ev.destino.nome)} — ${escapar(ev.destino.municipio)}</dd></div>` : ''}
               <div><dt>Responsável</dt><dd>${escapar(ev.responsavel)}</dd></div>
               ${ev.observacao ? `<div><dt>Observação</dt><dd>${escapar(ev.observacao)}</dd></div>` : ''}
             </dl>` : `<p class="trilha-pendente">Ainda não realizada. Responsável previsto: ${escapar(def.ator)}.</p>`}

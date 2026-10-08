@@ -123,10 +123,30 @@ def teste_ponto_inexistente_no_vinculo_e_recusado(cliente, admin, fabricar_conta
     assert "Ponto de coleta desconhecido" in resposta.get_json()["erro"]
 
 
-def teste_desvincular_o_operador_do_ponto(cliente, admin, fabricar_conta, ponto_ecoponto):
-    """Ausente = não mexer; presente e vazio = desvincular."""
+def teste_operador_nao_fica_sem_ponto(cliente, admin, fabricar_conta, ponto_ecoponto):
+    """
+    Presente e vazio = desvincular — o que é recusado para operador: é o ponto
+    que diz de quais aparelhos ele cuida (RF21), e sem ele a conta não
+    registraria nada.
+    """
     alvo = fabricar_conta("operador", ponto_id=ponto_ecoponto["id"])
     resposta = cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"pontoId": ""})
+    assert resposta.status_code == 400
+    assert "de qual ponto de coleta" in resposta.get_json()["erro"]
+
+
+def teste_promover_a_operador_exige_o_ponto(cliente, admin, fabricar_conta):
+    alvo = fabricar_conta("visitante")
+    resposta = cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "operador"})
+    assert resposta.status_code == 400
+    # Nada muda: a recusa desfaz a transação inteira, papel incluído.
+    lista = cliente.get("/api/admin/usuarios").get_json()
+    assert next(u for u in lista if u["id"] == alvo["id"])["papel"] == "visitante"
+
+
+def teste_rebaixar_a_visitante_desvincula_o_ponto(cliente, admin, fabricar_conta, ponto_ecoponto):
+    alvo = fabricar_conta("operador", ponto_id=ponto_ecoponto["id"])
+    resposta = cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "visitante"})
     assert resposta.status_code == 200
     assert resposta.get_json()["pontoId"] is None
 
@@ -264,11 +284,11 @@ def teste_excluir_conta_preserva_os_aparelhos_dela(cliente, fabricar_conta, entr
 
 def teste_alteracoes_registram_autor_alvo_e_mudanca(cliente, admin, fabricar_conta):
     alvo = fabricar_conta("visitante")
-    cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "operador"})
+    cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "operador", "pontoId": "pt-cg-eco-norte"})
 
     trilha = cliente.get("/api/admin/alteracoes").get_json()
-    registro = next(a for a in trilha if a["alvoNome"] == alvo["nome"])
-    assert registro["acao"] == "papel"
+    # A promoção grava dois registros, papel e ponto, que agora andam juntos.
+    registro = next(a for a in trilha if a["alvoNome"] == alvo["nome"] and a["acao"] == "papel")
     assert registro["autorNome"] == admin["nome"]
     assert registro["de"] == "visitante"
     assert registro["para"] == "operador"
@@ -283,7 +303,7 @@ def teste_a_trilha_nao_devolve_os_ids_das_contas(cliente, admin, fabricar_conta)
     não existe mais não diria nada a quem lê a tela.
     """
     alvo = fabricar_conta("visitante")
-    cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "operador"})
+    cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "operador", "pontoId": "pt-cg-eco-norte"})
 
     trilha = cliente.get("/api/admin/alteracoes").get_json()
     assert trilha
@@ -298,7 +318,7 @@ def teste_a_trilha_sobrevive_a_exclusao_da_conta(cliente, admin, fabricar_conta)
     auditoria que some junto com o auditado não serve para auditar nada.
     """
     alvo = fabricar_conta("visitante")
-    cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "operador"})
+    cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "operador", "pontoId": "pt-cg-eco-norte"})
     cliente.delete(f"/api/admin/usuarios/{alvo['id']}", json={"senha": admin["senha"]})
 
     trilha = cliente.get("/api/admin/alteracoes").get_json()
@@ -309,8 +329,8 @@ def teste_a_trilha_sobrevive_a_exclusao_da_conta(cliente, admin, fabricar_conta)
 def teste_alteracoes_filtram_por_usuario(cliente, admin, fabricar_conta):
     um = fabricar_conta("visitante")
     outro = fabricar_conta("visitante")
-    cliente.patch(f"/api/admin/usuarios/{um['id']}", json={"papel": "operador"})
-    cliente.patch(f"/api/admin/usuarios/{outro['id']}", json={"papel": "operador"})
+    cliente.patch(f"/api/admin/usuarios/{um['id']}", json={"papel": "operador", "pontoId": "pt-cg-eco-norte"})
+    cliente.patch(f"/api/admin/usuarios/{outro['id']}", json={"papel": "operador", "pontoId": "pt-cg-eco-norte"})
 
     trilha = cliente.get(f"/api/admin/alteracoes?usuario={um['id']}").get_json()
     assert trilha

@@ -421,6 +421,24 @@ export function etapasDoTipo(tipoPonto) {
   return ETAPAS.filter((e) => podeRegistrar(e.id, tipoPonto));
 }
 
+/* Com quem está o aparelho: o ponto do último evento, ou o destino para onde
+ * ele foi encaminhado. Só esse ponto registra a etapa seguinte. Mesma regra de
+ * `banco.registrar_evento`; aqui serve para a tela não oferecer o que o
+ * servidor recusaria. */
+
+export const ETAPAS_COM_DESTINO = ['COLETADO', 'EM_TRANSPORTE'];
+
+export function localAtual(eventos) {
+  const ultimo = eventos.at(-1);
+  return ultimo ? (ultimo.destinoId || ultimo.pontoId || null) : null;
+}
+
+/** O ponto que registra `etapaId` precisa encaminhar o aparelho a outro? */
+export function exigeDestino(etapaId, tipoPonto) {
+  const seguinte = proximaEtapa(etapaId);
+  return Boolean(seguinte) && !podeRegistrar(seguinte.id, tipoPonto);
+}
+
 
 /* Indicadores
  *

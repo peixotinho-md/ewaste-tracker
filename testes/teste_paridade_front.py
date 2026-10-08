@@ -217,6 +217,11 @@ def teste_a_competencia_por_etapa_e_a_mesma():
     assert js == modelo.COMPETENCIA
 
 
+def teste_as_etapas_que_encaminham_sao_as_mesmas():
+    achado = re.search(r"export const ETAPAS_COM_DESTINO = \[([^\]]*)\]", MODEL_JS)
+    assert tuple(re.findall(r"'(\w+)'", achado.group(1))) == modelo.ETAPAS_COM_DESTINO
+
+
 def teste_os_tipos_de_ponto_sao_os_mesmos():
     trecho = bloco(MODEL_JS, "export const TIPOS_PONTO", "{", "}")
     js = dict(re.findall(r"^\s{2}(\w+): \{ rotulo: '([^']+)'", trecho, re.MULTILINE))

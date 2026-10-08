@@ -135,6 +135,60 @@ def validar_competencia(etapa: str, tipo_ponto: str | None, nome_ponto: str = ""
     )
 
 
+# Com quem está o aparelho
+#
+# O tipo do ponto diz QUE TIPO de organização registra cada etapa; falta dizer
+# QUAL. Sem isso, qualquer ecoponto registrava a coleta de um aparelho entregue
+# em outro, e qualquer recicladora a reciclagem de um lote despachado para
+# outra. A regra é uma só: registra a próxima etapa quem está com o aparelho.
+#
+# O aparelho está no ponto do último evento — ou no DESTINO dele, quando o
+# evento o encaminhou a outro ponto. Só duas etapas encaminham:
+#
+#   COLETADO        um PEV ou uma loja recebe, mas não faz triagem: precisa
+#                   dizer para qual ecoponto ou cooperativa o aparelho segue.
+#                   Ecoponto e cooperativa podem ficar com ele ou encaminhar.
+#   EM_TRANSPORTE   o lote sempre vai para uma recicladora, e só ela registra
+#                   a reciclagem.
+#
+# Sem destino, o aparelho fica no ponto que registrou — e esse ponto precisa
+# ser capaz de registrar a etapa seguinte, ou a cadeia travaria ali.
+
+ETAPAS_COM_DESTINO = ("COLETADO", "EM_TRANSPORTE")
+
+
+def etapa_seguinte(etapa: str) -> str | None:
+    posicao = IDS_ETAPAS.index(etapa)
+    return IDS_ETAPAS[posicao + 1] if posicao + 1 < len(IDS_ETAPAS) else None
+
+
+def validar_destino(etapa: str, tipo_ponto: str, destino_tipo: str | None,
+                    mesmo_ponto: bool = False) -> None:
+    """Confere o encaminhamento declarado no evento. Levanta RegraViolada."""
+    seguinte = etapa_seguinte(etapa)
+    quem_segue = " ou ".join(TIPOS_PONTO[t].lower() for t in COMPETENCIA.get(seguinte, ()))
+
+    if destino_tipo is None:
+        if seguinte and not pode_registrar(seguinte, tipo_ponto):
+            raise RegraViolada(
+                f'Informe para onde o aparelho segue: "{ROTULOS[seguinte]}" é feita '
+                f"por {quem_segue}, e {TIPOS_PONTO[tipo_ponto].lower()} não a registra."
+            )
+        return
+
+    if etapa not in ETAPAS_COM_DESTINO:
+        raise RegraViolada(
+            "Só a coleta e o transporte encaminham o aparelho a outro ponto."
+        )
+    if mesmo_ponto:
+        raise RegraViolada("O destino precisa ser outro ponto, e não o que está registrando.")
+    if not pode_registrar(seguinte, destino_tipo):
+        raise RegraViolada(
+            f'O destino precisa ser {quem_segue}: é ele quem registra '
+            f'"{ROTULOS[seguinte]}".'
+        )
+
+
 # Categorias aceitas
 
 # Peso médio em kg, usado quando o cliente não informa um peso válido.

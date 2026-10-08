@@ -293,10 +293,20 @@ def criar_item(conexao, conta):
     peso = modelo.normalizar_peso(corpo.get("pesoKg"), categoria)
     ponto_origem = corpo.get("pontoOrigemId") or None
 
-    if ponto_origem and not conexao.execute(
-        "SELECT 1 FROM pontos WHERE id = ?", (ponto_origem,)
-    ).fetchone():
-        raise modelo.RegraViolada("Ponto de coleta desconhecido.")
+    if ponto_origem:
+        linha = conexao.execute(
+            "SELECT tipo FROM pontos WHERE id = ?", (ponto_origem,)
+        ).fetchone()
+        if linha is None:
+            raise modelo.RegraViolada("Ponto de coleta desconhecido.")
+        # O ponto de entrega é quem vai registrar a coleta (RF21). Uma
+        # recicladora não recebe do público: o aparelho nasceria sem ninguém
+        # que pudesse dar o primeiro passo.
+        if not modelo.pode_registrar("COLETADO", linha["tipo"]):
+            raise modelo.RegraViolada(
+                "Este ponto não recebe aparelhos do público. Escolha um ecoponto, "
+                "PEV, loja ou cooperativa."
+            )
 
     novo = banco.criar_item(
         conexao,
@@ -362,6 +372,7 @@ def criar_evento(conexao, codigo, conta):
         responsavel=modelo.texto(conta["nome"], "responsavel"),
         observacao=modelo.texto(corpo.get("observacao"), "observacao"),
         apagamento=corpo.get("apagamento"),
+        destino_id=corpo.get("destinoId") or None,
     )
     return jsonify(evento), 201
 

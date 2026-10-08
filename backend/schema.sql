@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 9;
+PRAGMA user_version = 10;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta
@@ -169,6 +169,10 @@ CREATE TABLE eventos (
   item_codigo TEXT NOT NULL REFERENCES itens (codigo) ON DELETE RESTRICT,
   etapa       TEXT NOT NULL,
   ponto_id    TEXT REFERENCES pontos (id),
+  -- Para onde o aparelho segue, quando o evento o encaminha a outro ponto
+  -- (coleta num PEV, transporte até a recicladora). É o que diz com quem o
+  -- aparelho está, e portanto quem registra a etapa seguinte (RF21).
+  destino_id  TEXT REFERENCES pontos (id),
   responsavel TEXT NOT NULL DEFAULT '',
   observacao  TEXT NOT NULL DEFAULT '',
   em          TEXT NOT NULL

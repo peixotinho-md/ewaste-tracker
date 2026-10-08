@@ -94,6 +94,8 @@ def teste_percorrer_as_seis_etapas_ate_o_certificado(cliente, fabricar_conta, en
     for etapa in modelo.IDS_ETAPAS[1:]:
         entrar(recicladora if etapa in ("EM_RECICLAGEM", "PROCESSADO") else ecoponto)
         extra = ATESTADO if etapa == "EM_TRIAGEM" else {}
+        if etapa == "EM_TRANSPORTE":
+            extra = {"destinoId": ponto_recicladora["id"]}
         resposta = avancar(cliente, item["codigo"], etapa, **extra)
         assert resposta.status_code == 201, (etapa, resposta.get_json())
 

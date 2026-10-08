@@ -125,13 +125,14 @@ export async function criarItem({ categoria, marca, pesoKg, pontoOrigemId, respo
  */
 export async function registrarEvento(
   codigo,
-  { etapa, pontoId, observacao, apagamento = null }
+  { etapa, pontoId, observacao, apagamento = null, destinoId = null }
 ) {
   return api(`/itens/${encodeURIComponent(codigo)}/eventos`, {
     metodo: 'POST',
     // `apagamento` só é usado ao concluir a triagem de um aparelho com mídia
-    // de dados; nas demais etapas o servidor ignora o campo.
-    corpo: { etapa, pontoId, observacao, apagamento },
+    // de dados; nas demais etapas o servidor ignora o campo. `destinoId` é para
+    // onde o aparelho segue, na coleta e no transporte (RF21).
+    corpo: { etapa, pontoId, observacao, apagamento, destinoId },
   });
 }
 

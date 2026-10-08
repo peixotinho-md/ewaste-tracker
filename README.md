@@ -85,10 +85,10 @@ terminal na primeira execução:
     admin     reserva@etrilha.ms     senha: ····················   (reserva)
 ```
 
-São dois operadores porque cada etapa só é registrada pelo tipo de ponto que a
-executa (veja *Competência por etapa*, abaixo): `operador@` é do Ecoponto Região
-Norte e vai da coleta ao transporte; `recicladora@` é da Recicladora Cerrado
-Verde e registra a reciclagem e o certificado.
+São dois operadores porque cada etapa só é registrada pelo ponto que está com o
+aparelho (veja *Competência por etapa*, abaixo): `operador@` é do Ecoponto
+Região Norte e vai da coleta ao transporte; `recicladora@` é da Recicladora
+Cerrado Verde e registra a reciclagem e o certificado.
 
 **Anote no momento em que aparecem.** Elas não são gravadas em arquivo nenhum: o
 banco guarda apenas o hash PBKDF2, e o sorteio não se repete.
@@ -176,8 +176,14 @@ A porta também é configurável, pela variável `PORTA`.
 
 ### Competência por etapa
 
-Ser operador diz que a conta escreve na cadeia; o **tipo do ponto** vinculado a
-ela diz o quê:
+Todo operador é **de um ponto de coleta**: ao dar o papel, o administrador
+informa o ponto, e sem ele a conta não é salva como operador. A partir daí:
+
+- **só registra quem está com o aparelho.** Ele começa no ponto de entrega
+  escolhido no cadastro; depois fica no ponto da última etapa, ou vai para onde
+  esse ponto o encaminhou. A coleta num PEV e todo transporte dizem para onde o
+  aparelho segue — o transporte, sempre para uma recicladora;
+- **cada tipo de ponto registra certas etapas:**
 
 | Etapa | Quem registra |
 |---|---|
@@ -185,10 +191,9 @@ ela diz o quê:
 | Em triagem, Em transporte | Ecoponto, cooperativa |
 | Em reciclagem, Processado | Só a recicladora credenciada |
 
-O operador não escolhe o local — vem da conta —, e operador sem ponto não
-registra etapa nenhuma. O admin escolhe o local a cada registro, mas só entre os
-pontos competentes. A recusa responde 403, e a tela do leitor nem oferece o
-botão de uma etapa que não é do ponto. O detalhamento está na seção 9.7.2 do
+O operador não escolhe o local — vem da conta. O admin escolhe a cada
+registro, mas só o ponto que está com o aparelho. A recusa responde 403, e a
+tela do leitor diz com quem o aparelho está em vez de oferecer o botão. O detalhamento está na seção 9.7.2 do
 [Relatório Técnico](docs/RELATORIO-TECNICO.md).
 
 ---
@@ -266,7 +271,7 @@ do [Relatório Técnico](docs/RELATORIO-TECNICO.md):
 | `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos — **público** |
 | `GET` | `/api/painel` | Indicadores. Anônimo para conta comum, identificado para operador — **exige conta** |
 | `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` — **exige conta** |
-| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa — **exige operador do ponto competente** (valida a transição e a competência) |
+| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa — **exige operador do ponto que está com o aparelho** (valida transição, tipo do ponto e destino) |
 | `GET` | `/api/sessao` | Usuário logado, se houver |
 | `POST` | `/api/sessao` | Entrar |
 | `DELETE` | `/api/sessao` | Sair |
@@ -345,9 +350,9 @@ sucesso — uma fila de gravações offline está listada como melhoria futura.
 As principais, com o detalhamento na seção 14 do
 [Relatório Técnico](docs/RELATORIO-TECNICO.md):
 
-- **a competência é por tipo de ponto, não pelo trajeto** — o ecoponto não
-  registra a reciclagem, mas qualquer recicladora registra a de qualquer
-  aparelho em transporte, e não só a do que foi despachado para ela;
+- **encaminhamento errado não tem volta** — se o transporte for registrado
+  para a recicladora errada, só ela pode continuar a cadeia: não há evento de
+  correção de destino;
 - **sem HTTPS** — a senha trafega em texto claro; em `localhost` não é problema,
   em rede é;
 - **gravação exige conexão**, e o servidor é o de desenvolvimento do Flask;

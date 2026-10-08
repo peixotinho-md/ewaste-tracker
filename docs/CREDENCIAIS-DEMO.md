@@ -85,10 +85,10 @@ recusa é o servidor, não o menu.
   de apagamento**. Escolha "memória flash" e tente "sobrescrita de setores": o
   servidor recusa e explica o *wear leveling* — é o argumento de Arquitetura de
   Computadores aplicado, e costuma ser o momento que a banca mais pergunta;
-- leve um aparelho até *Em transporte* e abra-o de novo no leitor: no lugar do
-  botão aparece **"Esta etapa não é do seu ponto"** — a reciclagem é da
-  recicladora. Pelo terminal, o servidor responde 403 mesmo mandando o id da
-  recicladora no corpo: o ponto vem da conta;
+- registre um aparelho com ponto de entrega no **Ecoponto Região Norte** e leve-o
+  até *Em transporte*: o leitor pede **para onde o aparelho segue**, e só
+  oferece recicladoras. Abra-o de novo: no lugar do botão aparece **"Esta etapa
+  não é do seu ponto"** — a reciclagem é da recicladora;
 - abra o painel de novo: agora as pendências vêm com o código e o link.
 
 **4b. Como recicladora.** Entre com `recicladora@etrilha.ms` e registre *Em
@@ -105,8 +105,11 @@ duas organizações, cada uma assinando a sua parte — é a competência por et
   atrasados"* para mostrar, em um clique, onde a cadeia travou;
 - clique em **Abrir** numa conta: o painel dela sobe por cima da tela, que
   escurece atrás — dados, aparelhos, histórico, permissões e exclusão;
-- promova a conta visitante criada no passo 3 a operador, vincule-a a um ponto e
-  veja a mudança aparecer na **trilha de administração** logo abaixo;
+- promova a conta visitante criada no passo 3 a operador: tente salvar **sem
+  dizer de qual ponto ela é** — a tela não deixa. Vincule ao **Ecoponto Região
+  Sul** e veja a mudança na **trilha de administração**. Entre com essa conta e
+  abra um aparelho entregue no Ecoponto Norte: o leitor diz que ele **está com
+  outro ponto** e não oferece a etapa;
 - tente **excluir** uma conta: o sistema pede a *sua* senha de administrador
   antes. Os aparelhos dela continuam cadastrados, e a exclusão fica na trilha;
 - tente rebaixar o próprio admin: é recusado, porque o sistema não pode ficar
