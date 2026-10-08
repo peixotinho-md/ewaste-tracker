@@ -215,9 +215,9 @@ def teste_as_contas_iniciais_nascem_com_senha_provisoria(cliente, bd):
         cliente.delete("/api/sessao")
 
 
-def teste_a_carga_cria_um_admin_um_operador_e_a_reserva(bd):
+def teste_a_carga_cria_um_admin_dois_operadores_e_a_reserva(bd):
     papeis = sorted(c["papel"] for c in bd.credenciais)
-    assert papeis == ["admin", "admin", "operador"]
+    assert papeis == ["admin", "admin", "operador", "operador"]
 
     reservas = [c for c in bd.credenciais if c["reserva"]]
     assert len(reservas) == 1, "a carga precisa criar exatamente uma reserva"

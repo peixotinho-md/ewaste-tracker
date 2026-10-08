@@ -33,7 +33,8 @@ import { ligarBuscaDeCodigo, iniciarPagina, aviso, seloEtapa, seloPapel, confirm
          formatarMassa, escapar } from './js/ui.js';
 import { normalizarCodigo, categoria, proximaEtapa, ETAPAS, ETAPA_FINAL,
          etapa as definicaoEtapa, exigeApagamento, metodosParaMidia,
-         MIDIAS, METODOS_APAGAMENTO } from './js/model.js';
+         MIDIAS, METODOS_APAGAMENTO, TIPOS_PONTO, COMPETENCIA, podeRegistrar,
+         etapasDoTipo } from './js/model.js';
 import { LeitorQR } from './js/qr.js';
 
 await iniciarPagina();
@@ -135,8 +136,14 @@ function telaOperacao() {
       Operando como <strong>${escapar(operador.nome)}</strong> ${seloPapel(operador.papel)}
       ${ponto
         ? `— ${escapar(ponto.nome)}, ${escapar(ponto.municipio)}.`
-        : '— sem ponto fixo vinculado; o local é escolhido a cada registro.'}
+        : operador.papel === 'admin'
+          ? '— sem ponto fixo vinculado; o local é escolhido a cada registro.'
+          : '— <strong>sem ponto vinculado</strong>. Peça a um administrador para vincular sua conta a um ponto de coleta.'}
       É este nome que assina cada etapa registrada.
+      ${ponto
+        ? `<br>Como ${escapar(TIPOS_PONTO[ponto.tipo]?.rotulo.toLowerCase() ?? ponto.tipo)}, este ponto registra:
+           <strong>${etapasDoTipo(ponto.tipo).map((e) => escapar(e.rotulo)).join(', ')}</strong>.`
+        : ''}
     </div>
 
     <div class="grade grade-2" style="align-items:start">
@@ -297,7 +304,8 @@ async function abrir(codigo) {
       </details>
     </div>`;
 
-  if (proxima) {
+  // Sem o botão, a etapa não é deste ponto (RF21): não há formulário a ligar.
+  if (proxima && document.getElementById('btn-avancar')) {
     ligarFormulario(item, proxima);
     if (proxima.id === 'EM_TRIAGEM') ligarApagamento(item);
   }
@@ -319,12 +327,33 @@ async function abrir(codigo) {
  */
 function formularioAvanco(item, proxima) {
   const meuPonto = pontos.find((p) => p.id === operador.pontoId);
-  const aceitos = pontos.filter((p) => p.aceita.includes(item.categoria));
+  // Admin escolhe o local, mas só entre os pontos que registram esta etapa (RF21).
+  const competentes = pontos.filter((p) => podeRegistrar(proxima.id, p.tipo));
+  const quem = COMPETENCIA[proxima.id]
+    .map((t) => TIPOS_PONTO[t]?.rotulo.toLowerCase() ?? t).join(' ou ');
 
-  return `
+  const cabecalho = `
     <div class="faixa faixa-info">
       Próxima etapa: <strong>${escapar(proxima.rotulo)}</strong> — ${escapar(proxima.descricao)}
-    </div>
+    </div>`;
+
+  // Operador sem ponto, ou com um ponto que não registra esta etapa: a tela
+  // explica em vez de oferecer um botão que o servidor recusaria com 403.
+  if (operador.papel !== 'admin' && (!meuPonto || !podeRegistrar(proxima.id, meuPonto.tipo))) {
+    return `${cabecalho}
+      <div class="faixa faixa-alerta" id="sem-competencia">
+        <strong>Esta etapa não é do seu ponto.</strong>
+        "${escapar(proxima.rotulo)}" é registrada por ${escapar(quem)}.
+        ${meuPonto
+          ? `${escapar(meuPonto.nome)} é ${escapar(TIPOS_PONTO[meuPonto.tipo]?.rotulo.toLowerCase() ?? meuPonto.tipo)}
+             e registra ${etapasDoTipo(meuPonto.tipo).map((e) => `"${escapar(e.rotulo)}"`).join(', ')}.`
+          : 'Sua conta não está vinculada a um ponto de coleta.'}
+        Quem registra cada elo é a organização que está com o aparelho nele —
+        é isso que faz a trilha valer como prova.
+      </div>`;
+  }
+
+  return `${cabecalho}
 
     <div class="campo">
       <label for="ponto-ev">Local / organização</label>
@@ -333,11 +362,11 @@ function formularioAvanco(item, proxima) {
            <p class="dica">Vem do ponto vinculado à sua conta. O servidor grava este
               local independentemente do que a tela enviar, para ninguém registrar
               passagem por onde não trabalha.</p>`
-        : `<select id="ponto-ev">
-             <option value="">Não informar</option>
-             ${aceitos.map((p) => `<option value="${p.id}"${p.id === item.pontoOrigemId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`).join('')}
+        : `<select id="ponto-ev" required>
+             ${competentes.map((p) => `<option value="${p.id}"${p.id === item.pontoOrigemId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`).join('')}
            </select>
-           <p class="dica">Sua conta não tem ponto fixo vinculado, então o local é escolhido aqui.</p>`}
+           <p class="dica">Sua conta não tem ponto fixo vinculado, então o local é escolhido aqui —
+              só entre os pontos que registram "${escapar(proxima.rotulo)}": ${escapar(quem)}.</p>`}
     </div>
 
     ${proxima.id === 'EM_TRIAGEM' ? blocoApagamento(item) : ''}
@@ -474,7 +503,9 @@ async function avancar(botao, item, etapaId, dados) {
   } catch (erro) {
     // A regra é aplicada no servidor, não na tela: a interface só mostra o motivo.
     aviso(erro.message, 'erro');
-    if (erro.status === 401 || erro.status === 403) {
+    // 403 por competência (RF21) não muda nada na conta: só esta etapa não é
+    // do ponto dela, e a tela continua valendo para as outras.
+    if (erro.status === 401 || (erro.status === 403 && !erro.competencia)) {
       // O papel pode ter sido revogado no meio da operação. Desliga a câmera e
       // redesenha a tela, para não deixar aberto um formulário que já não
       // funciona nem uma captura de vídeo sem dono.

@@ -22,7 +22,8 @@
 import * as store from './js/store.js';
 import { iniciarPagina, aviso, confirmar, confirmarComSenha, seloPapel, seloEtapa,
          escapar, formatarData, formatarMassa , numero} from './js/ui.js';
-import { ETAPAS, ETAPA_FINAL, categoria, estaPendente } from './js/model.js';
+import { ETAPAS, ETAPA_FINAL, categoria, estaPendente, etapasDoTipo,
+         TIPOS_PONTO } from './js/model.js';
 
 await iniciarPagina();
 
@@ -387,12 +388,14 @@ async function abrirConta(usuario) {
     <div class="campo">
       <label for="d-ponto">Ponto de coleta vinculado</label>
       <select id="d-ponto"${usuario.papel === 'operador' ? '' : ' disabled'}>
-        <option value="">Sem ponto fixo</option>
+        <option value="">Sem ponto — não registra nenhuma etapa</option>
         ${pontos.map((p) =>
           `<option value="${escapar(p.id)}"${p.id === usuario.pontoId ? ' selected' : ''}>${escapar(p.nome)} — ${escapar(p.municipio)}</option>`
         ).join('')}
       </select>
-      <p class="dica">Só operadores usam este vínculo: é dele que sai o local gravado no evento.</p>
+      <p class="dica">Só operadores usam este vínculo: é dele que sai o local gravado no evento,
+         e é o tipo do ponto que define quais etapas a conta registra.</p>
+      <p class="dica" id="d-competencia"></p>
     </div>
 
     <div class="botoes">
@@ -450,10 +453,22 @@ async function abrirConta(usuario) {
   // O ponto só faz sentido para operador — acompanha o papel escolhido.
   const selPapel = dialogo.querySelector('#d-papel');
   const selPonto = dialogo.querySelector('#d-ponto');
+  // Mostra, antes de salvar, quais etapas o ponto escolhido registra (RF21).
+  const dicaCompetencia = dialogo.querySelector('#d-competencia');
+  const mostrarCompetencia = () => {
+    const ponto = pontos.find((p) => p.id === selPonto.value);
+    dicaCompetencia.innerHTML = selPonto.disabled ? '' : ponto
+      ? `${escapar(TIPOS_PONTO[ponto.tipo]?.rotulo ?? ponto.tipo)}: registra
+         <strong>${etapasDoTipo(ponto.tipo).map((e) => escapar(e.rotulo)).join(', ')}</strong>.`
+      : 'Sem ponto, o operador não consegue registrar nenhuma etapa.';
+  };
+  selPonto.addEventListener('change', mostrarCompetencia);
   selPapel.addEventListener('change', () => {
     selPonto.disabled = selPapel.value !== 'operador';
     if (selPonto.disabled) selPonto.value = '';
+    mostrarCompetencia();
   });
+  mostrarCompetencia();
 
   dialogo.querySelector('[data-acao="salvar"]').addEventListener('click', (ev) =>
     salvarPermissoes(ev.currentTarget, usuario, selPapel.value,

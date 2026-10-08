@@ -46,12 +46,12 @@ def teste_cadastro_nasce_visitante_mesmo_pedindo_admin(cliente):
     assert resposta.get_json()["usuario"]["papel"] == "visitante"
 
 
-def teste_cadastro_nao_escolhe_ponto_vinculado(cliente, primeiro_ponto):
+def teste_cadastro_nao_escolhe_ponto_vinculado(cliente, ponto_ecoponto):
     resposta = cliente.post("/api/usuarios", json={
         "nome": "Pessoa Comum",
         "email": "comum2@teste.ms",
         "senha": "senha-boa",
-        "pontoId": primeiro_ponto["id"],
+        "pontoId": ponto_ecoponto["id"],
     })
     assert resposta.status_code == 201
     assert resposta.get_json()["usuario"]["pontoId"] is None
@@ -61,13 +61,13 @@ def teste_cadastro_nao_escolhe_ponto_vinculado(cliente, primeiro_ponto):
 # Promoção e rebaixamento
 # --------------------------------------------------------------------------- #
 
-def teste_admin_promove_visitante_a_operador(cliente, admin, fabricar_conta, primeiro_ponto):
+def teste_admin_promove_visitante_a_operador(cliente, admin, fabricar_conta, ponto_ecoponto):
     alvo = fabricar_conta("visitante")
     resposta = cliente.patch(f"/api/admin/usuarios/{alvo['id']}",
-                             json={"papel": "operador", "pontoId": primeiro_ponto["id"]})
+                             json={"papel": "operador", "pontoId": ponto_ecoponto["id"]})
     assert resposta.status_code == 200
     assert resposta.get_json()["papel"] == "operador"
-    assert resposta.get_json()["pontoId"] == primeiro_ponto["id"]
+    assert resposta.get_json()["pontoId"] == ponto_ecoponto["id"]
 
 
 def teste_papel_invalido_e_recusado(cliente, admin, fabricar_conta):
@@ -101,18 +101,18 @@ def teste_admin_rebaixa_outro_admin_enquanto_sobrar_um(cliente, fabricar_conta, 
 
 
 def teste_rebaixar_operador_desfaz_o_vinculo_com_o_ponto(cliente, admin, fabricar_conta,
-                                                         primeiro_ponto):
+                                                         ponto_ecoponto):
     """
     Papel sem escrita não guarda vínculo com ponto de coleta, e o desligamento
     entra na trilha: quem for auditar precisa ver que o vínculo caiu, e por quê.
     """
-    alvo = fabricar_conta("operador", ponto_id=primeiro_ponto["id"])
+    alvo = fabricar_conta("operador", ponto_id=ponto_ecoponto["id"])
     resposta = cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"papel": "visitante"})
     assert resposta.status_code == 200
     assert resposta.get_json()["pontoId"] is None
 
     trilha = cliente.get(f"/api/admin/alteracoes?usuario={alvo['id']}").get_json()
-    assert any(a["acao"] == "ponto" and a["de"] == primeiro_ponto["id"] for a in trilha)
+    assert any(a["acao"] == "ponto" and a["de"] == ponto_ecoponto["id"] for a in trilha)
 
 
 def teste_ponto_inexistente_no_vinculo_e_recusado(cliente, admin, fabricar_conta):
@@ -123,9 +123,9 @@ def teste_ponto_inexistente_no_vinculo_e_recusado(cliente, admin, fabricar_conta
     assert "Ponto de coleta desconhecido" in resposta.get_json()["erro"]
 
 
-def teste_desvincular_o_operador_do_ponto(cliente, admin, fabricar_conta, primeiro_ponto):
+def teste_desvincular_o_operador_do_ponto(cliente, admin, fabricar_conta, ponto_ecoponto):
     """Ausente = não mexer; presente e vazio = desvincular."""
-    alvo = fabricar_conta("operador", ponto_id=primeiro_ponto["id"])
+    alvo = fabricar_conta("operador", ponto_id=ponto_ecoponto["id"])
     resposta = cliente.patch(f"/api/admin/usuarios/{alvo['id']}", json={"pontoId": ""})
     assert resposta.status_code == 200
     assert resposta.get_json()["pontoId"] is None

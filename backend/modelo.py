@@ -71,6 +71,70 @@ def validar_transicao(etapa_atual: str, etapa_destino: str) -> None:
         )
 
 
+# Competência por etapa (RF21)
+#
+# Ter papel de operador diz que a conta PODE escrever na cadeia; não diz O QUÊ.
+# Sem esta tabela, o operador de um ecoponto registrava "Em reciclagem" de um
+# aparelho que nunca saiu do ecoponto, e a trilha afirmava uma passagem pela
+# recicladora que ninguém da recicladora assinou. A cadeia de custódia vale
+# justamente porque cada elo é declarado por quem estava com o aparelho naquele
+# momento.
+#
+# A regra amarra a etapa ao TIPO do ponto onde ela é registrada — e o ponto vem
+# da conta (operador) ou é escolhido pelo admin, que também passa pela tabela:
+#
+#   COLETADO        quem recebe do público: ecoponto, PEV, loja/fabricante e
+#                   cooperativa que aceita entrega direta;
+#   EM_TRIAGEM      quem separa e apaga a mídia: ecoponto e cooperativa;
+#   EM_TRANSPORTE   quem despacha o lote, o mesmo que fez a triagem;
+#   EM_RECICLAGEM   só a recicladora credenciada;
+#   PROCESSADO      só a recicladora credenciada — é ela quem emite o
+#                   certificado de destinação final.
+#
+# REGISTRADO não está aqui: nasce no cadastro do aparelho (`POST /api/itens`),
+# feito pelo próprio dono, e não por evento.
+
+TIPOS_PONTO = {
+    "ecoponto": "Ecoponto municipal",
+    "cooperativa": "Cooperativa de reciclagem",
+    "fabricante": "Loja / fabricante",
+    "pev": "Ponto de entrega voluntária",
+    "recicladora": "Recicladora credenciada",
+}
+
+COMPETENCIA = {
+    "COLETADO":      ("ecoponto", "pev", "fabricante", "cooperativa"),
+    "EM_TRIAGEM":    ("ecoponto", "cooperativa"),
+    "EM_TRANSPORTE": ("ecoponto", "cooperativa"),
+    "EM_RECICLAGEM": ("recicladora",),
+    "PROCESSADO":    ("recicladora",),
+}
+
+
+class SemCompetencia(RegraViolada):
+    """
+    A conta pode escrever na cadeia, mas não esta etapa neste ponto. Vira HTTP
+    403, e não 400: o pedido está bem formado; quem pede é que não pode.
+    """
+
+
+def pode_registrar(etapa: str, tipo_ponto: str | None) -> bool:
+    return tipo_ponto in COMPETENCIA.get(etapa, ())
+
+
+def validar_competencia(etapa: str, tipo_ponto: str | None, nome_ponto: str = "") -> None:
+    """Levanta SemCompetencia quando o tipo do ponto não registra a etapa."""
+    if pode_registrar(etapa, tipo_ponto):
+        return
+    quem = " ou ".join(TIPOS_PONTO[t].lower() for t in COMPETENCIA.get(etapa, ()))
+    onde = f"{nome_ponto} é {TIPOS_PONTO.get(tipo_ponto, 'um ponto sem tipo').lower()}"
+    raise SemCompetencia(
+        f'"{ROTULOS.get(etapa, etapa)}" só pode ser registrada por {quem}. '
+        f"{onde.strip()}: quem registra esta etapa é a organização que está com o "
+        "aparelho nela."
+    )
+
+
 # Categorias aceitas
 
 # Peso médio em kg, usado quando o cliente não informa um peso válido.

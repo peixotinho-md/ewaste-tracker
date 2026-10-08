@@ -202,6 +202,28 @@ def teste_quem_escreve_na_cadeia_e_o_mesmo_dos_dois_lados():
 
 
 # --------------------------------------------------------------------------- #
+# Competência por etapa (RF21)
+# --------------------------------------------------------------------------- #
+
+def teste_a_competencia_por_etapa_e_a_mesma():
+    """
+    Divergir aqui não abre brecha — quem recusa é o servidor —, mas a tela
+    ofereceria o botão de uma etapa que sempre volta com 403, ou esconderia o
+    de uma etapa que o ponto pode registrar.
+    """
+    trecho = bloco(MODEL_JS, "export const COMPETENCIA", "{", "}")
+    js = {etapa: tuple(re.findall(r"'(\w+)'", tipos))
+          for etapa, tipos in re.findall(r"^\s{2}(\w+): \[([^\]]*)\]", trecho, re.MULTILINE)}
+    assert js == modelo.COMPETENCIA
+
+
+def teste_os_tipos_de_ponto_sao_os_mesmos():
+    trecho = bloco(MODEL_JS, "export const TIPOS_PONTO", "{", "}")
+    js = dict(re.findall(r"^\s{2}(\w+): \{ rotulo: '([^']+)'", trecho, re.MULTILINE))
+    assert js == modelo.TIPOS_PONTO
+
+
+# --------------------------------------------------------------------------- #
 # Pontos de coleta: o JSON semeado e o que a tela espera
 # --------------------------------------------------------------------------- #
 

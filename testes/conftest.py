@@ -124,13 +124,28 @@ def cliente(bd):
 # Contas
 # --------------------------------------------------------------------------- #
 
-@pytest.fixture
-def primeiro_ponto(bd):
+def _primeiro_ponto_do_tipo(tipo: str) -> dict:
     conexao = banco.conectar()
     try:
-        return banco.listar_pontos(conexao)[0]
+        return next(p for p in banco.listar_pontos(conexao) if p["tipo"] == tipo)
     finally:
         conexao.close()
+
+
+@pytest.fixture
+def ponto_ecoponto(bd):
+    """
+    O ponto do operador padrão da suíte. É um ecoponto porque, com a competência
+    por etapa (RF21), é o tipo que registra coleta, triagem e transporte — o
+    trecho da cadeia que a maior parte dos testes percorre.
+    """
+    return _primeiro_ponto_do_tipo("ecoponto")
+
+
+@pytest.fixture
+def ponto_recicladora(bd):
+    """O único tipo que registra "Em reciclagem" e "Processado"."""
+    return _primeiro_ponto_do_tipo("recicladora")
 
 
 @pytest.fixture
@@ -206,8 +221,8 @@ def visitante(fabricar_conta, entrar):
 
 
 @pytest.fixture
-def operador(fabricar_conta, entrar, primeiro_ponto):
-    return entrar(fabricar_conta("operador", ponto_id=primeiro_ponto["id"]))
+def operador(fabricar_conta, entrar, ponto_ecoponto):
+    return entrar(fabricar_conta("operador", ponto_id=ponto_ecoponto["id"]))
 
 
 @pytest.fixture

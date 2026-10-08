@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 -- Versão do esquema. `banco.preparar()` recria o banco quando a versão gravada
 -- no arquivo é diferente desta. Como os dados são de demonstração e vêm de
 -- dados/*.json, recriar é mais simples e mais seguro do que migrar.
-PRAGMA user_version = 8;
+PRAGMA user_version = 9;
 
 -- --------------------------------------------------------------------------
 -- Pontos de coleta

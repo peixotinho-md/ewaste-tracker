@@ -36,10 +36,3 @@ O CSS ganhou um ponto de quebra em 640 px — menu que desliza em vez de quebrar
 em três linhas, alvos de toque de 44 px, margens menores. A verificação foi por
 inspeção do código, sem aparelho na mão. É justamente no celular que o sistema é
 usado de pé, num galpão.
-
-## 3. Competência por etapa
-
-O papel de operador permite registrar qualquer etapa. O desenho correto é o
-ponto de coleta registrar `COLETADO` e a recicladora registrar `PROCESSADO`,
-com o vínculo entre papel, organização e etapa permitida. É a limitação nº 1 do
-Relatório Técnico.

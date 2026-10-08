@@ -18,8 +18,9 @@ recuperar uma senha perdida estão em um lugar só, no
 produzido duas versões diferentes da mesma informação.
 
 O essencial para a apresentação: a carga cria `admin@etrilha.ms`,
-`operador@etrilha.ms` e `reserva@etrilha.ms`, sorteia uma senha para cada e as
-imprime **uma única vez, no terminal**. Anote no momento em que aparecem. Se
+`operador@etrilha.ms` (Ecoponto Região Norte), `recicladora@etrilha.ms`
+(Recicladora Cerrado Verde) e `reserva@etrilha.ms`, sorteia uma senha para cada
+e as imprime **uma única vez, no terminal**. Anote no momento em que aparecem. Se
 perder, `python backend/app.py --nova-senha <e-mail>` sorteia outra sem tocar
 nos dados.
 
@@ -84,7 +85,17 @@ recusa é o servidor, não o menu.
   de apagamento**. Escolha "memória flash" e tente "sobrescrita de setores": o
   servidor recusa e explica o *wear leveling* — é o argumento de Arquitetura de
   Computadores aplicado, e costuma ser o momento que a banca mais pergunta;
+- leve um aparelho até *Em transporte* e abra-o de novo no leitor: no lugar do
+  botão aparece **"Esta etapa não é do seu ponto"** — a reciclagem é da
+  recicladora. Pelo terminal, o servidor responde 403 mesmo mandando o id da
+  recicladora no corpo: o ponto vem da conta;
 - abra o painel de novo: agora as pendências vêm com o código e o link.
+
+**4b. Como recicladora.** Entre com `recicladora@etrilha.ms` e registre *Em
+reciclagem* e *Processado* do mesmo aparelho. A faixa do topo diz que este ponto
+registra só essas duas etapas. Consulte o código sem conta: a trilha mostra as
+duas organizações, cada uma assinando a sua parte — é a competência por etapa
+(RF21) que faz o certificado valer.
 
 **5. Como administrador:**
 
@@ -152,7 +163,7 @@ recria o banco do zero:
 
 - os pontos de coleta e os 10 aparelhos de exemplo voltam ao estado inicial;
 - **todas as contas são apagadas**, junto com os aparelhos que registraram;
-- as três contas iniciais — incluindo a de reserva — renascem com **senhas
+- as quatro contas iniciais — incluindo a de reserva — renascem com **senhas
   novas, sorteadas**, impressas no **terminal do servidor**, não na tela do
   navegador.
 

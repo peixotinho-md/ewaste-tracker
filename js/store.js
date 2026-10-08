@@ -49,6 +49,9 @@ async function api(caminho, { metodo = 'GET', corpo = null, nuloEm404 = false } 
     // 401 (falta entrar) e 403 (entrou, mas a conta não tem o papel) pedem
     // respostas diferentes da tela, então o status sobe junto com a mensagem.
     erro.status = resposta.status;
+    // 403 por competência (RF21) não é papel revogado: a conta continua de
+    // operador, só que esta etapa não é do ponto dela.
+    erro.competencia = dados?.competencia === true;
     throw erro;
   }
   return dados;

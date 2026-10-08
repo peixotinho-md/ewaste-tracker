@@ -139,7 +139,7 @@ def corpo_para(caminho, conta):
 
 @pytest.mark.parametrize("metodo,caminho,papel", FECHADAS)
 def teste_papel_suficiente_passa_da_autorizacao(
-    cliente, fabricar_conta, entrar, primeiro_ponto, metodo, caminho, papel
+    cliente, fabricar_conta, entrar, ponto_ecoponto, metodo, caminho, papel
 ):
     """
     Com o papel certo, a resposta pode ser qualquer coisa menos 401 ou 403.
@@ -148,7 +148,7 @@ def teste_papel_suficiente_passa_da_autorizacao(
     dados no corpo (400) ou por id inexistente (404), e isso é assunto dos
     arquivos específicos. O que este teste garante é que o portão abriu.
     """
-    ponto = primeiro_ponto["id"] if papel == "operador" else None
+    ponto = ponto_ecoponto["id"] if papel == "operador" else None
     conta = entrar(fabricar_conta(papel, ponto_id=ponto))
     resposta = cliente.open(caminho, method=metodo, json=corpo_para(caminho, conta))
     assert resposta.status_code not in (401, 403), (

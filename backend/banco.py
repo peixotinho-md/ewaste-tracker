@@ -27,8 +27,9 @@ CAMINHO_BANCO = PASTA_BACKEND / "etrilha.db"
 CAMINHO_SCHEMA = PASTA_BACKEND / "schema.sql"
 PASTA_DADOS = RAIZ / "dados"
 
-# Contas criadas na carga inicial: um administrador, um operador de exemplo e
-# um administrador de reserva, que não aparece na tela de administração.
+# Contas criadas na carga inicial: um administrador, dois operadores de exemplo
+# (ecoponto e recicladora, as duas pontas da cadeia) e um administrador de
+# reserva, que não aparece na tela de administração.
 #
 # A SENHA NÃO ESTÁ AQUI, nem em lugar nenhum. Ela é sorteada a cada carga
 # (`_semear_contas`), impressa UMA vez no terminal de quem subiu o servidor e
@@ -53,8 +54,16 @@ CONTAS_INICIAIS = [
         "nome": "Operador do Ecoponto Região Norte",
         "email": "operador@etrilha.ms",
         "papel": "operador",
-        # Preenchido na carga com o primeiro ponto de coleta cadastrado.
-        "ponto_id": None,
+        "ponto_id": "pt-cg-eco-norte",
+    },
+    {
+        # Com a competência por etapa (RF21), o operador do ecoponto vai até o
+        # transporte; reciclagem e certificado são da recicladora. Sem esta
+        # conta, a demonstração do ciclo completo dependeria do admin.
+        "nome": "Operador da Recicladora Cerrado Verde",
+        "email": "recicladora@etrilha.ms",
+        "papel": "operador",
+        "ponto_id": "pt-cg-recicladora",
     },
     {
         # A segunda chave. Não aparece na tela de administração, ninguém a
@@ -250,10 +259,10 @@ def _semear(conexao) -> list[dict]:
                      triagem[3], quando(triagem[1])),
                 )
 
-        return _semear_contas(conexao, pontos[0]["id"] if pontos else None)
+        return _semear_contas(conexao)
 
 
-def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
+def _semear_contas(conexao) -> list[dict]:
     """
     Cria as contas de `CONTAS_INICIAIS`, cada uma com uma senha sorteada, e
     devolve as credenciais para quem subiu o servidor ver.
@@ -274,7 +283,7 @@ def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
                 generate_password_hash(senha),
                 agora_iso(),
                 conta["papel"],
-                ponto_do_operador if conta["papel"] == "operador" else conta["ponto_id"],
+                conta["ponto_id"],
                 1 if conta.get("reserva") else 0,
             ),
         )
@@ -542,6 +551,22 @@ def registrar_evento(conexao, codigo, *, etapa, ponto_id, responsavel, observaca
 
         # A validação acontece aqui, dentro da transação e do lado do servidor.
         modelo.validar_transicao(linha["etapa_atual"], etapa)
+
+        # Competência por etapa (RF21): depois da transição, para que pular ou
+        # retroceder continue respondendo com o motivo da máquina de estados.
+        # Sem ponto não há como saber quem registra — e um elo sem local não
+        # diria onde o aparelho estava.
+        if not ponto_id:
+            raise modelo.RegraViolada(
+                "Informe o ponto onde a etapa aconteceu: é o tipo do ponto que "
+                "define quem pode registrar cada etapa."
+            )
+        ponto = conexao.execute(
+            "SELECT nome, tipo FROM pontos WHERE id = ?", (ponto_id,)
+        ).fetchone()
+        if ponto is None:
+            raise modelo.RegraViolada("Ponto de coleta desconhecido.")
+        modelo.validar_competencia(etapa, ponto["tipo"], ponto["nome"])
 
         if etapa == "EM_TRIAGEM":
             dados = apagamento or {}

@@ -60,7 +60,7 @@ python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-São 388 testes em cerca de 21 segundos, cobrindo 92% do servidor. Cada teste
+São 429 testes em cerca de 11 a 21 segundos, cobrindo 92% do servidor. Cada teste
 trabalha numa **cópia temporária** do banco, então rodar a suíte não toca em
 `backend/etrilha.db` nem nas contas da demonstração. Para o número de cobertura:
 
@@ -74,15 +74,21 @@ encontrou, na 11.5.
 
 ### Contas iniciais
 
-A carga cria três contas e **sorteia uma senha para cada uma**, impressa no
+A carga cria quatro contas e **sorteia uma senha para cada uma**, impressa no
 terminal na primeira execução:
 
 ```
   Contas criadas agora, com senha sorteada:
     admin     admin@etrilha.ms       senha: ····················
     operador  operador@etrilha.ms    senha: ····················
+    operador  recicladora@etrilha.ms senha: ····················
     admin     reserva@etrilha.ms     senha: ····················   (reserva)
 ```
+
+São dois operadores porque cada etapa só é registrada pelo tipo de ponto que a
+executa (veja *Competência por etapa*, abaixo): `operador@` é do Ecoponto Região
+Norte e vai da coleta ao transporte; `recicladora@` é da Recicladora Cerrado
+Verde e registra a reciclagem e o certificado.
 
 **Anote no momento em que aparecem.** Elas não são gravadas em arquivo nenhum: o
 banco guarda apenas o hash PBKDF2, e o sorteio não se repete.
@@ -168,6 +174,25 @@ A porta também é configurável, pela variável `PORTA`.
 
 ---
 
+### Competência por etapa
+
+Ser operador diz que a conta escreve na cadeia; o **tipo do ponto** vinculado a
+ela diz o quê:
+
+| Etapa | Quem registra |
+|---|---|
+| Coletado | Ecoponto, PEV, loja/fabricante, cooperativa |
+| Em triagem, Em transporte | Ecoponto, cooperativa |
+| Em reciclagem, Processado | Só a recicladora credenciada |
+
+O operador não escolhe o local — vem da conta —, e operador sem ponto não
+registra etapa nenhuma. O admin escolhe o local a cada registro, mas só entre os
+pontos competentes. A recusa responde 403, e a tela do leitor nem oferece o
+botão de uma etapa que não é do ponto. O detalhamento está na seção 9.7.2 do
+[Relatório Técnico](docs/RELATORIO-TECNICO.md).
+
+---
+
 ## Conta obrigatória, consulta pública
 
 A primeira tela pergunta o que a pessoa quer: **entrar**, **criar conta** ou
@@ -241,7 +266,7 @@ do [Relatório Técnico](docs/RELATORIO-TECNICO.md):
 | `GET` | `/api/itens/<codigo>/rastreio` | Item + trilha + pontos resolvidos — **público** |
 | `GET` | `/api/painel` | Indicadores. Anônimo para conta comum, identificado para operador — **exige conta** |
 | `POST` | `/api/itens` | Registra aparelho, gera código e o evento `REGISTRADO` — **exige conta** |
-| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa — **exige operador** (valida a transição) |
+| `POST` | `/api/itens/<codigo>/eventos` | Avança a etapa — **exige operador do ponto competente** (valida a transição e a competência) |
 | `GET` | `/api/sessao` | Usuário logado, se houver |
 | `POST` | `/api/sessao` | Entrar |
 | `DELETE` | `/api/sessao` | Sair |
@@ -320,8 +345,9 @@ sucesso — uma fila de gravações offline está listada como melhoria futura.
 As principais, com o detalhamento na seção 14 do
 [Relatório Técnico](docs/RELATORIO-TECNICO.md):
 
-- **o papel não distingue as etapas** — um operador de ponto de coleta ainda
-  consegue registrar `EM_RECICLAGEM`;
+- **a competência é por tipo de ponto, não pelo trajeto** — o ecoponto não
+  registra a reciclagem, mas qualquer recicladora registra a de qualquer
+  aparelho em transporte, e não só a do que foi despachado para ela;
 - **sem HTTPS** — a senha trafega em texto claro; em `localhost` não é problema,
   em rede é;
 - **gravação exige conexão**, e o servidor é o de desenvolvimento do Flask;
