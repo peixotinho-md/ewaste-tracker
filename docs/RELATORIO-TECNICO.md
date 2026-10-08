@@ -241,7 +241,7 @@ aplicativo municipal de MS que registre a destinação por item.
 | RF18 | Confirmar a mudança de etapa mostrando o que será gravado, antes de gravar | Implementado |
 | RF19 | Administrar contas: conceder e revogar papéis, vincular ponto e redefinir senha | Implementado |
 | RF20 | Registrar em trilha somente de acréscimo quem alterou o quê nas contas | Implementado |
-| RF21 | Distinguir a etapa que cada operador pode registrar (coleta, triagem, reciclagem) | Implementado — seção 9.7.2 |
+| RF21 | Vincular todo operador a um ponto e aceitar cada etapa só do ponto que está com o aparelho | Implementado — seção 9.7.2 |
 | RF15 | Exigir atestado de apagamento de dados na triagem de aparelhos com memória não volátil | Implementado |
 | RF16 | Recusar método de apagamento incompatível com a tecnologia da mídia | Implementado |
 
@@ -483,7 +483,7 @@ provaria nada. Três papéis dividem o acesso:
 |---|---|---|---|---|---|
 | Sem conta | sim | não | não | não | não |
 | Visitante | sim | sim | não | não | não |
-| Operador | sim | sim | sim | só as etapas do seu ponto (9.7.2) | não |
+| Operador | sim | sim | sim | só dos aparelhos que estão no seu ponto (9.7.2) | não |
 | Administrador | sim | sim | sim | sim | sim |
 
 Cinco decisões sustentam esse controle:
@@ -689,15 +689,21 @@ a página e tem cara de erro do sistema em vez de decisão consciente.
 
 ### 9.7.2 Competência por etapa (RF21)
 
-O papel de operador diz que a conta **escreve** na cadeia; não diz **o quê**.
-Até a Pré-Entrega 2, o operador de um ecoponto conseguia registrar *Em
-reciclagem* e *Processado* de um aparelho que nunca saiu do ecoponto — e o
-certificado de destinação final saía assinado por quem não reciclou nada. Uma
-cadeia de custódia vale porque cada elo é declarado por quem estava com o
-aparelho naquele momento.
+O papel de operador diz que a conta **escreve** na cadeia; não diz **o quê**
+nem **de qual aparelho**. Até a Pré-Entrega 2, o operador de um ecoponto
+conseguia registrar *Em reciclagem* e *Processado* de um aparelho que nunca saiu
+do ecoponto — e o certificado de destinação final saía assinado por quem não
+reciclou nada. Uma cadeia de custódia vale porque cada elo é declarado por quem
+estava com o aparelho naquele momento. Três regras fecham isso:
 
-A etapa passou a ser amarrada ao **tipo do ponto** onde é registrada
-(`modelo.COMPETENCIA`, espelhada em `js/model.js`):
+**1. Todo operador é de um ponto.** Ao dar o papel de operador, o administrador
+precisa dizer de qual ponto de coleta é a conta — a tela de administração pede
+o ponto e não salva sem ele, e `banco.atualizar_usuario` recusa com 400 a
+promoção sem ponto e a retirada do ponto de quem continua operador. Rebaixar a
+visitante desfaz o vínculo junto.
+
+**2. Cada tipo de ponto registra certas etapas** (`modelo.COMPETENCIA`,
+espelhada em `js/model.js`):
 
 | Etapa | Quem registra |
 |---|---|
@@ -707,33 +713,49 @@ A etapa passou a ser amarrada ao **tipo do ponto** onde é registrada
 | `EM_RECICLAGEM` | Só a recicladora credenciada |
 | `PROCESSADO` | Só a recicladora credenciada, que emite o certificado |
 
-Quatro decisões de desenho:
+**3. Só registra quem está com o aparelho.** O aparelho começa no ponto de
+entrega escolhido no cadastro — que, por isso, precisa ser um ponto que recebe
+do público. Depois, fica no ponto do último evento, ou no **destino** para onde
+esse evento o encaminhou (`eventos.destino_id`). Só duas etapas encaminham:
+
+- **coleta**: um PEV ou uma loja recebe, mas não faz triagem, e precisa dizer
+  para qual ecoponto ou cooperativa o aparelho segue. Ecoponto e cooperativa
+  podem ficar com ele ou encaminhar;
+- **transporte**: sempre diz para qual recicladora vai o lote, e só ela
+  registra a reciclagem.
+
+O servidor confere que o destino é de um tipo que registra a etapa seguinte e
+que não é o próprio ponto. Sem destino, o ponto que registrou precisa ser capaz
+de registrar a etapa seguinte — senão a cadeia travaria ali.
+
+Decisões de desenho:
 
 - **A verificação é do servidor, dentro da transação** (`banco.registrar_evento`)
   e depois da máquina de estados: pular etapa continua respondendo 400 com o
-  motivo da transição, e a recusa por competência responde **403**, com
-  `"competencia": true` no corpo. A marca existe porque a tela trata 403 como
-  papel revogado e redesenha a página; este 403 não muda nada na conta.
-- **O operador não escolhe o local.** O ponto vem da conta. Operador sem ponto
-  não registra etapa nenhuma — se o corpo da requisição valesse, bastaria mandar
-  o id de uma recicladora para registrar a reciclagem.
-- **O admin também passa pela tabela.** Ele escolhe o local a cada registro, mas
-  só entre os pontos competentes, e o local passou a ser obrigatório: um elo sem
+  motivo da transição. Recusa por tipo ou por posse responde **403**, com
+  `"competencia": true` no corpo; a marca existe porque a tela trata 403 como
+  papel revogado e redesenha a página, e este 403 não muda nada na conta.
+  Destino ausente ou inválido responde 400, como os outros dados do formulário.
+- **O operador não escolhe o local.** O ponto vem da conta. Mandar no corpo o id
+  do ponto que está com o aparelho não muda nada.
+- **O admin também passa pelas regras.** Ele escolhe o local a cada registro,
+  mas só o ponto que está com o aparelho, e o local é obrigatório: um elo sem
   local não diz onde o aparelho estava.
-- **A tela não oferece o que o servidor recusaria.** O leitor de QR mostra, no
-  lugar do botão, quem registra a etapa seguinte; a faixa do topo diz quais
-  etapas o ponto da conta registra; e a administração mostra isso ao vincular um
-  operador a um ponto.
+- **A tela não oferece o que o servidor recusaria.** O leitor de QR diz com quem
+  o aparelho está quando não é com a conta, mostra quem registra a etapa
+  seguinte quando ela não é do tipo do ponto, e pede o destino na coleta e no
+  transporte. A rastreabilidade pública mostra o encaminhamento na trilha.
 
-A carga inicial passou a criar um segundo operador, `recicladora@etrilha.ms`,
-vinculado à Recicladora Cerrado Verde: sem ele, a demonstração do ciclo completo
-dependeria do admin. A versão do esquema subiu para 9, o que recria o banco da
-demonstração na próxima subida.
+A carga inicial cria um segundo operador, `recicladora@etrilha.ms`, vinculado à
+Recicladora Cerrado Verde: sem ele, a demonstração do ciclo completo dependeria
+do admin. A trilha dos aparelhos de demonstração ganhou os destinos, e o esquema
+subiu para a versão 10, o que recria o banco da demonstração na próxima subida.
 
-`testes/teste_api_competencia.py` confere a matriz inteira pela API — cada tipo
-de ponto contra cada etapa — e os casos que a matriz não mostra (operador sem
-ponto, ponto mandado no corpo, admin, ordem das recusas). Com a verificação
-desligada de propósito, 19 testes falham.
+`testes/teste_api_competencia.py` (50 testes) confere a matriz de tipos × etapas
+e, pela API, a posse — coleta no ponto de entrega, triagem em quem coletou,
+reciclagem só na recicladora de destino, encaminhamento pelo PEV — e as regras
+do destino. Desligando de propósito a verificação de posse, 7 testes falham;
+desligando a do destino, outros 7.
 
 ### 9.8 Concorrência
 
@@ -966,9 +988,11 @@ cara a cada código emitido.
 | 68 | Admin redefine a própria senha | Não exige troca — quem escolheu é quem vai usar |
 | 69 | Trocar a senha sem sessão | HTTP 401 |
 | 70 | Operador com senha provisória tenta gravar um evento | HTTP 403; depois da troca, aceito |
-| 71 | Operador do ecoponto abre um item em transporte | A tela não oferece "Em reciclagem" e diz quem a registra |
-| 72 | O mesmo operador pede a reciclagem pela API, inclusive mandando o id da recicladora | HTTP 403 nas duas; a etapa não muda |
-| 73 | Operador da recicladora registra reciclagem e processado | Aceito; o certificado sai assinado pela recicladora |
+| 71 | Admin dá o papel de operador sem informar o ponto | A tela avisa e não salva; pela API, HTTP 400 e a conta continua visitante |
+| 72 | Operadora do Ecoponto Sul abre um aparelho entregue no Ecoponto Norte | A tela diz com quem o aparelho está e não oferece a etapa; pela API, HTTP 403, mesmo mandando o ponto do Norte no corpo |
+| 73 | Ecoponto registra o transporte sem destino | HTTP 400: o transporte diz para qual recicladora vai |
+| 74 | Ecoponto registra o transporte para a recicladora e tenta a reciclagem | Transporte aceito; reciclagem recusada com 403 |
+| 75 | A recicladora de destino registra reciclagem e processado | Aceito; a trilha mostra o encaminhamento e as duas organizações |
 
 ### 11.2 Resultados obtidos
 
@@ -1111,27 +1135,29 @@ em `docs/pre-entrega-3.html`:
 |---|---|---|
 | `01-entrada-publica` | 46 | Porta de entrada sem sessão |
 | `02-troca-senha-obrigatoria` | 60 | Primeiro acesso preso à troca de senha |
-| `03-registro-formulario`, `04-registro-codigo-e-qr` | 1 | Registro de um notebook; código `MS-ZB5M-Z7WG` e QR |
+| `03-registro-formulario`, `04-registro-codigo-e-qr` | 1 | Registro de um notebook entregue no Ecoponto Norte; código `MS-PWX4-NEYG` e QR |
 | `05-scanner-item-localizado` | 3 | Aparelho localizado pelo código, local vindo da conta |
 | `06-recusa-pular-etapa` | 4 | Recusa ao pular de *Registrado* para *Processado* |
 | `07-confirmacao-antes-de-gravar` | 28 | Diálogo de confirmação antes de gravar |
 | `08-triagem-atestado-apagamento` | 20 | Atestado de apagamento em memória flash |
-| `09-scanner-cadeia-concluida` | 3 | Cadeia concluída pela recicladora, sem próxima etapa |
+| `09-transporte-destino` | 74 | Transporte com a recicladora de destino |
 | `10a`, `10b`, `10c` | 6 | Rastreio sem conta: certificado, trilha, atestado e materiais |
 | `11-codigo-digito-invalido` | 7 | Código com um caractere trocado, recusado |
 | `12-painel-indicadores-topo` | 10 | Painel depois do percurso |
 | `13-rastreio-viewport-celular` | — | Rastreio em 390 px de largura (emulado, não é aparelho real) |
-| `14-rf21-etapa-nao-e-do-ponto` | 71 | Operador do ecoponto, item em transporte: a reciclagem não é oferecida |
+| `15-admin-ponto-obrigatorio`, `16-admin-ponto-escolhido` | 71 | Administração pedindo de qual ponto é o operador |
+| `17-rf21-aparelho-com-outro-ponto` | 72 | Ecoponto Sul diante de um aparelho do Ecoponto Norte |
+| `18-scanner-cadeia-concluida` | 75 | Cadeia concluída pela recicladora, sem próxima etapa |
 
 A captura `04` foi decodificada pelo `jsQR` e devolveu
-`http://127.0.0.1:8765/rastrear?c=MS-ZB5M-Z7WG`: o QR sobrevive à passagem pela
+`http://127.0.0.1:8765/rastrear?c=MS-PWX4-NEYG`: o QR sobrevive à passagem pela
 tela. Na mesma sessão, pela API:
 
 ```
-POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_TRANSPORTE"}   (já em PROCESSADO)
+POST /api/itens/MS-PWX4-NEYG/eventos  {"etapa":"EM_TRANSPORTE"}   (já em PROCESSADO)
   HTTP 400  Não é possível retroceder de "Processado" para "Em transporte".
 
-GET /api/itens/MS-ZB5M-Z7WA/rastreio   (um caractere trocado)
+GET /api/itens/MS-PWX4-NEYA/rastreio   (um caractere trocado)
   HTTP 400  Código de rastreio inválido.
 ```
 
@@ -1144,22 +1170,29 @@ HTTP 400  x 9   O item já está em "Coletado".
 eventos COLETADO gravados: 1
 ```
 
-**Competência por etapa** (cenários 71 a 73): com o item em transporte, o
-operador do ecoponto tentou registrar a reciclagem — pela tela não há botão, e
-pela API:
+**Competência por etapa** (cenários 71 a 75), pela API, na mesma sessão:
 
 ```
-POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM"}
-  HTTP 403  "Em reciclagem" só pode ser registrada por recicladora credenciada.
-            Ecoponto Campo Grande — Região Norte é ecoponto municipal [...]
+PATCH /api/admin/usuarios/<id>  {"papel":"operador"}            (sem ponto)
+  HTTP 400  Informe de qual ponto de coleta é este operador. [...]
 
-POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM","pontoId":"pt-cg-recicladora"}
-  HTTP 403  (mesma recusa: o ponto vem da conta, não do corpo)
+POST eventos {"etapa":"COLETADO"}        (Ecoponto Sul, aparelho do Ecoponto Norte)
+  HTTP 403  Este aparelho está com Ecoponto Campo Grande — Região Norte. [...]
+POST eventos {"etapa":"COLETADO","pontoId":"pt-cg-eco-norte"}   (idem)
+  HTTP 403
+
+POST /api/itens/MS-PWX4-NEYG/eventos  {"etapa":"EM_TRANSPORTE"}  (sem destino)
+  HTTP 400  Informe para onde o aparelho segue: "Em reciclagem" é feita por
+            recicladora credenciada [...]
+
+POST /api/itens/MS-PWX4-NEYG/eventos  {"etapa":"EM_RECICLAGEM"}  (pelo ecoponto)
+  HTTP 403  "Em reciclagem" só pode ser registrada por recicladora credenciada. [...]
 ```
 
-A conta da recicladora registrou as duas últimas etapas, e a trilha da captura
-`10b` mostra as duas organizações: coleta, triagem e transporte assinados pelo
-ecoponto; reciclagem e processamento, pela recicladora.
+A recicladora de destino registrou as duas últimas etapas, e a trilha da
+captura `10b` mostra o encaminhamento e as duas organizações: coleta, triagem e
+transporte assinados pelo ecoponto; reciclagem e processamento, pela
+recicladora.
 
 ### 11.3 Conferência manual dos indicadores
 
@@ -1325,13 +1358,12 @@ não um formulário.
 
 ## 14. Limitações
 
-1. **A competência é por tipo de ponto, não pelo trajeto do aparelho.** Desde a
-   Pré-Entrega 3, cada etapa só é registrada pelo tipo de organização que a
-   executa (seção 9.7.2): o ecoponto não registra a reciclagem. Mas qualquer
-   recicladora registra a reciclagem de qualquer aparelho em transporte, e não
-   só daquele que foi despachado para ela; e qualquer ecoponto registra a coleta
-   de um aparelho entregue em outro. Fechar isso exigiria registrar o destino
-   no despacho e conferi-lo na chegada.
+1. **Encaminhamento errado não tem volta.** Desde a Pré-Entrega 3, só o ponto
+   que está com o aparelho registra a etapa seguinte (seção 9.7.2). Se o
+   transporte for registrado para a recicladora errada, só ela pode continuar a
+   cadeia — o histórico é somente de acréscimo, e não existe evento de correção
+   de destino nem de recusa de recebimento. Na prática o aparelho ficaria parado
+   até a recicladora indicada registrar a chegada.
 2. **O credenciamento depende da confiança no administrador.** Não há
    verificação de pessoa física, contrato com a cooperativa nem segundo fator:
    quem tem o papel de admin concede operador a quem quiser. A trilha de
@@ -1386,10 +1418,9 @@ não um formulário.
 
 ## 15. Melhorias futuras
 
-1. **Destino no despacho**: ao registrar `EM_TRANSPORTE`, informar a
-   recicladora de destino, e aceitar `EM_RECICLAGEM` só dela. A competência por
-   tipo de ponto já está implementada (seção 9.7.2); isto a estende ao trajeto
-   do aparelho e fecha a limitação nº 1.
+1. **Correção de destino e recusa de recebimento**: um evento, também somente
+   de acréscimo, que permita ao destino recusar o lote ou ao admin corrigir o
+   encaminhamento, com justificativa na trilha. Fecha a limitação nº 1.
 2. **Credenciamento verificado**: ligar a conta de operador ao cadastro da
    organização no órgão ambiental, com segundo fator para quem escreve na
    cadeia. Fecha a limitação nº 2.

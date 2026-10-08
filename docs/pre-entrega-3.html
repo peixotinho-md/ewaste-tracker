@@ -210,14 +210,14 @@
     <p>A Etapa 8 pede o <strong>fluxo principal funcionando</strong>, o <strong>relatório preliminar completo</strong> e as <strong>evidências dos testes</strong>. Além disso, fechamos a limitação nº 1 do projeto, que estava no caminho crítico do cronograma.</p>
 
     <div class="destaque">
-      <p>Cada etapa da cadeia agora só é registrada pelo tipo de organização que está com o aparelho nela: o ecoponto coleta, faz a triagem e despacha; <strong>só a recicladora registra a reciclagem e emite o certificado</strong>. Um notebook percorreu a cadeia inteira assim, pela interface, com duas contas diferentes. A suíte passou de 366 para <strong>429 testes</strong>, todos passando.</p>
+      <p>Cada etapa da cadeia agora só é registrada <strong>pelo ponto que está com o aparelho</strong>. Todo operador é vinculado a um ponto de coleta no momento em que recebe o papel, e só registra os aparelhos que estão nesse ponto: o ecoponto coleta, faz a triagem e despacha para uma recicladora; <strong>só aquela recicladora registra a reciclagem e emite o certificado</strong>. Um notebook percorreu a cadeia inteira assim, pela interface, com duas contas. A suíte passou de 366 para <strong>443 testes</strong>, todos passando.</p>
     </div>
 
     <div class="tabela-caixa">
       <table>
         <thead><tr><th>Frente</th><th>Situação</th><th>O que se fez</th></tr></thead>
         <tbody>
-          <tr><td>Competência por etapa (RF21)</td><td><span class="selo ok">Implementado</span></td><td>Regra no servidor, tela que não oferece a etapa errada e 41 testes novos (seção 3).</td></tr>
+          <tr><td>Competência por etapa (RF21)</td><td><span class="selo ok">Implementado</span></td><td>Ponto obrigatório para operador, regra no servidor, tela que não oferece o que seria recusado e 56 testes novos (seção 3).</td></tr>
           <tr><td>Evidências de teste em imagem</td><td><span class="selo ok">Fechada</span></td><td>Percurso completo capturado em 08/10/2026 (seção 4).</td></tr>
           <tr><td>Revisão de segurança do servidor</td><td><span class="selo ok">Fechada</span></td><td>Dois defeitos corrigidos em 27/09, com 22 testes novos (seção 5).</td></tr>
           <tr><td>Relatório Técnico</td><td><span class="selo parcial">Preliminar</span></td><td>As 17 seções estão escritas; restam 6 marcadores de trabalho de campo e de fonte (seção 8).</td></tr>
@@ -237,13 +237,13 @@
         <thead><tr><th>#</th><th>Quem</th><th>Passo</th><th>Resultado</th><th>Fig.</th></tr></thead>
         <tbody>
           <tr><td class="ref">1</td><td>Ecoponto</td><td>Primeiro acesso com a senha sorteada</td><td>Sessão presa à troca de senha; o resto da API responde 403</td><td class="ref">1</td></tr>
-          <tr><td class="ref">2</td><td>Ecoponto</td><td>Registra um notebook</td><td>Código <code>MS-ZB5M-Z7WG</code> e QR</td><td class="ref">2</td></tr>
+          <tr><td class="ref">2</td><td>Ecoponto</td><td>Registra um notebook entregue no próprio ecoponto</td><td>Código <code>MS-PWX4-NEYG</code> e QR</td><td class="ref">2</td></tr>
           <tr><td class="ref">3</td><td>Ecoponto</td><td>Tenta pular para <em>Processado</em></td><td>Recusado; etapa continua <em>Registrado</em></td><td class="ref">3</td></tr>
           <tr><td class="ref">4</td><td>Ecoponto</td><td>Registra <em>Coletado</em></td><td>Confirmação antes de gravar</td><td class="ref">4</td></tr>
           <tr><td class="ref">5</td><td>Ecoponto</td><td>Registra <em>Em triagem</em></td><td>Atestado de apagamento; sobrescrita em flash recusada</td><td class="ref">5</td></tr>
-          <tr><td class="ref">6</td><td>Ecoponto</td><td>Registra <em>Em transporte</em> e tenta <em>Em reciclagem</em></td><td>Transporte aceito; reciclagem recusada (RF21)</td><td class="ref">6</td></tr>
-          <tr><td class="ref">7</td><td>Recicladora</td><td>Registra <em>Em reciclagem</em> e <em>Processado</em></td><td>Cadeia concluída, certificado emitido</td><td class="ref">7</td></tr>
-          <tr><td class="ref">8</td><td>Sem conta</td><td>Consulta o código</td><td>Trilha com as duas organizações, sem login</td><td class="ref">8</td></tr>
+          <tr><td class="ref">6</td><td>Ecoponto</td><td>Registra <em>Em transporte</em> para a Recicladora Cerrado Verde</td><td>Sem destino, recusado; com destino, aceito</td><td class="ref">8</td></tr>
+          <tr><td class="ref">7</td><td>Recicladora</td><td>Registra <em>Em reciclagem</em> e <em>Processado</em></td><td>Cadeia concluída, certificado emitido</td><td class="ref">9</td></tr>
+          <tr><td class="ref">8</td><td>Sem conta</td><td>Consulta o código</td><td>Trilha com as duas organizações e o encaminhamento, sem login</td><td class="ref">10</td></tr>
         </tbody>
       </table>
     </div>
@@ -253,45 +253,50 @@
   <section id="rf21">
     <h2 class="secao"><span class="n">3</span> Competência por etapa (RF21)</h2>
 
-    <p>Até a Pré-Entrega 2, o papel de operador valia para a cadeia inteira. O operador de um ecoponto conseguia registrar <em>Em reciclagem</em> e <em>Processado</em> de um aparelho que nunca saiu do ecoponto, e o certificado saía assinado por quem não reciclou nada. Agora a etapa fica amarrada ao <strong>tipo do ponto</strong> onde é registrada:</p>
+    <p>Até a Pré-Entrega 2, o papel de operador valia para a cadeia inteira. O operador de um ecoponto conseguia registrar <em>Processado</em> de um aparelho que nunca saiu de lá, e o certificado saía assinado por quem não reciclou nada. Agora valem três regras, todas conferidas pelo servidor:</p>
 
-    <div class="tabela-caixa">
-      <table>
-        <thead><tr><th>Etapa</th><th>Quem registra</th></tr></thead>
-        <tbody>
-          <tr><td>Coletado</td><td>Ecoponto, PEV, loja/fabricante, cooperativa</td></tr>
-          <tr><td>Em triagem</td><td>Ecoponto, cooperativa</td></tr>
-          <tr><td>Em transporte</td><td>Ecoponto, cooperativa — quem fez a triagem despacha</td></tr>
-          <tr><td>Em reciclagem</td><td>Só a recicladora credenciada</td></tr>
-          <tr><td>Processado</td><td>Só a recicladora credenciada</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <ol>
+      <li><strong>Todo operador é de um ponto.</strong> Ao dar o papel de operador, o administrador precisa dizer de qual ponto de coleta é a conta (Fig. 6). Sem o ponto, a conta não é salva como operador — a tela avisa e a API responde 400.</li>
+      <li><strong>Cada tipo de ponto registra certas etapas.</strong>
+        <div class="tabela-caixa" style="margin:.6rem 0">
+          <table>
+            <thead><tr><th>Etapa</th><th>Quem registra</th></tr></thead>
+            <tbody>
+              <tr><td>Coletado</td><td>Ecoponto, PEV, loja/fabricante, cooperativa</td></tr>
+              <tr><td>Em triagem, Em transporte</td><td>Ecoponto, cooperativa</td></tr>
+              <tr><td>Em reciclagem, Processado</td><td>Só a recicladora</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </li>
+      <li><strong>Só registra quem está com o aparelho.</strong> O aparelho começa no ponto de entrega escolhido no cadastro. Depois, fica no ponto que registrou a última etapa — ou vai para onde esse ponto o encaminhou. Só a coleta e o transporte encaminham: um PEV coleta e diz para qual ecoponto ou cooperativa o aparelho segue; o transporte sempre diz para qual recicladora vai o lote (Fig. 8).</li>
+    </ol>
 
-    <ul>
-      <li><strong>No servidor.</strong> A verificação roda em <code>banco.registrar_evento</code>, na mesma transação da máquina de estados e depois dela: pular etapa continua respondendo 400 com o motivo da transição. A recusa por competência responde <strong>403</strong>.</li>
-      <li><strong>O operador não escolhe o local.</strong> O ponto vem da conta. Operador sem ponto não registra nada, e mandar o id da recicladora no corpo da requisição não muda isso.</li>
-      <li><strong>O admin também passa pela tabela.</strong> Ele escolhe o local, mas só entre os pontos competentes.</li>
-      <li><strong>Na tela.</strong> O leitor de QR não mostra o botão de uma etapa que não é do ponto e explica quem a registra (Fig. 6). A faixa do topo diz quais etapas o ponto registra, e a administração mostra isso ao vincular um operador a um ponto.</li>
-      <li><strong>Demonstração.</strong> A carga inicial passou a criar uma segunda conta de operador, <code>recicladora@etrilha.ms</code>, para o ciclo completo não depender do admin.</li>
-    </ul>
+    <p>Na prática: a operadora do Ecoponto Sul não registra a coleta de um aparelho entregue no Ecoponto Norte (Fig. 7); o Ecoponto Norte não registra a reciclagem; e uma recicladora não registra o lote despachado para outra. O admin também passa pelas três regras: escolhe o local, mas só o ponto que está com o aparelho.</p>
 
-<pre class="console"><span class="c"># operador do ecoponto, item em "Em transporte"</span>
-POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM"}
-  <span class="no">HTTP 403</span>  "Em reciclagem" só pode ser registrada por recicladora credenciada.
-            Ecoponto Campo Grande — Região Norte é ecoponto municipal [...]
+<pre class="console"><span class="c"># admin dando o papel de operador sem dizer o ponto</span>
+PATCH /api/admin/usuarios/&lt;id&gt;  {"papel":"operador"}
+  <span class="no">HTTP 400</span>  Informe de qual ponto de coleta é este operador. [...]
 
-POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM","pontoId":"pt-cg-recicladora"}
-  <span class="no">HTTP 403</span>  (mesma recusa: o ponto vem da conta, não do corpo)</pre>
+<span class="c"># operadora do Ecoponto Sul, aparelho entregue no Ecoponto Norte</span>
+POST eventos  {"etapa":"COLETADO"}
+  <span class="no">HTTP 403</span>  Este aparelho está com Ecoponto Campo Grande — Região Norte. [...]
+POST eventos  {"etapa":"COLETADO","pontoId":"pt-cg-eco-norte"}
+  <span class="no">HTTP 403</span>  (mesma recusa: o ponto vem da conta, não do corpo)
 
-    <p><strong>Testes.</strong> O novo <code>teste_api_competencia.py</code> tem 39 testes, incluindo a matriz completa pela API: 5 tipos de ponto × 5 etapas, cada combinação conferida contra a tabela. Mais 2 de paridade conferem que a tabela do navegador é a mesma do servidor. Com a verificação desligada de propósito, <strong>19 testes falham</strong> — a regra está de fato coberta.</p>
+<span class="c"># Ecoponto Norte despachando sem dizer para onde</span>
+POST /api/itens/MS-PWX4-NEYG/eventos  {"etapa":"EM_TRANSPORTE"}
+  <span class="no">HTTP 400</span>  Informe para onde o aparelho segue: "Em reciclagem" é feita por
+            recicladora credenciada [...]</pre>
+
+    <p><strong>Testes.</strong> <code>teste_api_competencia.py</code> tem 50 testes: a matriz completa de tipos de ponto × etapas, a posse (coleta no ponto de entrega, triagem em quem coletou, reciclagem só na recicladora de destino, encaminhamento pelo PEV) e as regras do destino. Mais 3 na administração e 3 de paridade com o navegador. Desligando de propósito a verificação de posse, 7 testes falham; desligando a do destino, outros 7.</p>
   </section>
 
   <!-- 4 -->
   <section id="imagens">
     <h2 class="secao"><span class="n">4</span> Evidências em imagem</h2>
 
-    <p>Capturadas em 08/10/2026 no Google Chrome, dirigido por script (Playwright), com o servidor em <code>localhost</code> e banco criado só para isso. As demais telas do percurso — entrada, formulário de registro, painel, largura de celular — estão em <code>docs/evidencias-pe3/</code>.</p>
+    <p>Capturadas em 08/10/2026 no Google Chrome, dirigido por script (Playwright), com o servidor em <code>localhost</code> e banco criado só para isso. As demais telas do percurso — entrada, formulário de registro, recusa do admin sem ponto, painel, largura de celular — estão em <code>docs/evidencias-pe3/</code>.</p>
 
     <div class="par">
       <figure class="evidencia">
@@ -315,16 +320,24 @@ POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM","pontoId":"pt-cg-
         <figcaption><span class="fig-n">Fig. 5</span><strong>Atestado de apagamento.</strong> Para memória flash, a tela só oferece os métodos que destroem o dado e explica por que os outros ficam de fora.</figcaption>
       </figure>
       <figure class="evidencia">
-        <img src="evidencias-pe3/14-rf21-etapa-nao-e-do-ponto.png" alt="Leitor recusando a etapa Em reciclagem para o operador do ecoponto">
-        <figcaption><span class="fig-n">Fig. 6</span><strong>RF21.</strong> No ecoponto, com o item em transporte, o leitor não oferece <em>Em reciclagem</em> e explica que ela é da recicladora.</figcaption>
+        <img src="evidencias-pe3/16-admin-ponto-escolhido.png" alt="Administração pedindo de qual ponto de coleta é a conta de operador">
+        <figcaption><span class="fig-n">Fig. 6</span><strong>Ponto obrigatório.</strong> Ao dar o papel de operador, o admin informa de qual ponto é a conta, e a tela mostra quais etapas aquele ponto registra.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/17-rf21-aparelho-com-outro-ponto.png" alt="Leitor recusando a coleta de um aparelho que está com outro ecoponto">
+        <figcaption><span class="fig-n">Fig. 7</span><strong>Aparelho de outro ponto.</strong> A operadora do Ecoponto Sul não registra a coleta de um aparelho entregue no Ecoponto Norte.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/09-transporte-destino.png" alt="Formulário de transporte com a recicladora de destino">
+        <figcaption><span class="fig-n">Fig. 8</span><strong>Para onde o aparelho segue.</strong> No transporte, só recicladoras aparecem como destino — e só ela vai registrar a reciclagem.</figcaption>
       </figure>
       <figure class="evidencia retrato">
         <img src="evidencias-pe3/10a-item-e-certificado.png" alt="Rastreio público com o certificado de destinação final">
-        <figcaption><span class="fig-n">Fig. 7</span><strong>Certificado de destinação final</strong>, num navegador sem conta.</figcaption>
+        <figcaption><span class="fig-n">Fig. 9</span><strong>Certificado de destinação final</strong>, num navegador sem conta.</figcaption>
       </figure>
       <figure class="evidencia retrato">
-        <img src="evidencias-pe3/10b-trilha.png" alt="Trilha com as seis etapas e duas organizações">
-        <figcaption><span class="fig-n">Fig. 8</span><strong>Trilha.</strong> Coleta, triagem e transporte assinados pelo ecoponto; reciclagem e processamento, pela recicladora.</figcaption>
+        <img src="evidencias-pe3/10b-trilha.png" alt="Trilha com as seis etapas e o encaminhamento para a recicladora">
+        <figcaption><span class="fig-n">Fig. 10</span><strong>Trilha.</strong> O ecoponto coleta, faz a triagem e encaminha à recicladora; ela registra reciclagem e processamento.</figcaption>
       </figure>
     </div>
   </section>
@@ -334,11 +347,11 @@ POST /api/itens/MS-ZB5M-Z7WG/eventos  {"etapa":"EM_RECICLAGEM","pontoId":"pt-cg-
     <h2 class="secao"><span class="n">5</span> Testes automatizados</h2>
 
 <pre class="console"><span class="c">&gt; python -m pytest --cov=backend --cov-report=term</span>
-backend\app.py        338     52    85%
-backend\banco.py      258      5    98%
-backend\modelo.py     120      0   100%
-TOTAL                 716     57    92%
-<span class="ok">429 passed</span> in 11.71s</pre>
+backend\app.py        342     52    85%
+backend\banco.py      274      5    98%
+backend\modelo.py     137      0   100%
+TOTAL                 753     57    92%
+<span class="ok">443 passed</span> in 11.46s</pre>
 
     <div class="tabela-caixa">
       <table>
@@ -347,14 +360,14 @@ TOTAL                 716     57    92%
           <tr><td><code>teste_modelo.py</code></td><td class="num">111</td><td>Máquina de estados, dígito verificador, peso, apagamento e papéis, sem banco</td></tr>
           <tr><td><code>teste_api_autorizacao.py</code></td><td class="num">65</td><td>Rotas × papéis; 401 (falta entrar) contra 403 (não pode)</td></tr>
           <tr><td><code>teste_paginas.py</code></td><td class="num">61</td><td>Portão de autenticação no HTML e arquivos que o servidor entrega</td></tr>
-          <tr><td><code>teste_api_competencia.py</code></td><td class="num">39</td><td><strong>Novo.</strong> Competência por etapa (RF21)</td></tr>
-          <tr><td><code>teste_api_admin.py</code></td><td class="num">38</td><td>Papéis, exclusão com senha, último admin e conta de reserva</td></tr>
+          <tr><td><code>teste_api_competencia.py</code></td><td class="num">50</td><td><strong>Novo.</strong> Competência por etapa (RF21): tipo, posse e destino</td></tr>
+          <tr><td><code>teste_api_admin.py</code></td><td class="num">40</td><td>Papéis, ponto obrigatório para operador, exclusão, último admin e reserva</td></tr>
           <tr><td><code>teste_api_contas.py</code></td><td class="num">32</td><td>Cadastro, login, troca de senha e queda das sessões antigas</td></tr>
           <tr><td><code>teste_api_itens.py</code></td><td class="num">29</td><td>Cadeia de custódia pela API; assinatura vinda da sessão</td></tr>
-          <tr><td><code>teste_paridade_front.py</code></td><td class="num">25</td><td>Tabelas de regras iguais no servidor e no navegador</td></tr>
+          <tr><td><code>teste_paridade_front.py</code></td><td class="num">26</td><td>Tabelas de regras iguais no servidor e no navegador</td></tr>
           <tr><td><code>teste_banco_gatilhos.py</code></td><td class="num">16</td><td>Gatilhos de somente-acréscimo e restrições do banco</td></tr>
           <tr><td><code>teste_api_corpo.py</code></td><td class="num">13</td><td><strong>Novo.</strong> Corpo JSON que não é objeto recebe 400, e não 500</td></tr>
-          <tr class="total"><td>Total</td><td class="num">429</td><td></td></tr>
+          <tr class="total"><td>Total</td><td class="num">443</td><td></td></tr>
         </tbody>
       </table>
     </div>
@@ -394,14 +407,15 @@ UPDATE apagamentos  -&gt; <span class="no">recusado</span>  O atestado de apagam
       <table>
         <thead><tr><th>Critério</th><th>Evidência</th><th>Estado</th></tr></thead>
         <tbody>
-          <tr><td>Um aparelho percorre a cadeia e emite certificado</td><td>Fig. 2 a 8</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Um aparelho percorre a cadeia e emite certificado</td><td>Fig. 2 a 10</td><td><span class="selo ok">Atende</span></td></tr>
           <tr><td>Etapa fora de ordem é recusada</td><td>Fig. 3 e seção 6</td><td><span class="selo ok">Atende</span></td></tr>
           <tr><td>Quem não tem papel não grava</td><td>Seção 6</td><td><span class="selo ok">Atende</span></td></tr>
-          <tr><td>Cada etapa é registrada por quem tem competência</td><td>Fig. 6, Fig. 8 e seção 3</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Operador só existe vinculado a um ponto</td><td>Fig. 6 e seção 3</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Só o ponto que está com o aparelho registra a etapa</td><td>Fig. 7, 8, 10 e seção 3</td><td><span class="selo ok">Atende</span></td></tr>
           <tr><td>Registro gravado não pode ser alterado</td><td>Seção 6</td><td><span class="selo ok">Atende</span></td></tr>
           <tr><td>Método de apagamento ineficaz é recusado</td><td>Fig. 5 e seção 6</td><td><span class="selo ok">Atende</span></td></tr>
           <tr><td>Leituras simultâneas não duplicam etapa</td><td>Seção 6</td><td><span class="selo ok">Atende</span></td></tr>
-          <tr><td>A suíte passa a cada mudança</td><td>Seção 5</td><td><span class="selo ok">429 testes</span></td></tr>
+          <tr><td>A suíte passa a cada mudança</td><td>Seção 5</td><td><span class="selo ok">443 testes</span></td></tr>
           <tr><td>Funciona em celular real, em campo</td><td>Só a largura foi emulada no navegador</td><td><span class="selo pendente">Não verificado</span></td></tr>
         </tbody>
       </table>
