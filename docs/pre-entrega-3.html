@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>Pré-Entrega 3 e-Trilha MS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+  :root {
+    --tinta:#16211a; --tinta-media:#47564c; --tinta-fraca:#77857c;
+    --fundo:#f4f7f4; --superficie:#ffffff; --borda:#dde5df; --borda-forte:#b8c8bd;
+    --verde-700:#1b5e33; --verde-600:#22773f; --verde-500:#2f9553; --verde-050:#eef6f0;
+    --terra:#a0631d; --terra-fundo:#fbf3e7;
+    --vermelho:#b23a34; --vermelho-fundo:#fbeceb;
+    --sombra:0 1px 2px rgba(16,56,31,.05), 0 8px 28px rgba(16,56,31,.06);
+    --serif:"Spectral",Georgia,"Times New Roman",serif;
+    --sans:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --tinta:#e6ede8; --tinta-media:#a9b8ae; --tinta-fraca:#7d8c83;
+      --fundo:#0f1712; --superficie:#17211a; --borda:#2a3830; --borda-forte:#3d5145;
+      --verde-700:#6cc78c; --verde-600:#4fb271; --verde-500:#46b06b; --verde-050:#16281c;
+      --terra:#d8a05a; --terra-fundo:#2a2114;
+      --vermelho:#e08b84; --vermelho-fundo:#2c1917;
+      --sombra:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --tinta:#e6ede8; --tinta-media:#a9b8ae; --tinta-fraca:#7d8c83;
+    --fundo:#0f1712; --superficie:#17211a; --borda:#2a3830; --borda-forte:#3d5145;
+    --verde-700:#6cc78c; --verde-600:#4fb271; --verde-500:#46b06b; --verde-050:#16281c;
+    --terra:#d8a05a; --terra-fundo:#2a2114;
+    --vermelho:#e08b84; --vermelho-fundo:#2c1917;
+    --sombra:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--fundo); color: var(--tinta); font-family: var(--sans);
+    font-size: 17px; line-height: 1.62; margin: 0; padding: 0 1.25rem 5rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .folha { max-width: 50rem; margin: 0 auto; }
+
+  .capa { padding: 3.5rem 0 2rem; border-bottom: 2px solid var(--tinta); margin-bottom: 2.5rem; }
+  .eyebrow {
+    font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--verde-600); display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin-bottom: 1.1rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(2.1rem,1.4rem + 3vw,3.2rem);
+    line-height: 1.08; letter-spacing: -.015em; margin: 0 0 .5rem; text-wrap: balance;
+  }
+  .subtitulo {
+    font-family: var(--serif); font-style: italic; font-size: clamp(1.1rem,1rem + .6vw,1.35rem);
+    color: var(--tinta-media); margin: 0 0 2rem; text-wrap: balance;
+  }
+  .ficha { display: grid; grid-template-columns: repeat(auto-fit,minmax(13rem,1fr)); gap: 1.1rem 2rem; }
+  .ficha div { display: grid; gap: .15rem; align-content: start; }
+  .ficha dt { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-fraca); }
+  .ficha dd { margin: 0; font-size: .95rem; }
+
+  .sumario { background: var(--superficie); border: 1px solid var(--borda); padding: 1.25rem 1.5rem; margin-bottom: 3rem; }
+  .sumario h2 { font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-fraca); margin: 0 0 .7rem; }
+  .sumario ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; counter-reset: sum; }
+  .sumario li { counter-increment: sum; margin: 0; }
+  .sumario a { color: var(--tinta); text-decoration: none; display: flex; gap: .7rem; align-items: baseline; padding: .12rem 0; }
+  .sumario a::before { content: counter(sum) "."; font-family: var(--serif); font-weight: 600; color: var(--verde-600); min-width: 1.1rem; font-variant-numeric: tabular-nums; }
+  .sumario a:hover { color: var(--verde-600); text-decoration: underline; }
+
+  section { margin-bottom: 3.25rem; scroll-margin-top: 1.5rem; }
+  h2.secao {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(1.45rem,1.2rem + 1.1vw,1.95rem);
+    line-height: 1.2; letter-spacing: -.01em; margin: 0 0 1.4rem; padding-bottom: .6rem;
+    border-bottom: 1px solid var(--borda-forte); display: flex; gap: .8rem; align-items: baseline; text-wrap: balance;
+  }
+  h2.secao .n { font-size: .82em; color: var(--verde-600); font-variant-numeric: tabular-nums; flex: none; }
+  h3 { font-family: var(--serif); font-weight: 600; font-size: 1.18rem; line-height: 1.3; margin: 2rem 0 .6rem; text-wrap: balance; }
+  h3:first-of-type { margin-top: 0; }
+  h4 { font-family: var(--sans); font-size: .76rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--verde-600); margin: 1.6rem 0 .5rem; }
+
+  p { margin: 0 0 1.05rem; }
+  a { color: var(--verde-600); }
+  ul, ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+  li::marker { color: var(--verde-500); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--verde-050); padding: .08em .35em; border-radius: 3px; color: var(--verde-700); }
+
+  .tabela-caixa { overflow-x: auto; margin: 1.4rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; line-height: 1.45; }
+  thead th {
+    font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--tinta-media); text-align: left;
+    padding: .55rem .7rem; vertical-align: bottom;
+    border-top: 2px solid var(--tinta); border-bottom: 1px solid var(--borda-forte); white-space: nowrap;
+  }
+  tbody td { padding: .6rem .7rem; vertical-align: top; border-bottom: 1px solid var(--borda); }
+  tbody tr:last-child td { border-bottom: 2px solid var(--tinta); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ref { font-family: var(--mono); font-size: .82rem; font-weight: 600; color: var(--verde-600); white-space: nowrap; }
+  tfoot td { padding: .7rem .7rem 0; font-size: .84rem; color: var(--tinta-fraca); border: 0; }
+  .total td { font-weight: 700; }
+
+  .selo { font-size: .74rem; font-weight: 700; letter-spacing: .04em; padding: .12rem .5rem; border-radius: 100px; white-space: nowrap; display: inline-block; }
+  .ok { background: var(--verde-050); color: var(--verde-700); border: 1px solid var(--verde-500); }
+  .parcial { background: var(--terra-fundo); color: var(--terra); border: 1px solid var(--terra); }
+  .pendente { background: transparent; color: var(--tinta-fraca); border: 1px solid var(--borda-forte); }
+
+  .destaque {
+    background: var(--superficie); border: 1px solid var(--borda); border-left: 3px solid var(--verde-500);
+    box-shadow: var(--sombra); padding: 1.4rem 1.6rem; margin: 1.2rem 0 2rem;
+    font-family: var(--serif); font-size: 1.08rem; line-height: 1.55;
+  }
+  .destaque p:last-child { margin-bottom: 0; }
+
+  .pendencias { border: 1px dashed var(--terra); background: var(--terra-fundo); padding: 1.35rem 1.5rem; margin: 1.6rem 0; }
+  .pendencias h4 { color: var(--terra); margin-top: 0; }
+  .pendencias ol, .pendencias ul { margin-bottom: 0; }
+  .pendencias li::marker { color: var(--terra); }
+
+  .placar { display: grid; grid-template-columns: repeat(auto-fit,minmax(9rem,1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .placar div { background: var(--superficie); border: 1px solid var(--borda); padding: .9rem 1rem; }
+  .placar .v { font-family: var(--serif); font-size: 1.9rem; font-weight: 700; line-height: 1; color: var(--verde-700); font-variant-numeric: tabular-nums; }
+  .placar .r { font-size: .8rem; color: var(--tinta-media); margin-top: .3rem; }
+
+  .referencias { display: grid; gap: 1rem; }
+  .referencias p { margin: 0; padding-left: 1.6rem; text-indent: -1.6rem; font-size: .95rem; line-height: 1.5; }
+  .referencias a { word-break: break-word; }
+  .nota-metodo { margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--borda); font-size: .9rem; color: var(--tinta-media); }
+
+  a:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  @media print {
+    body { background: #fff; color: #111; font-size: 10.5pt; padding: 0; }
+    .folha { max-width: none; }
+    .capa { padding-top: 0; }
+    section { break-inside: auto; margin-bottom: 1.6rem; }
+    h2.secao, h3 { break-after: avoid; }
+    table, .pendencias, .destaque, .placar { break-inside: avoid; }
+    .pendencias, .destaque, .placar div { background: #fff; }
+    a { color: #111; text-decoration: none; }
+  }
+  /* Pré-Entrega 3: figuras de evidência e saídas de terminal. */
+  figure.evidencia { margin: 1.4rem 0 2rem; }
+  figure.evidencia img {
+    display: block; width: 100%; height: auto; border: 1px solid var(--borda-forte);
+    box-shadow: var(--sombra); background: var(--superficie);
+  }
+  figure.evidencia.retrato img { max-width: 30rem; margin: 0 auto; }
+  figure.evidencia.celular img { max-width: 17rem; margin: 0 auto; }
+  figure.evidencia figcaption { font-size: .88rem; line-height: 1.5; color: var(--tinta-media); margin-top: .65rem; }
+  figure.evidencia figcaption strong { color: var(--tinta); }
+  .fig-n { font-family: var(--mono); font-size: .8rem; font-weight: 700; color: var(--verde-600); margin-right: .35rem; }
+  .par { display: grid; grid-template-columns: repeat(auto-fit,minmax(20rem,1fr)); gap: 0 1.5rem; }
+  pre.console {
+    font-family: var(--mono); font-size: .8rem; line-height: 1.55; background: var(--superficie);
+    border: 1px solid var(--borda); border-left: 3px solid var(--verde-500);
+    padding: .9rem 1.1rem; margin: 1rem 0 1.6rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+  }
+  pre.console .c { color: var(--tinta-fraca); }
+  pre.console .ok { color: var(--verde-700); font-weight: 700; background: none; border: 0; }
+  pre.console .no { color: var(--vermelho); font-weight: 700; }
+  @media print {
+    figure.evidencia { break-inside: avoid; }
+    figure.evidencia img { box-shadow: none; }
+    pre.console { break-inside: avoid; background: #fff; }
+  }
+</style>
+
+<div class="folha">
+
+  <header class="capa">
+    <div class="eyebrow">
+      <span>DAC 262 TADS</span><span>Etapa 8</span><span>Entrega 23/10</span><span>Eixo 3 — Resíduos e Economia Circular</span>
+    </div>
+    <h1>Pré-Entrega 3: e-Trilha MS</h1>
+    <p class="subtitulo">Fluxo principal funcionando, relatório preliminar completo e evidências dos testes</p>
+    <dl class="ficha">
+      <div><dt>Curso</dt><dd>262 — Tecnologia em Análise e Desenvolvimento de Sistemas</dd></div>
+      <div><dt>Professor referência</dt><dd>Vitor Gabriel de Souza Farias — RF1440</dd></div>
+      <div><dt>Equipe</dt><dd>Rafael Dias (205220) · Vinicios Pereira (208618) · José Victor (204998) · Eder Maciel (205969) · Renato Peixoto (205683)</dd></div>
+    </dl>
+  </header>
+
+  <nav class="sumario" aria-label="Sumário">
+    <h2>Sumário</h2>
+    <ol>
+      <li><a href="#evolucao">O que mudou desde a Pré-Entrega 2</a></li>
+      <li><a href="#fluxo">Fluxo principal funcionando</a></li>
+      <li><a href="#rf21">Competência por etapa (RF21)</a></li>
+      <li><a href="#imagens">Evidências em imagem</a></li>
+      <li><a href="#automatizados">Testes automatizados</a></li>
+      <li><a href="#fora-da-tela">Verificações por fora da tela</a></li>
+      <li><a href="#validacao">Critérios de validação</a></li>
+      <li><a href="#relatorio">Estado do Relatório Técnico</a></li>
+      <li><a href="#entrega">O que falta até a entrega de 29/10</a></li>
+      <li><a href="#referencias">Referências</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 -->
+  <section id="evolucao">
+    <h2 class="secao"><span class="n">1</span> O que mudou desde a Pré-Entrega 2</h2>
+
+    <p>A Etapa 8 pede o <strong>fluxo principal funcionando</strong>, o <strong>relatório preliminar completo</strong> e as <strong>evidências dos testes</strong>. Além disso, fechamos a limitação nº 1 do projeto, que estava no caminho crítico do cronograma.</p>
+
+    <div class="destaque">
+      <p>Cada etapa da cadeia agora só é registrada <strong>pelo ponto que está com o aparelho</strong>. Todo operador é vinculado a um ponto de coleta no momento em que recebe o papel, e só registra os aparelhos que estão nesse ponto: o ecoponto coleta, faz a triagem e despacha para uma recicladora; <strong>só aquela recicladora registra a reciclagem e emite o certificado</strong>. Um notebook percorreu a cadeia inteira assim, pela interface, com duas contas. A suíte passou de 366 para <strong>443 testes</strong>, todos passando.</p>
+    </div>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Frente</th><th>Situação</th><th>O que se fez</th></tr></thead>
+        <tbody>
+          <tr><td>Competência por etapa (RF21)</td><td><span class="selo ok">Implementado</span></td><td>Ponto obrigatório para operador, regra no servidor, tela que não oferece o que seria recusado e 56 testes novos (seção 3).</td></tr>
+          <tr><td>Evidências de teste em imagem</td><td><span class="selo ok">Fechada</span></td><td>Percurso completo capturado em 08/10/2026 (seção 4).</td></tr>
+          <tr><td>Revisão de segurança do servidor</td><td><span class="selo ok">Fechada</span></td><td>Dois defeitos corrigidos em 27/09, com 22 testes novos (seção 5).</td></tr>
+          <tr><td>Relatório Técnico</td><td><span class="selo parcial">Preliminar</span></td><td>As 17 seções estão escritas; restam 6 marcadores de trabalho de campo e de fonte (seção 8).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="fluxo">
+    <h2 class="secao"><span class="n">2</span> Fluxo principal funcionando</h2>
+
+    <p>O fluxo principal responde à pergunta do projeto: <em>um aparelho entregue foi mesmo reciclado?</em> Ele foi executado pela interface, no Chrome, contra o servidor local com banco novo. Nenhuma etapa foi gravada direto no banco.</p>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>#</th><th>Quem</th><th>Passo</th><th>Resultado</th><th>Fig.</th></tr></thead>
+        <tbody>
+          <tr><td class="ref">1</td><td>Ecoponto</td><td>Primeiro acesso com a senha sorteada</td><td>Sessão presa à troca de senha; o resto da API responde 403</td><td class="ref">1</td></tr>
+          <tr><td class="ref">2</td><td>Ecoponto</td><td>Registra um notebook entregue no próprio ecoponto</td><td>Código <code>MS-PWX4-NEYG</code> e QR</td><td class="ref">2</td></tr>
+          <tr><td class="ref">3</td><td>Ecoponto</td><td>Tenta pular para <em>Processado</em></td><td>Recusado; etapa continua <em>Registrado</em></td><td class="ref">3</td></tr>
+          <tr><td class="ref">4</td><td>Ecoponto</td><td>Registra <em>Coletado</em></td><td>Confirmação antes de gravar</td><td class="ref">4</td></tr>
+          <tr><td class="ref">5</td><td>Ecoponto</td><td>Registra <em>Em triagem</em></td><td>Atestado de apagamento; sobrescrita em flash recusada</td><td class="ref">5</td></tr>
+          <tr><td class="ref">6</td><td>Ecoponto</td><td>Registra <em>Em transporte</em> para a Recicladora Cerrado Verde</td><td>Sem destino, recusado; com destino, aceito</td><td class="ref">8</td></tr>
+          <tr><td class="ref">7</td><td>Recicladora</td><td>Registra <em>Em reciclagem</em> e <em>Processado</em></td><td>Cadeia concluída, certificado emitido</td><td class="ref">9</td></tr>
+          <tr><td class="ref">8</td><td>Sem conta</td><td>Consulta o código</td><td>Trilha com as duas organizações e o encaminhamento, sem login</td><td class="ref">10</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="rf21">
+    <h2 class="secao"><span class="n">3</span> Competência por etapa (RF21)</h2>
+
+    <p>Até a Pré-Entrega 2, o papel de operador valia para a cadeia inteira. O operador de um ecoponto conseguia registrar <em>Processado</em> de um aparelho que nunca saiu de lá, e o certificado saía assinado por quem não reciclou nada. Agora valem três regras, todas conferidas pelo servidor:</p>
+
+    <ol>
+      <li><strong>Todo operador é de um ponto.</strong> Ao dar o papel de operador, o administrador precisa dizer de qual ponto de coleta é a conta (Fig. 6). Sem o ponto, a conta não é salva como operador — a tela avisa e a API responde 400.</li>
+      <li><strong>Cada tipo de ponto registra certas etapas.</strong>
+        <div class="tabela-caixa" style="margin:.6rem 0">
+          <table>
+            <thead><tr><th>Etapa</th><th>Quem registra</th></tr></thead>
+            <tbody>
+              <tr><td>Coletado</td><td>Ecoponto, PEV, loja/fabricante, cooperativa</td></tr>
+              <tr><td>Em triagem, Em transporte</td><td>Ecoponto, cooperativa</td></tr>
+              <tr><td>Em reciclagem, Processado</td><td>Só a recicladora</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </li>
+      <li><strong>Só registra quem está com o aparelho.</strong> O aparelho começa no ponto de entrega escolhido no cadastro. Depois, fica no ponto que registrou a última etapa — ou vai para onde esse ponto o encaminhou. Só a coleta e o transporte encaminham: um PEV coleta e diz para qual ecoponto ou cooperativa o aparelho segue; o transporte sempre diz para qual recicladora vai o lote (Fig. 8).</li>
+    </ol>
+
+    <p>Na prática: a operadora do Ecoponto Sul não registra a coleta de um aparelho entregue no Ecoponto Norte (Fig. 7); o Ecoponto Norte não registra a reciclagem; e uma recicladora não registra o lote despachado para outra. O admin também passa pelas três regras: escolhe o local, mas só o ponto que está com o aparelho.</p>
+
+<pre class="console"><span class="c"># admin dando o papel de operador sem dizer o ponto</span>
+PATCH /api/admin/usuarios/&lt;id&gt;  {"papel":"operador"}
+  <span class="no">HTTP 400</span>  Informe de qual ponto de coleta é este operador. [...]
+
+<span class="c"># operadora do Ecoponto Sul, aparelho entregue no Ecoponto Norte</span>
+POST eventos  {"etapa":"COLETADO"}
+  <span class="no">HTTP 403</span>  Este aparelho está com Ecoponto Campo Grande — Região Norte. [...]
+POST eventos  {"etapa":"COLETADO","pontoId":"pt-cg-eco-norte"}
+  <span class="no">HTTP 403</span>  (mesma recusa: o ponto vem da conta, não do corpo)
+
+<span class="c"># Ecoponto Norte despachando sem dizer para onde</span>
+POST /api/itens/MS-PWX4-NEYG/eventos  {"etapa":"EM_TRANSPORTE"}
+  <span class="no">HTTP 400</span>  Informe para onde o aparelho segue: "Em reciclagem" é feita por
+            recicladora credenciada [...]</pre>
+
+    <p><strong>Testes.</strong> <code>teste_api_competencia.py</code> tem 50 testes: a matriz completa de tipos de ponto × etapas, a posse (coleta no ponto de entrega, triagem em quem coletou, reciclagem só na recicladora de destino, encaminhamento pelo PEV) e as regras do destino. Mais 3 na administração e 3 de paridade com o navegador. Desligando de propósito a verificação de posse, 7 testes falham; desligando a do destino, outros 7.</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="imagens">
+    <h2 class="secao"><span class="n">4</span> Evidências em imagem</h2>
+
+    <p>Capturadas em 08/10/2026 no Google Chrome, dirigido por script (Playwright), com o servidor em <code>localhost</code> e banco criado só para isso. As demais telas do percurso — entrada, formulário de registro, recusa do admin sem ponto, painel, largura de celular — estão em <code>docs/evidencias-pe3/</code>.</p>
+
+    <div class="par">
+      <figure class="evidencia">
+        <img src="evidencias-pe3/02-troca-senha-obrigatoria.png" alt="Formulário de troca de senha obrigatória no primeiro acesso">
+        <figcaption><span class="fig-n">Fig. 1</span><strong>Troca de senha obrigatória.</strong> A senha sorteada foi lida por quem subiu o servidor. Até a troca, a API respondeu <code>403</code> a qualquer outra rota.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/04-registro-codigo-e-qr.png" alt="Código e QR Code gerados no registro">
+        <figcaption><span class="fig-n">Fig. 2</span><strong>Código e QR.</strong> A própria captura foi decodificada pelo jsQR e devolveu a URL de rastreio do aparelho.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/06-recusa-pular-etapa.png" alt="Mensagem de recusa ao tentar pular etapas">
+        <figcaption><span class="fig-n">Fig. 3</span><strong>Pular etapa.</strong> “Não é possível pular etapas: depois de "Registrado" vem "Coletado".”</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/07-confirmacao-antes-de-gravar.png" alt="Diálogo de confirmação antes de gravar a etapa">
+        <figcaption><span class="fig-n">Fig. 4</span><strong>Confirmação antes de gravar.</strong> Código, origem e destino, quem assina, onde — e o aviso de que é definitivo.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/08-triagem-atestado-apagamento.png" alt="Formulário de triagem com atestado de apagamento">
+        <figcaption><span class="fig-n">Fig. 5</span><strong>Atestado de apagamento.</strong> Para memória flash, a tela só oferece os métodos que destroem o dado e explica por que os outros ficam de fora.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/16-admin-ponto-escolhido.png" alt="Administração pedindo de qual ponto de coleta é a conta de operador">
+        <figcaption><span class="fig-n">Fig. 6</span><strong>Ponto obrigatório.</strong> Ao dar o papel de operador, o admin informa de qual ponto é a conta, e a tela mostra quais etapas aquele ponto registra.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/17-rf21-aparelho-com-outro-ponto.png" alt="Leitor recusando a coleta de um aparelho que está com outro ecoponto">
+        <figcaption><span class="fig-n">Fig. 7</span><strong>Aparelho de outro ponto.</strong> A operadora do Ecoponto Sul não registra a coleta de um aparelho entregue no Ecoponto Norte.</figcaption>
+      </figure>
+      <figure class="evidencia">
+        <img src="evidencias-pe3/09-transporte-destino.png" alt="Formulário de transporte com a recicladora de destino">
+        <figcaption><span class="fig-n">Fig. 8</span><strong>Para onde o aparelho segue.</strong> No transporte, só recicladoras aparecem como destino — e só ela vai registrar a reciclagem.</figcaption>
+      </figure>
+      <figure class="evidencia retrato">
+        <img src="evidencias-pe3/10a-item-e-certificado.png" alt="Rastreio público com o certificado de destinação final">
+        <figcaption><span class="fig-n">Fig. 9</span><strong>Certificado de destinação final</strong>, num navegador sem conta.</figcaption>
+      </figure>
+      <figure class="evidencia retrato">
+        <img src="evidencias-pe3/10b-trilha.png" alt="Trilha com as seis etapas e o encaminhamento para a recicladora">
+        <figcaption><span class="fig-n">Fig. 10</span><strong>Trilha.</strong> O ecoponto coleta, faz a triagem e encaminha à recicladora; ela registra reciclagem e processamento.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="automatizados">
+    <h2 class="secao"><span class="n">5</span> Testes automatizados</h2>
+
+<pre class="console"><span class="c">&gt; python -m pytest --cov=backend --cov-report=term</span>
+backend\app.py        342     52    85%
+backend\banco.py      274      5    98%
+backend\modelo.py     137      0   100%
+TOTAL                 753     57    92%
+<span class="ok">443 passed</span> in 11.46s</pre>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Arquivo</th><th class="num">Testes</th><th>O que cobre</th></tr></thead>
+        <tbody>
+          <tr><td><code>teste_modelo.py</code></td><td class="num">111</td><td>Máquina de estados, dígito verificador, peso, apagamento e papéis, sem banco</td></tr>
+          <tr><td><code>teste_api_autorizacao.py</code></td><td class="num">65</td><td>Rotas × papéis; 401 (falta entrar) contra 403 (não pode)</td></tr>
+          <tr><td><code>teste_paginas.py</code></td><td class="num">61</td><td>Portão de autenticação no HTML e arquivos que o servidor entrega</td></tr>
+          <tr><td><code>teste_api_competencia.py</code></td><td class="num">50</td><td><strong>Novo.</strong> Competência por etapa (RF21): tipo, posse e destino</td></tr>
+          <tr><td><code>teste_api_admin.py</code></td><td class="num">40</td><td>Papéis, ponto obrigatório para operador, exclusão, último admin e reserva</td></tr>
+          <tr><td><code>teste_api_contas.py</code></td><td class="num">32</td><td>Cadastro, login, troca de senha e queda das sessões antigas</td></tr>
+          <tr><td><code>teste_api_itens.py</code></td><td class="num">29</td><td>Cadeia de custódia pela API; assinatura vinda da sessão</td></tr>
+          <tr><td><code>teste_paridade_front.py</code></td><td class="num">26</td><td>Tabelas de regras iguais no servidor e no navegador</td></tr>
+          <tr><td><code>teste_banco_gatilhos.py</code></td><td class="num">16</td><td>Gatilhos de somente-acréscimo e restrições do banco</td></tr>
+          <tr><td><code>teste_api_corpo.py</code></td><td class="num">13</td><td><strong>Novo.</strong> Corpo JSON que não é objeto recebe 400, e não 500</td></tr>
+          <tr class="total"><td>Total</td><td class="num">443</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>Defeitos corrigidos desde a Pré-Entrega 2</strong>, ambos achados em revisão e invisíveis na tela: a troca de senha não derrubava as outras sessões abertas, que continuavam valendo por até 12 horas; e um corpo JSON como <code>[1, 2]</code> derrubava a rota com erro 500.</p>
+  </section>
+
+  <!-- 6 -->
+  <section id="fora-da-tela">
+    <h2 class="secao"><span class="n">6</span> Verificações por fora da tela</h2>
+
+    <p>A regra precisa valer para quem chama a API direto. Saídas registradas na mesma sessão de 08/10:</p>
+
+<pre class="console">POST eventos  sem sessão                           <span class="no">HTTP 401</span>  Esta ação exige uma conta.
+POST eventos  como visitante                       <span class="no">HTTP 403</span>  Sua conta não tem permissão para esta ação.
+POST eventos  EM_TRIAGEM, flash + SOBRESCRITA      <span class="no">HTTP 400</span>  [...] o wear leveling remapeou [...]
+POST eventos  EM_TRANSPORTE depois de PROCESSADO   <span class="no">HTTP 400</span>  Não é possível retroceder [...]
+GET  rastreio com 1 caractere trocado              <span class="no">HTTP 400</span>  Código de rastreio inválido.
+GET  rastreio sem sessão                           <span class="ok">HTTP 200</span>  6 eventos, atestado público
+
+<span class="c"># 10 requisições simultâneas pedindo "Coletado" para o mesmo aparelho</span>
+<span class="ok">HTTP 201</span> × 1   <span class="no">HTTP 400</span> × 9  O item já está em "Coletado".   eventos gravados: <span class="ok">1</span>
+
+<span class="c"># direto no arquivo do banco, sem passar pela aplicação</span>
+UPDATE eventos      -&gt; <span class="no">recusado</span>  O histórico de eventos é somente de acréscimo: alterar é proibido.
+DELETE eventos      -&gt; <span class="no">recusado</span>  O histórico de eventos é somente de acréscimo: apagar é proibido.
+UPDATE apagamentos  -&gt; <span class="no">recusado</span>  O atestado de apagamento é definitivo: alterar é proibido.</pre>
+
+    <p>A concorrência é o argumento de Sistemas Operacionais: as escritas usam <code>BEGIN IMMEDIATE</code>, que serializa o “ler, decidir, gravar”, e por isso duas leituras simultâneas da mesma etiqueta não gravam a etapa duas vezes.</p>
+  </section>
+
+  <!-- 7 -->
+  <section id="validacao">
+    <h2 class="secao"><span class="n">7</span> Critérios de validação</h2>
+
+    <div class="tabela-caixa">
+      <table>
+        <thead><tr><th>Critério</th><th>Evidência</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>Um aparelho percorre a cadeia e emite certificado</td><td>Fig. 2 a 10</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Etapa fora de ordem é recusada</td><td>Fig. 3 e seção 6</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Quem não tem papel não grava</td><td>Seção 6</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Operador só existe vinculado a um ponto</td><td>Fig. 6 e seção 3</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Só o ponto que está com o aparelho registra a etapa</td><td>Fig. 7, 8, 10 e seção 3</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Registro gravado não pode ser alterado</td><td>Seção 6</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Método de apagamento ineficaz é recusado</td><td>Fig. 5 e seção 6</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>Leituras simultâneas não duplicam etapa</td><td>Seção 6</td><td><span class="selo ok">Atende</span></td></tr>
+          <tr><td>A suíte passa a cada mudança</td><td>Seção 5</td><td><span class="selo ok">443 testes</span></td></tr>
+          <tr><td>Funciona em celular real, em campo</td><td>Só a largura foi emulada no navegador</td><td><span class="selo pendente">Não verificado</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="relatorio">
+    <h2 class="secao"><span class="n">8</span> Estado do Relatório Técnico</h2>
+
+    <p>O Relatório está em <code>docs/RELATORIO-TECNICO.md</code>, com as <strong>17 seções exigidas pela DAC</strong> escritas. Nesta etapa ele recebeu as evidências (11.2), os números da suíte (11.4), o RF21 implementado (requisitos, autorização, limitações e melhorias futuras) e o cronograma de 08/10. Restam <strong>6 marcadores</strong>, nenhum de código:</p>
+    <div class="pendencias">
+      <h4>O que o relatório ainda pede da equipe</h4>
+      <ol>
+        <li>Visita a um ecoponto ou cooperativa, relatando como o registro é feito hoje.</li>
+        <li>Levantamento de pontos em Dourados, Três Lagoas, Corumbá e Ponta Porã.</li>
+        <li>Divisão do trabalho na equipe e decisões que mudaram no caminho.</li>
+        <li>Datas de acesso e formatação ABNT das referências.</li>
+        <li>Fonte dos percentuais de composição material por categoria.</li>
+        <li>Fonte dos fatores de CO₂e por material — o número que o painel mais destaca.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="entrega">
+    <h2 class="secao"><span class="n">9</span> O que falta até a entrega de 29/10</h2>
+
+    <div class="pendencias">
+      <h4>Pendências, em ordem de prioridade</h4>
+      <ol>
+        <li><strong>Decidir o dígito verificador.</strong> Cerca de 5% dos erros de um caractere passam, porque os pesos pares dividem o módulo 32. A correção é de uma linha em cada lado, mas muda o dígito de todo código já emitido. Quanto mais tarde, mais caro.</li>
+        <li><strong>Teste em celular real</strong>, com etiqueta impressa. Pela rede local, sem HTTPS, a câmera não abre — o teste precisa prever isso.</li>
+        <li><strong>Os seis marcadores do relatório</strong>, sobretudo a visita de campo.</li>
+      </ol>
+    </div>
+    <p>Do cronograma interno, ficam concluídos o RF21 (previsto para 16/10) e as evidências em imagem (previstas para 23/10). O levantamento de dados do interior segue parcial.</p>
+  </section>
+
+  <!-- 10 -->
+  <section id="referencias">
+    <h2 class="secao"><span class="n">10</span> Referências</h2>
+
+    <div class="referencias">
+      <p>BRASIL. <strong>Lei nº 12.305, de 2 de agosto de 2010</strong>. Institui a Política Nacional de Resíduos Sólidos. Diário Oficial da União, Brasília, 3 ago. 2010.</p>
+
+      <p>BRASIL. <strong>Decreto nº 10.240, de 12 de fevereiro de 2020</strong>. Regulamenta a implementação de sistema de logística reversa de produtos eletroeletrônicos de uso doméstico e seus componentes. Diário Oficial da União, Brasília, 13 fev. 2020.</p>
+
+      <p>KISSEL, R. et al. <strong>NIST Special Publication 800-88 Revision 1: Guidelines for Media Sanitization</strong>. Gaithersburg: NIST, 2014.</p>
+
+      <p>SQLITE. <strong>Transaction</strong> e <strong>CREATE TRIGGER</strong>. Disponível em: <a href="https://www.sqlite.org/lang_transaction.html">https://www.sqlite.org/lang_transaction.html</a></p>
+
+      <p>PYTEST. <strong>pytest documentation</strong>. Disponível em: <a href="https://docs.pytest.org/">https://docs.pytest.org/</a></p>
+
+      <p>MICROSOFT. <strong>Playwright for Python</strong>. Usado só para dirigir o navegador na captura das evidências. Disponível em: <a href="https://playwright.dev/python/">https://playwright.dev/python/</a></p>
+    </div>
+
+    <p class="nota-metodo"><strong>Nota de método.</strong> As evidências foram produzidas em 08/10/2026 com Windows 11, Python 3.13 e Google Chrome, com o servidor ouvindo apenas em <code>127.0.0.1</code>. O banco foi criado do zero a partir de <code>dados/*.json</code> e descartado depois; os códigos citados existiram só nele. As referências de contexto do problema estão na Pré-Entrega 2 e no Relatório Técnico.</p>
+  </section>
+
+</div>
+
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm; }
+  @media print {
+    .sumario { display: block !important; border: 0; border-top: 1px solid var(--borda);
+               border-bottom: 1px solid var(--borda); padding: .9rem 0; background: none;
+               break-inside: avoid; }
+    .capa { break-after: avoid; }
+    body { font-size: 10pt; line-height: 1.5; }
+    h2.secao { margin-top: .4rem; }
+    .referencias p { break-inside: avoid; }
+    .par { grid-template-columns: 1fr 1fr; }
+    figure.evidencia.retrato img { max-width: none; }
+  }
+</style>
+</body></html>

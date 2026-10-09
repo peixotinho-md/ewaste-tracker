@@ -132,6 +132,16 @@ def erro_de_regra(erro):
     return jsonify({"erro": str(erro)}), 400
 
 
+@app.errorhandler(modelo.SemCompetencia)
+def erro_de_competencia(erro):
+    """
+    A etapa não é deste ponto (RF21). 403, como as outras recusas de permissão,
+    mas marcado: a tela não deve tratar isto como papel revogado, porque a
+    conta continua sendo de operador e pode registrar as etapas do ponto dela.
+    """
+    return jsonify({"erro": str(erro), "competencia": True}), 403
+
+
 @app.errorhandler(404)
 def nao_encontrado(_erro):
     if request.path.startswith("/api/"):
@@ -283,10 +293,20 @@ def criar_item(conexao, conta):
     peso = modelo.normalizar_peso(corpo.get("pesoKg"), categoria)
     ponto_origem = corpo.get("pontoOrigemId") or None
 
-    if ponto_origem and not conexao.execute(
-        "SELECT 1 FROM pontos WHERE id = ?", (ponto_origem,)
-    ).fetchone():
-        raise modelo.RegraViolada("Ponto de coleta desconhecido.")
+    if ponto_origem:
+        linha = conexao.execute(
+            "SELECT tipo FROM pontos WHERE id = ?", (ponto_origem,)
+        ).fetchone()
+        if linha is None:
+            raise modelo.RegraViolada("Ponto de coleta desconhecido.")
+        # O ponto de entrega é quem vai registrar a coleta (RF21). Uma
+        # recicladora não recebe do público: o aparelho nasceria sem ninguém
+        # que pudesse dar o primeiro passo.
+        if not modelo.pode_registrar("COLETADO", linha["tipo"]):
+            raise modelo.RegraViolada(
+                "Este ponto não recebe aparelhos do público. Escolha um ecoponto, "
+                "PEV, loja ou cooperativa."
+            )
 
     novo = banco.criar_item(
         conexao,
@@ -314,16 +334,30 @@ def criar_evento(conexao, codigo, conta):
       responsavel  vem do nome da conta autenticada. Se viesse do formulário,
                    qualquer operador poderia assinar o evento com o nome de
                    outra pessoa, e a assinatura não provaria nada.
-      pontoId      é o ponto ao qual o operador está vinculado, quando há um.
-                   Assim ele não registra passagem por um local onde não
-                   trabalha. Só o admin, que não tem ponto fixo, informa o local.
+      pontoId      é o ponto ao qual o operador está vinculado. Assim ele não
+                   registra passagem por um local onde não trabalha. Só o
+                   admin, que não tem ponto fixo, informa o local.
+
+    O tipo desse ponto decide quais etapas a conta registra (RF21). A
+    verificação fica em `banco.registrar_evento`, dentro da transação.
     """
     canonico = modelo.normalizar_codigo(codigo)
     if not canonico:
         return jsonify({"erro": "Código de rastreio inválido."}), 400
 
     corpo = corpo_json()
-    ponto_id = conta["pontoId"] or (corpo.get("pontoId") or None)
+    if conta["papel"] == "operador":
+        # Operador sem ponto não escolhe o local no formulário: se escolhesse,
+        # bastaria escolher uma recicladora para registrar a reciclagem.
+        if not conta["pontoId"]:
+            raise modelo.SemCompetencia(
+                "Sua conta de operador não está vinculada a um ponto de coleta, e "
+                "é o ponto que define quais etapas você registra. Peça a um "
+                "administrador para fazer o vínculo."
+            )
+        ponto_id = conta["pontoId"]
+    else:
+        ponto_id = corpo.get("pontoId") or None
 
     if ponto_id and not conexao.execute(
         "SELECT 1 FROM pontos WHERE id = ?", (ponto_id,)
@@ -338,6 +372,7 @@ def criar_evento(conexao, codigo, conta):
         responsavel=modelo.texto(conta["nome"], "responsavel"),
         observacao=modelo.texto(corpo.get("observacao"), "observacao"),
         apagamento=corpo.get("apagamento"),
+        destino_id=corpo.get("destinoId") or None,
     )
     return jsonify(evento), 201
 

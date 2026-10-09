@@ -135,7 +135,7 @@
 <script type="module">
 import * as store from './js/store.js';
 import { iniciarPagina, aviso, escapar, formatarMassa } from './js/ui.js';
-import { CATEGORIAS, categoria, normalizarCodigo } from './js/model.js';
+import { CATEGORIAS, categoria, normalizarCodigo, podeRegistrar } from './js/model.js';
 import { desenharQR, svgQR, urlDeRastreio } from './js/qr.js';
 
 await iniciarPagina();
@@ -191,7 +191,9 @@ function aoTrocarCategoria() {
     ? `Contém ${cat.contaminantes.join(', ')} — por isso não pode ir no lixo comum.`
     : '';
 
-  const aceitos = pontos.filter((p) => p.aceita.includes(cat.id));
+  // Só pontos que recebem do público: é o ponto de entrega que registra a
+  // coleta (RF21), e uma recicladora não a registra.
+  const aceitos = pontos.filter((p) => p.aceita.includes(cat.id) && podeRegistrar('COLETADO', p.tipo));
   const porMunicipio = new Map();
   for (const p of aceitos) {
     if (!porMunicipio.has(p.municipio)) porMunicipio.set(p.municipio, []);

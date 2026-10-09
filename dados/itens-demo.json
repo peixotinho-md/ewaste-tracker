@@ -16,7 +16,8 @@
         "COLETADO",
         600,
         "pt-cg-eco-norte",
-        "Equipe Ecoponto Norte"
+        "Equipe Ecoponto Norte",
+        "pt-cg-coop-reviver"
       ],
       [
         "EM_TRIAGEM",
@@ -28,7 +29,8 @@
         "EM_TRANSPORTE",
         480,
         "pt-cg-coop-reviver",
-        "Transporte MS Logística"
+        "Transporte MS Logística",
+        "pt-cg-recicladora"
       ],
       [
         "EM_RECICLAGEM",
@@ -65,7 +67,8 @@
         "COLETADO",
         288,
         "pt-cg-shopping",
-        "PEV Shopping Campo Grande"
+        "PEV Shopping Campo Grande",
+        "pt-cg-coop-reviver"
       ],
       [
         "EM_TRIAGEM",
@@ -77,7 +80,8 @@
         "EM_TRANSPORTE",
         180,
         "pt-cg-coop-reviver",
-        "Transporte MS Logística"
+        "Transporte MS Logística",
+        "pt-cg-recicladora"
       ],
       [
         "EM_RECICLAGEM",
@@ -126,7 +130,8 @@
         "EM_TRANSPORTE",
         150,
         "pt-do-coop",
-        "Transporte MS Logística"
+        "Transporte MS Logística",
+        "pt-cg-recicladora"
       ],
       [
         "EM_RECICLAGEM",
@@ -184,7 +189,8 @@
         "COLETADO",
         140,
         "pt-cg-loja-tec",
-        "TecMais Assistência"
+        "TecMais Assistência",
+        "pt-cg-coop-reviver"
       ],
       [
         "EM_TRIAGEM",
@@ -196,7 +202,8 @@
         "EM_TRANSPORTE",
         60,
         "pt-cg-coop-reviver",
-        "Transporte MS Logística"
+        "Transporte MS Logística",
+        "pt-cg-recicladora"
       ]
     ]
   },
@@ -265,7 +272,8 @@
         "COLETADO",
         30,
         "pt-cg-loja-tec",
-        "TecMais Assistência"
+        "TecMais Assistência",
+        "pt-cg-eco-norte"
       ]
     ]
   },

@@ -71,6 +71,124 @@ def validar_transicao(etapa_atual: str, etapa_destino: str) -> None:
         )
 
 
+# Competência por etapa (RF21)
+#
+# Ter papel de operador diz que a conta PODE escrever na cadeia; não diz O QUÊ.
+# Sem esta tabela, o operador de um ecoponto registrava "Em reciclagem" de um
+# aparelho que nunca saiu do ecoponto, e a trilha afirmava uma passagem pela
+# recicladora que ninguém da recicladora assinou. A cadeia de custódia vale
+# justamente porque cada elo é declarado por quem estava com o aparelho naquele
+# momento.
+#
+# A regra amarra a etapa ao TIPO do ponto onde ela é registrada — e o ponto vem
+# da conta (operador) ou é escolhido pelo admin, que também passa pela tabela:
+#
+#   COLETADO        quem recebe do público: ecoponto, PEV, loja/fabricante e
+#                   cooperativa que aceita entrega direta;
+#   EM_TRIAGEM      quem separa e apaga a mídia: ecoponto e cooperativa;
+#   EM_TRANSPORTE   quem despacha o lote, o mesmo que fez a triagem;
+#   EM_RECICLAGEM   só a recicladora credenciada;
+#   PROCESSADO      só a recicladora credenciada — é ela quem emite o
+#                   certificado de destinação final.
+#
+# REGISTRADO não está aqui: nasce no cadastro do aparelho (`POST /api/itens`),
+# feito pelo próprio dono, e não por evento.
+
+TIPOS_PONTO = {
+    "ecoponto": "Ecoponto municipal",
+    "cooperativa": "Cooperativa de reciclagem",
+    "fabricante": "Loja / fabricante",
+    "pev": "Ponto de entrega voluntária",
+    "recicladora": "Recicladora credenciada",
+}
+
+COMPETENCIA = {
+    "COLETADO":      ("ecoponto", "pev", "fabricante", "cooperativa"),
+    "EM_TRIAGEM":    ("ecoponto", "cooperativa"),
+    "EM_TRANSPORTE": ("ecoponto", "cooperativa"),
+    "EM_RECICLAGEM": ("recicladora",),
+    "PROCESSADO":    ("recicladora",),
+}
+
+
+class SemCompetencia(RegraViolada):
+    """
+    A conta pode escrever na cadeia, mas não esta etapa neste ponto. Vira HTTP
+    403, e não 400: o pedido está bem formado; quem pede é que não pode.
+    """
+
+
+def pode_registrar(etapa: str, tipo_ponto: str | None) -> bool:
+    return tipo_ponto in COMPETENCIA.get(etapa, ())
+
+
+def validar_competencia(etapa: str, tipo_ponto: str | None, nome_ponto: str = "") -> None:
+    """Levanta SemCompetencia quando o tipo do ponto não registra a etapa."""
+    if pode_registrar(etapa, tipo_ponto):
+        return
+    quem = " ou ".join(TIPOS_PONTO[t].lower() for t in COMPETENCIA.get(etapa, ()))
+    onde = f"{nome_ponto} é {TIPOS_PONTO.get(tipo_ponto, 'um ponto sem tipo').lower()}"
+    raise SemCompetencia(
+        f'"{ROTULOS.get(etapa, etapa)}" só pode ser registrada por {quem}. '
+        f"{onde.strip()}: quem registra esta etapa é a organização que está com o "
+        "aparelho nela."
+    )
+
+
+# Com quem está o aparelho
+#
+# O tipo do ponto diz QUE TIPO de organização registra cada etapa; falta dizer
+# QUAL. Sem isso, qualquer ecoponto registrava a coleta de um aparelho entregue
+# em outro, e qualquer recicladora a reciclagem de um lote despachado para
+# outra. A regra é uma só: registra a próxima etapa quem está com o aparelho.
+#
+# O aparelho está no ponto do último evento — ou no DESTINO dele, quando o
+# evento o encaminhou a outro ponto. Só duas etapas encaminham:
+#
+#   COLETADO        um PEV ou uma loja recebe, mas não faz triagem: precisa
+#                   dizer para qual ecoponto ou cooperativa o aparelho segue.
+#                   Ecoponto e cooperativa podem ficar com ele ou encaminhar.
+#   EM_TRANSPORTE   o lote sempre vai para uma recicladora, e só ela registra
+#                   a reciclagem.
+#
+# Sem destino, o aparelho fica no ponto que registrou — e esse ponto precisa
+# ser capaz de registrar a etapa seguinte, ou a cadeia travaria ali.
+
+ETAPAS_COM_DESTINO = ("COLETADO", "EM_TRANSPORTE")
+
+
+def etapa_seguinte(etapa: str) -> str | None:
+    posicao = IDS_ETAPAS.index(etapa)
+    return IDS_ETAPAS[posicao + 1] if posicao + 1 < len(IDS_ETAPAS) else None
+
+
+def validar_destino(etapa: str, tipo_ponto: str, destino_tipo: str | None,
+                    mesmo_ponto: bool = False) -> None:
+    """Confere o encaminhamento declarado no evento. Levanta RegraViolada."""
+    seguinte = etapa_seguinte(etapa)
+    quem_segue = " ou ".join(TIPOS_PONTO[t].lower() for t in COMPETENCIA.get(seguinte, ()))
+
+    if destino_tipo is None:
+        if seguinte and not pode_registrar(seguinte, tipo_ponto):
+            raise RegraViolada(
+                f'Informe para onde o aparelho segue: "{ROTULOS[seguinte]}" é feita '
+                f"por {quem_segue}, e {TIPOS_PONTO[tipo_ponto].lower()} não a registra."
+            )
+        return
+
+    if etapa not in ETAPAS_COM_DESTINO:
+        raise RegraViolada(
+            "Só a coleta e o transporte encaminham o aparelho a outro ponto."
+        )
+    if mesmo_ponto:
+        raise RegraViolada("O destino precisa ser outro ponto, e não o que está registrando.")
+    if not pode_registrar(seguinte, destino_tipo):
+        raise RegraViolada(
+            f'O destino precisa ser {quem_segue}: é ele quem registra '
+            f'"{ROTULOS[seguinte]}".'
+        )
+
+
 # Categorias aceitas
 
 # Peso médio em kg, usado quando o cliente não informa um peso válido.

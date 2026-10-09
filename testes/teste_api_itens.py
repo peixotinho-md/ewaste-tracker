@@ -79,14 +79,23 @@ def teste_o_dono_e_a_conta_da_sessao(cliente, visitante):
 # --------------------------------------------------------------------------- #
 
 def teste_percorrer_as_seis_etapas_ate_o_certificado(cliente, fabricar_conta, entrar,
-                                                     primeiro_ponto):
-    """Item 3 do roteiro manual: ler o QR e avançar as seis etapas."""
+                                                     ponto_ecoponto, ponto_recicladora):
+    """
+    Item 3 do roteiro manual: ler o QR e avançar as seis etapas.
+
+    São duas contas, como na cadeia real (RF21): o ecoponto leva o aparelho até
+    o transporte, e a recicladora registra a reciclagem e emite o certificado.
+    """
     dono = entrar(fabricar_conta("visitante"))
     item = registrar(cliente)
 
-    entrar(fabricar_conta("operador", ponto_id=primeiro_ponto["id"]))
+    ecoponto = fabricar_conta("operador", ponto_id=ponto_ecoponto["id"])
+    recicladora = fabricar_conta("operador", ponto_id=ponto_recicladora["id"])
     for etapa in modelo.IDS_ETAPAS[1:]:
+        entrar(recicladora if etapa in ("EM_RECICLAGEM", "PROCESSADO") else ecoponto)
         extra = ATESTADO if etapa == "EM_TRIAGEM" else {}
+        if etapa == "EM_TRANSPORTE":
+            extra = {"destinoId": ponto_recicladora["id"]}
         resposta = avancar(cliente, item["codigo"], etapa, **extra)
         assert resposta.status_code == 201, (etapa, resposta.get_json())
 
@@ -94,6 +103,7 @@ def teste_percorrer_as_seis_etapas_ate_o_certificado(cliente, fabricar_conta, en
     assert rastreio["item"]["etapaAtual"] == modelo.ETAPA_FINAL
     assert [e["etapa"] for e in rastreio["eventos"]] == modelo.IDS_ETAPAS
     assert rastreio["apagamento"]["metodo"] == "SECURE_ERASE"
+    assert [e["pontoId"] for e in rastreio["eventos"][-2:]] == [ponto_recicladora["id"]] * 2
     assert dono["nome"]  # o registro continua assinado por quem registrou
 
 
@@ -151,28 +161,28 @@ def teste_responsavel_do_corpo_e_descartado(cliente, operador):
 
 
 def teste_ponto_do_corpo_e_ignorado_quando_o_operador_tem_ponto(
-    cliente, operador, primeiro_ponto, bd
+    cliente, operador, ponto_ecoponto, bd
 ):
     """O operador não registra passagem por um local onde não trabalha."""
     import banco
 
     conexao = banco.conectar()
     try:
-        outro = [p for p in banco.listar_pontos(conexao) if p["id"] != primeiro_ponto["id"]][0]
+        outro = [p for p in banco.listar_pontos(conexao) if p["id"] != ponto_ecoponto["id"]][0]
     finally:
         conexao.close()
 
     item = registrar(cliente)
     resposta = avancar(cliente, item["codigo"], "COLETADO", pontoId=outro["id"])
     assert resposta.status_code == 201
-    assert resposta.get_json()["pontoId"] == primeiro_ponto["id"]
+    assert resposta.get_json()["pontoId"] == ponto_ecoponto["id"]
 
 
-def teste_admin_sem_ponto_fixo_informa_o_local(cliente, admin, primeiro_ponto):
+def teste_admin_sem_ponto_fixo_informa_o_local(cliente, admin, ponto_ecoponto):
     item = registrar(cliente)
-    resposta = avancar(cliente, item["codigo"], "COLETADO", pontoId=primeiro_ponto["id"])
+    resposta = avancar(cliente, item["codigo"], "COLETADO", pontoId=ponto_ecoponto["id"])
     assert resposta.status_code == 201
-    assert resposta.get_json()["pontoId"] == primeiro_ponto["id"]
+    assert resposta.get_json()["pontoId"] == ponto_ecoponto["id"]
 
 
 def teste_ponto_inexistente_no_evento_e_recusado(cliente, admin):

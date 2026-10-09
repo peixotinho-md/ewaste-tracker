@@ -49,6 +49,9 @@ async function api(caminho, { metodo = 'GET', corpo = null, nuloEm404 = false } 
     // 401 (falta entrar) e 403 (entrou, mas a conta não tem o papel) pedem
     // respostas diferentes da tela, então o status sobe junto com a mensagem.
     erro.status = resposta.status;
+    // 403 por competência (RF21) não é papel revogado: a conta continua de
+    // operador, só que esta etapa não é do ponto dela.
+    erro.competencia = dados?.competencia === true;
     throw erro;
   }
   return dados;
@@ -122,13 +125,14 @@ export async function criarItem({ categoria, marca, pesoKg, pontoOrigemId, respo
  */
 export async function registrarEvento(
   codigo,
-  { etapa, pontoId, observacao, apagamento = null }
+  { etapa, pontoId, observacao, apagamento = null, destinoId = null }
 ) {
   return api(`/itens/${encodeURIComponent(codigo)}/eventos`, {
     metodo: 'POST',
     // `apagamento` só é usado ao concluir a triagem de um aparelho com mídia
-    // de dados; nas demais etapas o servidor ignora o campo.
-    corpo: { etapa, pontoId, observacao, apagamento },
+    // de dados; nas demais etapas o servidor ignora o campo. `destinoId` é para
+    // onde o aparelho segue, na coleta e no transporte (RF21).
+    corpo: { etapa, pontoId, observacao, apagamento, destinoId },
   });
 }
 

@@ -398,6 +398,47 @@ export const TIPOS_PONTO = {
   recicladora: { rotulo: 'Recicladora credenciada', cor: '#525a68' },
 };
 
+/* 7. Competência por etapa (RF21)
+ *
+ * Que tipo de ponto registra cada etapa. Mesma tabela de `backend/modelo.py`,
+ * que é quem decide; aqui ela serve para a tela não oferecer um botão que o
+ * servidor vai recusar. */
+
+export const COMPETENCIA = {
+  COLETADO: ['ecoponto', 'pev', 'fabricante', 'cooperativa'],
+  EM_TRIAGEM: ['ecoponto', 'cooperativa'],
+  EM_TRANSPORTE: ['ecoponto', 'cooperativa'],
+  EM_RECICLAGEM: ['recicladora'],
+  PROCESSADO: ['recicladora'],
+};
+
+export function podeRegistrar(etapaId, tipoPonto) {
+  return (COMPETENCIA[etapaId] ?? []).includes(tipoPonto);
+}
+
+/** Etapas que um tipo de ponto registra, na ordem da cadeia. */
+export function etapasDoTipo(tipoPonto) {
+  return ETAPAS.filter((e) => podeRegistrar(e.id, tipoPonto));
+}
+
+/* Com quem está o aparelho: o ponto do último evento, ou o destino para onde
+ * ele foi encaminhado. Só esse ponto registra a etapa seguinte. Mesma regra de
+ * `banco.registrar_evento`; aqui serve para a tela não oferecer o que o
+ * servidor recusaria. */
+
+export const ETAPAS_COM_DESTINO = ['COLETADO', 'EM_TRANSPORTE'];
+
+export function localAtual(eventos) {
+  const ultimo = eventos.at(-1);
+  return ultimo ? (ultimo.destinoId || ultimo.pontoId || null) : null;
+}
+
+/** O ponto que registra `etapaId` precisa encaminhar o aparelho a outro? */
+export function exigeDestino(etapaId, tipoPonto) {
+  const seguinte = proximaEtapa(etapaId);
+  return Boolean(seguinte) && !podeRegistrar(seguinte.id, tipoPonto);
+}
+
 
 /* Indicadores
  *

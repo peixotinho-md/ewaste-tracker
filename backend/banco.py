@@ -27,8 +27,9 @@ CAMINHO_BANCO = PASTA_BACKEND / "etrilha.db"
 CAMINHO_SCHEMA = PASTA_BACKEND / "schema.sql"
 PASTA_DADOS = RAIZ / "dados"
 
-# Contas criadas na carga inicial: um administrador, um operador de exemplo e
-# um administrador de reserva, que não aparece na tela de administração.
+# Contas criadas na carga inicial: um administrador, dois operadores de exemplo
+# (ecoponto e recicladora, as duas pontas da cadeia) e um administrador de
+# reserva, que não aparece na tela de administração.
 #
 # A SENHA NÃO ESTÁ AQUI, nem em lugar nenhum. Ela é sorteada a cada carga
 # (`_semear_contas`), impressa UMA vez no terminal de quem subiu o servidor e
@@ -53,8 +54,16 @@ CONTAS_INICIAIS = [
         "nome": "Operador do Ecoponto Região Norte",
         "email": "operador@etrilha.ms",
         "papel": "operador",
-        # Preenchido na carga com o primeiro ponto de coleta cadastrado.
-        "ponto_id": None,
+        "ponto_id": "pt-cg-eco-norte",
+    },
+    {
+        # Com a competência por etapa (RF21), o operador do ecoponto vai até o
+        # transporte; reciclagem e certificado são da recicladora. Sem esta
+        # conta, a demonstração do ciclo completo dependeria do admin.
+        "nome": "Operador da Recicladora Cerrado Verde",
+        "email": "recicladora@etrilha.ms",
+        "papel": "operador",
+        "ponto_id": "pt-cg-recicladora",
     },
     {
         # A segunda chave. Não aparece na tela de administração, ninguém a
@@ -231,11 +240,13 @@ def _semear(conexao) -> list[dict]:
                     trilha[-1][0],
                 ),
             )
+            # O 5º elemento, quando existe, é o destino do encaminhamento.
             conexao.executemany(
-                """INSERT INTO eventos (item_codigo, etapa, ponto_id, responsavel, observacao, em)
-                   VALUES (?, ?, ?, ?, '', ?)""",
-                [(item["codigo"], etapa, ponto, responsavel, quando(horas))
-                 for etapa, horas, ponto, responsavel in trilha],
+                """INSERT INTO eventos (item_codigo, etapa, ponto_id, destino_id,
+                                        responsavel, observacao, em)
+                   VALUES (?, ?, ?, ?, ?, '', ?)""",
+                [(item["codigo"], e[0], e[2], e[4] if len(e) > 4 else None, e[3], quando(e[1]))
+                 for e in trilha],
             )
 
             # O atestado de apagamento nasce na triagem; itens de exemplo que
@@ -250,10 +261,10 @@ def _semear(conexao) -> list[dict]:
                      triagem[3], quando(triagem[1])),
                 )
 
-        return _semear_contas(conexao, pontos[0]["id"] if pontos else None)
+        return _semear_contas(conexao)
 
 
-def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
+def _semear_contas(conexao) -> list[dict]:
     """
     Cria as contas de `CONTAS_INICIAIS`, cada uma com uma senha sorteada, e
     devolve as credenciais para quem subiu o servidor ver.
@@ -274,7 +285,7 @@ def _semear_contas(conexao, ponto_do_operador: str | None) -> list[dict]:
                 generate_password_hash(senha),
                 agora_iso(),
                 conta["papel"],
-                ponto_do_operador if conta["papel"] == "operador" else conta["ponto_id"],
+                conta["ponto_id"],
                 1 if conta.get("reserva") else 0,
             ),
         )
@@ -361,6 +372,7 @@ def evento_json(linha) -> dict:
         "itemCodigo": linha["item_codigo"],
         "etapa": linha["etapa"],
         "pontoId": linha["ponto_id"],
+        "destinoId": linha["destino_id"],
         "responsavel": linha["responsavel"],
         "observacao": linha["observacao"],
         "em": linha["em"],
@@ -447,6 +459,7 @@ def obter_rastreio(conexao, codigo: str) -> dict | None:
     for linha in linhas:
         evento = evento_json(linha)
         evento["ponto"] = pontos.get(evento["pontoId"])
+        evento["destino"] = pontos.get(evento["destinoId"])
         eventos.append(evento)
 
     return {"item": item, "eventos": eventos, "apagamento": obter_apagamento(conexao, codigo)}
@@ -521,7 +534,7 @@ def criar_item(conexao, *, categoria, marca, peso_kg, ponto_origem_id,
 
 
 def registrar_evento(conexao, codigo, *, etapa, ponto_id, responsavel, observacao,
-                     apagamento=None) -> dict:
+                     apagamento=None, destino_id=None) -> dict:
     """
     Acrescenta um elo à cadeia de custódia. A validação da transição roda
     dentro da transação, sobre a etapa lida do banco — nunca sobre o que o
@@ -543,6 +556,52 @@ def registrar_evento(conexao, codigo, *, etapa, ponto_id, responsavel, observaca
         # A validação acontece aqui, dentro da transação e do lado do servidor.
         modelo.validar_transicao(linha["etapa_atual"], etapa)
 
+        # Competência por etapa (RF21): depois da transição, para que pular ou
+        # retroceder continue respondendo com o motivo da máquina de estados.
+        # Sem ponto não há como saber quem registra — e um elo sem local não
+        # diria onde o aparelho estava.
+        if not ponto_id:
+            raise modelo.RegraViolada(
+                "Informe o ponto onde a etapa aconteceu: é o tipo do ponto que "
+                "define quem pode registrar cada etapa."
+            )
+        ponto = conexao.execute(
+            "SELECT nome, tipo FROM pontos WHERE id = ?", (ponto_id,)
+        ).fetchone()
+        if ponto is None:
+            raise modelo.RegraViolada("Ponto de coleta desconhecido.")
+        modelo.validar_competencia(etapa, ponto["tipo"], ponto["nome"])
+
+        # Com quem está o aparelho: o ponto do último evento, ou o destino dele.
+        # Só esse ponto registra a etapa seguinte. Item registrado sem ponto de
+        # entrega ainda não está com ninguém, e qualquer ponto competente coleta.
+        ultimo = conexao.execute(
+            "SELECT ponto_id, destino_id FROM eventos WHERE item_codigo = ? "
+            "ORDER BY id DESC LIMIT 1", (codigo,)
+        ).fetchone()
+        local = ultimo and (ultimo["destino_id"] or ultimo["ponto_id"])
+        if local and local != ponto_id:
+            nome_local = conexao.execute(
+                "SELECT nome FROM pontos WHERE id = ?", (local,)
+            ).fetchone()["nome"]
+            raise modelo.SemCompetencia(
+                f"Este aparelho está com {nome_local}. Só quem trabalha lá registra "
+                f'"{modelo.ROTULOS[etapa]}" — a etapa é declarada por quem está com '
+                "o aparelho nas mãos."
+            )
+
+        destino = None
+        if destino_id:
+            destino = conexao.execute(
+                "SELECT tipo FROM pontos WHERE id = ?", (destino_id,)
+            ).fetchone()
+            if destino is None:
+                raise modelo.RegraViolada("Ponto de destino desconhecido.")
+        modelo.validar_destino(
+            etapa, ponto["tipo"], destino["tipo"] if destino else None,
+            mesmo_ponto=destino_id == ponto_id,
+        )
+
         if etapa == "EM_TRIAGEM":
             dados = apagamento or {}
             midia, metodo = modelo.validar_apagamento(
@@ -559,9 +618,11 @@ def registrar_evento(conexao, codigo, *, etapa, ponto_id, responsavel, observaca
                 )
 
         cursor = conexao.execute(
-            """INSERT INTO eventos (item_codigo, etapa, ponto_id, responsavel, observacao, em)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (codigo, etapa, ponto_id, responsavel or "Não informado", observacao, agora),
+            """INSERT INTO eventos (item_codigo, etapa, ponto_id, destino_id, responsavel,
+                                   observacao, em)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (codigo, etapa, ponto_id, destino_id or None, responsavel or "Não informado",
+             observacao, agora),
         )
         # `etapa_atual` é só um espelho do último evento, mantido para consulta
         # rápida. A verdade continua sendo a tabela de eventos.
@@ -789,7 +850,8 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
     transação e cada uma com seu registro na trilha.
 
     `ponto_id` usa `...` como "não mexer" porque `None` aqui é um valor legítimo:
-    significa desvincular o operador do ponto.
+    significa desvincular a conta do ponto — o que só vale para quem não é
+    operador, já que operador sem ponto não registra nada.
     """
     with transacao(conexao):
         atual = _conta_administravel(conexao, alvo_id)
@@ -830,6 +892,19 @@ def atualizar_usuario(conexao, alvo_id: str, *, autor: dict, papel=None,
             _registrar_alteracao(
                 conexao, alvo=dict(atual), autor=autor, acao="ponto",
                 de=atual["ponto_id"] or "", para=ponto_id or "",
+            )
+
+        # Operador sem ponto não registraria etapa nenhuma: é o ponto que diz de
+        # quais aparelhos ele cuida (RF21). Por isso o vínculo é exigido junto
+        # com o papel, e não pode ser desfeito enquanto o papel durar.
+        final = conexao.execute(
+            "SELECT papel, ponto_id FROM usuarios WHERE id = ?", (alvo_id,)
+        ).fetchone()
+        mexeu_no_acesso = papel is not None or ponto_id is not ...
+        if mexeu_no_acesso and final["papel"] == "operador" and not final["ponto_id"]:
+            raise modelo.RegraViolada(
+                "Informe de qual ponto de coleta é este operador. Ele só vai "
+                "registrar etapas dos aparelhos que estiverem nesse ponto."
             )
 
         if senha_hash:
