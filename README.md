@@ -37,7 +37,7 @@ as credenciais estão em **[docs/CREDENCIAIS-DEMO.md](docs/CREDENCIAIS-DEMO.md)*
 **1. Instalar a dependência** (uma vez só):
 
 ```powershell
-cd C:\Users\rpalmeida\ewaste
+cd <pasta onde o repositório foi clonado>   # ex.: C:\Users\Peixoto\ewaste
 python -m pip install -r requirements.txt
 ```
 
@@ -48,6 +48,9 @@ python backend/app.py
 ```
 
 **3. Abrir <http://localhost:8000>**
+
+Para encerrar, `Ctrl+C` no terminal do servidor. Para acessar de outro
+aparelho, veja *Acesso pela rede local* e *Acesso de fora da rede*, abaixo.
 
 O banco (`backend/etrilha.db`) é criado e populado automaticamente na primeira
 execução, a partir de `dados/*.json`. As bibliotecas de QR já estão em
@@ -171,6 +174,49 @@ $env:HOST = "127.0.0.1"; python backend/app.py
 ```
 
 A porta também é configurável, pela variável `PORTA`.
+
+### Acesso de fora da rede
+
+Para abrir o sistema de qualquer lugar — 4G, outra rede, a sala da
+apresentação —, um túnel da Cloudflare liga um endereço HTTPS público ao
+servidor que roda no PC. Não precisa de conta nem de mexer no roteador.
+
+**1. Instalar o `cloudflared`** (uma vez só):
+
+```powershell
+winget install --id Cloudflare.cloudflared -e
+```
+
+**2. Subir o servidor**, como acima, num terminal:
+
+```powershell
+python backend/app.py
+```
+
+**3. Abrir o túnel** em outro terminal:
+
+```powershell
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://localhost:8000
+```
+
+Depois de alguns segundos ele imprime um endereço como
+`https://palavras-aleatorias.trycloudflare.com`. É esse o link: abre de qualquer
+rede, e por ser HTTPS a câmera do leitor de QR funciona no celular.
+
+Antes de usar:
+
+- **o link é público** — quem o tiver abre o sistema. A proteção é o login do
+  e-Trilha: troque as senhas sorteadas no primeiro acesso, como o sistema exige,
+  e não divulgue o link fora da equipe;
+- **o endereço muda** a cada vez que o túnel abre, e só funciona enquanto o PC,
+  o servidor e o túnel estiverem ligados — deixe o Windows sem suspender durante
+  a apresentação;
+- **é para demonstração**, não hospedagem: o túnel rápido não tem garantia de
+  funcionamento, e o servidor é o de desenvolvimento do Flask;
+- `/api/saude` mostra o caminho do banco no disco, com o nome do usuário do
+  Windows.
+
+Para fechar, `Ctrl+C` no terminal do túnel: o link para de funcionar na hora.
 
 ---
 
