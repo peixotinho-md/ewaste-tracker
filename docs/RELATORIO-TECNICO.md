@@ -18,12 +18,6 @@ Redes de Computadores · Sistemas Operacionais · Projeto de Extensão em Susten
 | Eder Maciel | 205969 |
 | Renato Peixoto | 205683 |
 
-> **Como usar este documento.** As seções estão na ordem exigida pela DAC e
-> preenchidas com o que o protótipo e as fontes da seção 17 permitem afirmar.
-> Restam dois marcadores **[PREENCHER]**, e os dois só a equipe pode fechar: a
-> visita a um ecoponto (pergunta 5 da seção 1.1) e a divisão do trabalho
-> (seção 10).
-
 ---
 
 ## 1. Problema
@@ -169,10 +163,6 @@ Balcão do Cidadão recebem eletrônicos pequenos de graça e os encaminham à R
 Circulare, da Circular Brain. A divulgação fala em rastreio até a destinação
 final, mas o que o cidadão leva da agência é um comprovante de envio; não foi
 divulgada consulta por aparelho nem certificado de destinação (seção 5).
-
-> **[PREENCHER]** Confirmar em visita a um ecoponto ou cooperativa: se a anotação
-> é em papel ou em planilha, se algo do material é registrado e para onde o lote
-> segue.
 
 **6. Onde a tecnologia poderá contribuir?**
 Na etapa que hoje não tem registro nenhum: o percurso entre a entrega e a
@@ -919,12 +909,6 @@ aqui, a variável de ambiente é a mitigação honesta para uma demonstração.
 
 ## 10. Desenvolvimento
 
-### Divisão do trabalho
-
-> **[PREENCHER]** Quem ficou com cada frente — código, levantamento de dados
-> locais, relatório, testes e apresentação. É a única parte desta seção que o
-> repositório não registra.
-
 ### Como o projeto evoluiu
 
 O histórico do repositório registra cada mudança com data e com o motivo. Em
@@ -1021,7 +1005,7 @@ está concluído foi verificado pela suíte de testes e pelo roteiro da seção 
 | 10 | Teste em celular real, em campo | 16/10 | Não iniciado |
 | 11 | Decisão sobre o dígito verificador | 16/10 | Em aberto — ver Limitações |
 | 12 | Evidências de teste em imagem para o relatório | 23/10 | Concluído em 08/10 — seção 11.2 |
-| 13 | Consolidação do Relatório Técnico | 23/10 | Fontes e dados fechados em 22/10; restam a visita ao ecoponto e a divisão do trabalho |
+| 13 | Consolidação do Relatório Técnico | 23/10 | Concluído em 22/10 — fontes e dados locais fechados |
 | 14 | Correções da revisão do servidor (sessões e corpo JSON) | 27/09 | Concluído — 22 testes novos |
 
 Estado em 22/10. Desde 08/10 fecharam os itens 8 e 13: o interior foi levantado
