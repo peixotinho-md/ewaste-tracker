@@ -18,11 +18,11 @@ Redes de Computadores · Sistemas Operacionais · Projeto de Extensão em Susten
 | Eder Maciel | 205969 |
 | Renato Peixoto | 205683 |
 
-> **Como usar este documento.** As seções já estão na ordem exigida pela DAC e
-> preenchidas com o que o protótipo permite afirmar hoje. Onde aparece
-> **[PREENCHER]**, falta um dado local que a equipe precisa levantar — é
-> justamente isso que diferencia um trabalho genérico de um trabalho aplicado a
-> uma realidade concreta, como o enunciado exige.
+> **Como usar este documento.** As seções estão na ordem exigida pela DAC e
+> preenchidas com o que o protótipo e as fontes da seção 17 permitem afirmar.
+> Restam dois marcadores **[PREENCHER]**, e os dois só a equipe pode fechar: a
+> visita a um ecoponto (pergunta 5 da seção 1.1) e a divisão do trabalho
+> (seção 10).
 
 ---
 
@@ -57,18 +57,57 @@ logística reversa é opaca entre o ponto de coleta e a recicladora.
 Estado de Mato Grosso do Sul. O recorte é estadual porque a estrutura de coleta é
 desigual: a capital concentra ecopontos e cooperativas, enquanto municípios do
 interior dependem de campanhas pontuais.
-Levantamento em Campo Grande (setembro de 2026): a rede **Green Eletron**, gestora
-do sistema nacional de logística reversa, mantém **8 pontos** na capital; a
-prefeitura opera **5 ecopontos**, que recebem eletroeletrônicos junto com entulho,
-móveis e podas; e a **AGEMS** tornou-se ponto de coleta em parceria com a Recic.LE.
-São cerca de **14 locais** — contra os **~36** que a regra do Decreto 10.240/2020
-(1 ponto por 25 mil habitantes) implicaria para os 897.938 habitantes da cidade.
-Cobertura de aproximadamente **39%**, e apenas 9 deles são específicos de
-eletroeletrônicos.
+**Campo Grande.** O Decreto 10.240/2020 pede 1 ponto de coleta para cada 25 mil
+habitantes nos municípios acima de 80 mil, o que dá **~36** para os 897.938
+habitantes da capital. O primeiro levantamento, de setembro de 2026, contou cerca
+de **14 locais** — 8 da rede **Green Eletron**, os 5 ecopontos da prefeitura e a
+**AGEMS**, ponto de coleta em parceria com a Recic.LE — e chegou a uma cobertura
+de 39%.
 
-> **[PREENCHER]** Estender o levantamento a Dourados, Três Lagoas, Corumbá e Ponta
-> Porã — os outros quatro municípios de MS acima de 80 mil habitantes, também
-> alcançados pelo Decreto.
+Esse número não se sustentou. A contagem foi refeita em **22/10/2026** no
+localizador da Green Eletron, que também mostra os pontos da **ABREE**, a outra
+gestora do sistema de logística reversa de eletroeletrônicos, e que o primeiro
+levantamento deixou de fora. Somadas as duas redes, a capital tem **36 pontos
+cadastrados** — exatamente o que a regra pede. O que a contagem nova revela não é
+falta de ponto, é o **tipo** de ponto:
+
+| Tipo de ponto em Campo Grande | Pontos |
+|---|---|
+| Lojas de varejo e de operadoras de telefonia (balcão, aparelhos pequenos) | 25 |
+| Pontos da prefeitura (ecopontos e afins) | 6 |
+| Recicladoras e associação de recicladores | 3 |
+| Outros (uma assistência técnica e a rodoviária) | 2 |
+| **Total** | **36** |
+
+Um celular tem 36 lugares para ir. Um desktop, um no-break ou uma TV têm, na
+prática, os 9 que não são balcão de loja. E nenhum dos 36 é um sistema de
+rastreio: são endereços num mapa, e a informação termina na entrega.
+
+**Interior.** Pelo mesmo método e na mesma data, os outros quatro municípios de MS
+acima de 80 mil habitantes, contando só endereços dentro de cada um:
+
+| Município | População (Censo 2022) | Pontos pela regra | Pontos cadastrados | O que são |
+|---|---|---|---|---|
+| Dourados | 243.368 | ~10 | 9 | 7 lojas e operadoras, 1 ecoponto particular de eletrônicos, 1 empresa sem tipo identificado |
+| Três Lagoas | 132.152 | ~5 | 5 | Todos lojas de varejo |
+| Corumbá | 96.268 | ~4 | 3 | Todos lojas de varejo |
+| Ponta Porã | 92.017 | ~4 | 3 | Todos lojas de varejo |
+
+O número cumpre a regra ou chega perto dela em todos os quatro; o tipo, não.
+Fora do balcão de loja, o único ponto permanente é o ecoponto de eletrônicos da
+Rua Ponta Porã, em Dourados, mantido por um particular. Nas outras três cidades o
+aparelho grande depende de **campanha**: a caravana da prefeitura de Três Lagoas
+recolheu cerca de 2,5 t em dois dias de outubro de 2025; Corumbá fez coleta em
+setembro, conduzida pela Fundação de Meio Ambiente do Pantanal; Ponta Porã, no
+encerramento da Semana do Meio Ambiente de 2025, com a associação de catadores
+ASCARS cuidando da destinação. No estado inteiro, o localizador mostra 81 pontos
+em 22 dos 79 municípios.
+
+Duas ressalvas de método. A primeira: o cadastro é o da gestora, e não foi
+conferido no local — um ponto listado pode ter deixado de receber. A segunda: a
+lista da ABREE traz alguns endereços de outros estados posicionados por engano em
+MS; eles foram descartados, e por isso a contagem é por endereço, não por
+posição no mapa.
 
 **3. Quem é afetado?**
 - Moradores urbanos com eletrônicos obsoletos sem destino;
@@ -118,9 +157,22 @@ Limpo); para eletroeletrônicos, a operação em MS é a da rede nacional
 Green Eletron e da ABREE, sem instrumento estadual específico. O **ICMS
 Ecológico** é o mecanismo que premia municípios pela gestão adequada de resíduos.
 
-> **[PREENCHER]** Visitar um ecoponto ou cooperativa e relatar como o registro é
-> feito na prática — planilha, papel ou nada. É o dado que fecha o argumento de
-> que a rastreabilidade por item não existe hoje.
+**Como o registro é feito hoje.** A Carta de Serviços de Campo Grande descreve
+o procedimento dos ecopontos: na chegada, o funcionário da concessionária anota o
+nome completo, o CPF e a placa do veículo de quem vai descartar. O registro é de
+**quem entregou**, não do **que foi entregue** — não há menção a tipo, peso ou
+destino do material. É o contrário do que a rastreabilidade pede, e confirma a
+lacuna pelo lado documental.
+
+A novidade mais próxima é dos **Correios**: desde 14/10/2026, as agências com
+Balcão do Cidadão recebem eletrônicos pequenos de graça e os encaminham à Rede
+Circulare, da Circular Brain. A divulgação fala em rastreio até a destinação
+final, mas o que o cidadão leva da agência é um comprovante de envio; não foi
+divulgada consulta por aparelho nem certificado de destinação (seção 5).
+
+> **[PREENCHER]** Confirmar em visita a um ecoponto ou cooperativa: se a anotação
+> é em papel ou em planilha, se algo do material é registrado e para onde o lote
+> segue.
 
 **6. Onde a tecnologia poderá contribuir?**
 Na etapa que hoje não tem registro nenhum: o percurso entre a entrega e a
@@ -201,9 +253,14 @@ comprovação da destinação final.
 | Aplicativos municipais de coleta seletiva | Localizam pontos e informam horários | Param na entrega; não acompanham a destinação |
 | Sistemas internos de recicladoras | Controlam lotes e pesagem | Fechados, sem acesso ao cidadão ou ao gestor público |
 | MTR / SINIR (manifesto de resíduos) | Rastreiam transporte de resíduos entre empresas | Instrumento de conformidade B2B, por lote, não por aparelho, e sem interface para o cidadão |
+| Correios + Rede Circulare (desde 14/10/2026) | Recebem eletrônicos pequenos nas agências com Balcão do Cidadão, com comprovante de envio, e encaminham a recicladores | Divulga rastreio até a destinação, mas não descreve consulta por aparelho nem certificado ao cidadão; não aceita pilhas, baterias e lâmpadas, e a caixa vai até 30 kg |
 
 **Lacuna identificada:** nenhuma das soluções acompanha o *item individual* de
-ponta a ponta nem devolve essa informação a quem entregou o aparelho.
+ponta a ponta nem devolve essa informação a quem entregou o aparelho. A iniciativa
+dos Correios, lançada às vésperas desta entrega, é a que chega mais perto e
+confirma que a rastreabilidade virou demanda; pelo que foi divulgado até
+22/10/2026, porém, ela entrega um comprovante de postagem, não uma trilha que o
+cidadão consulte.
 **Em MS.** Campo Grande publica os ecopontos na Carta de Serviços ao Usuário e a
 concessionária CG Solurb atende por telefone; a Green Eletron mantém um
 localizador nacional de pontos. Nenhum dos dois acompanha o aparelho depois da
@@ -862,9 +919,78 @@ aqui, a variável de ambiente é a mitigação honesta para uma demonstração.
 
 ## 10. Desenvolvimento
 
-> **[PREENCHER]** Registrar como o trabalho foi dividido na equipe, as decisões
-> que mudaram no meio do caminho e as dificuldades encontradas. Vale colar
-> capturas de tela da evolução entre as pré-entregas de 04/09, 25/09 e 23/10.
+### Divisão do trabalho
+
+> **[PREENCHER]** Quem ficou com cada frente — código, levantamento de dados
+> locais, relatório, testes e apresentação. É a única parte desta seção que o
+> repositório não registra.
+
+### Como o projeto evoluiu
+
+O histórico do repositório registra cada mudança com data e com o motivo. Em
+linhas gerais:
+
+- **21/08** — primeira versão funcional: front-end sem build, API em Flask sobre
+  SQLite e gatilhos que tornam o histórico somente de acréscimo. No mesmo dia
+  entrou o atestado de apagamento na triagem.
+- **24 a 27/08** — autorização: login de operador, administração de contas,
+  confirmação antes de gravar, conta obrigatória e troca de senha no primeiro
+  acesso.
+- **09/09** — Pré-Entrega 1, leitor de QR restrito a quem pode gravar, conta de
+  reserva e a primeira suíte de testes.
+- **25 a 27/09** — Pré-Entrega 2 e Relatório v0.3, com o levantamento de Campo
+  Grande; correção de dois defeitos do servidor achados em revisão.
+- **08/10** — competência por etapa (RF21) e Pré-Entrega 3, com as capturas da
+  seção 11.2.
+- **22/10** — levantamento do interior e contagem de Campo Grande refeita.
+
+As três pré-entregas estão em `docs/pre-entrega-1.html`, `pre-entrega-2.html` e
+`pre-entrega-3.html`, e as capturas de 08/10 em `docs/evidencias-pe3/`.
+
+### Decisões que mudaram no meio do caminho
+
+1. **A conta deixou de ser opcional.** A primeira versão permitia registrar e
+   consultar sem login, e duas rotas públicas devolviam todos os aparelhos —
+   com código, dono e o nome de quem assinou cada etapa. Em 27/08 a conta passou
+   a ser obrigatória e as duas rotas saíram; só a consulta por código continua
+   pública, porque é a promessa do projeto a quem tem a etiqueta na mão.
+2. **O responsável deixou de ser digitado.** O formulário tinha um campo
+   "responsável". Um nome digitado não prova nada, então desde 24/08 o servidor
+   carimba o nome da conta autenticada e descarta o que vier no corpo.
+3. **As senhas deixaram de ser fixas.** As contas iniciais nasciam com senha no
+   código. Passaram a ser sorteadas na carga e, quando quem definiu a senha não
+   foi o dono, a troca virou obrigatória: uma senha que o administrador conhece
+   não sustenta a assinatura dos eventos.
+4. **A trilha de administração perdeu a chave estrangeira.** Com `RESTRICT`, o
+   banco recusava excluir uma conta já promovida; com `CASCADE`, apagaria
+   justamente o registro de que ela existiu. Os nomes passaram a ser copiados
+   para a própria linha.
+5. **A competência por etapa foi desenhada duas vezes no mesmo dia.** A primeira
+   versão (por tipo de ponto) impedia o ecoponto de registrar a reciclagem, mas
+   ainda deixava qualquer ecoponto registrar a coleta de um aparelho entregue em
+   outro. A segunda amarrou a etapa ao ponto que está com o aparelho e obrigou o
+   transporte a informar o destino.
+6. **A cobertura de Campo Grande foi recalculada.** Os 39% de setembro contavam
+   só uma das duas gestoras; com as duas, a capital cumpre a regra no número, e
+   o argumento passou de "faltam pontos" para "os pontos existem, mas param na
+   entrega" (seção 1.1).
+
+### Dificuldades
+
+- **Defeitos que só apareceram nos testes.** A troca de senha não derrubava as
+  outras sessões abertas, e um corpo JSON válido que não fosse objeto derrubava o
+  servidor com erro 500. A seção 11.5 lista os três que a suíte pegou depois.
+- **Documentação envelhecendo junto com o código.** Um módulo removido seguiu
+  aparecendo no diagrama de arquitetura e no mapa de arquivos, e os números da
+  suíte ficaram desatualizados. A revisão de 25/09 acertou o mapa e os números,
+  medidos de novo em vez de estimados.
+- **Fonte que não se confirmou.** A Pré-Entrega 1 atribuía a 200 discos rígidos
+  de segunda mão um número que era de outro estudo, sobre pendrives. O dado
+  correto (seção 9.6) foi trocado em 25/09.
+- **A câmera exige contexto seguro.** Pelo IP da rede local, sem HTTPS, o leitor
+  de QR não abre a câmera; só a digitação do código funciona (limitação 10).
+- **Falta o aparelho na mão.** A interface móvel foi ajustada por inspeção, e o
+  teste em celular real segue em aberto (item 10 do cronograma).
 
 Marcos previstos no cronograma da DAC:
 
@@ -890,18 +1016,18 @@ está concluído foi verificado pela suíte de testes e pelo roteiro da seção 
 | 5 | Atestado de apagamento seguro | 31/08 | Concluído |
 | 6 | Suíte de testes automatizados | 31/08 | Concluído — 429 testes |
 | 7 | Conta de reserva e recuperação de acesso pelo terminal | 09/09 | Concluído |
-| 8 | Levantamento de dados locais de MS | 25/09 | Parcial — Campo Grande feito; interior pendente |
+| 8 | Levantamento de dados locais de MS | 25/09 | Concluído em 22/10 — interior levantado e Campo Grande recontado (seção 1.1) |
 | 9 | Competência por etapa (RF21) | 16/10 | Concluído em 08/10 — seção 9.7.2 |
 | 10 | Teste em celular real, em campo | 16/10 | Não iniciado |
 | 11 | Decisão sobre o dígito verificador | 16/10 | Em aberto — ver Limitações |
 | 12 | Evidências de teste em imagem para o relatório | 23/10 | Concluído em 08/10 — seção 11.2 |
-| 13 | Consolidação do Relatório Técnico | 23/10 | Versão preliminar completa; restam os marcadores de campo |
+| 13 | Consolidação do Relatório Técnico | 23/10 | Fontes e dados fechados em 22/10; restam a visita ao ecoponto e a divisão do trabalho |
 | 14 | Correções da revisão do servidor (sessões e corpo JSON) | 27/09 | Concluído — 22 testes novos |
 
-Estado em 08/10. Os itens 9 e 12 foram fechados: a competência por etapa e as
-capturas da seção 11.2. O caminho crítico até 29/10 passa a ser os itens 10 e 11:
-o teste com aparelho na mão e a decisão sobre o dígito verificador, que fica mais
-cara a cada código emitido.
+Estado em 22/10. Desde 08/10 fecharam os itens 8 e 13: o interior foi levantado
+e as fontes do relatório foram completadas. O caminho crítico até 29/10 continua
+nos itens 10 e 11: o teste com aparelho na mão e a decisão sobre o dígito
+verificador, que fica mais cara a cada código emitido.
 
 ---
 
@@ -1325,7 +1451,7 @@ equipe, para ordenar o que merece atenção — não medida.
 | # | Risco | Prob. | Impacto | O que reduz |
 |---|---|---|---|---|
 | R1 | **Adesão**: pontos de coleta e recicladoras não registram as leituras, e a trilha fica vazia no meio | Alta | Alto | É o risco principal, e não é técnico. Reduz-se começando por um ponto só, com um operador só, e mostrando o certificado pronto antes de pedir adesão |
-| R2 | Dados locais de MS não chegam a tempo do relatório final | Média | Médio | Campo Grande já levantado; o interior é extensão do mesmo método, não trabalho novo |
+| R2 | Dados locais de MS não chegam a tempo do relatório final | — | — | **Encerrado**: capital e interior levantados em 22/10 (seção 1.1) |
 | R3 | Competência por etapa (RF21) não ser implementada até 29/10 | — | — | **Encerrado**: implementada em 08/10 (seção 9.7.2) |
 | R4 | Dígito verificador: corrigir invalida códigos já impressos | Baixa | Médio | A decisão está registrada e medida (≈5% de escape). Enquanto as etiquetas são de demonstração, o custo de corrigir só cresce |
 | R5 | Câmera do scanner não abrir na apresentação | Média | Alto | Exige `localhost` ou HTTPS. Mitigado: a digitação manual do código faz o mesmo caminho, e o roteiro prevê o QR ampliado em tela |
@@ -1487,7 +1613,7 @@ plano estadual já prevê, entre seus programas prioritários, a implementação
 sistema de informações de gestão. A lacuna que este projeto endereça já está
 reconhecida em política pública.
 
-A segunda é que **o que o protótipo não faz está declarado**, e não escondido: a
+A segunda é que **o que o protótipo não faz está declarado**, e não escondido:
 o HTTPS, a fila de gravação offline e o dígito verificador estão nas Limitações,
 com o desenho de cada uma. Um trabalho que só mostra o que funciona ensina menos
 do que um que diz onde para.
@@ -1501,26 +1627,104 @@ comportamento de quem entrega, de quem opera e de quem fiscaliza.
 
 ## 17. Referências
 
-> **[PREENCHER]** Completar com as datas de acesso e com as fontes locais
-> levantadas pela equipe. Formatar conforme ABNT NBR 6023.
+Formatadas conforme a ABNT NBR 6023. As datas de acesso de setembro são as do
+primeiro levantamento; as de 22/10/2026, as das consultas que fecharam este
+relatório.
+
+### Legislação e política pública
 
 - BRASIL. **Lei nº 12.305, de 2 de agosto de 2010.** Institui a Política Nacional
-  de Resíduos Sólidos.
-- FORTI, V. et al. **The Global E-waste Monitor.** UNITAR/UNU/ITU.
-- GREEN ELETRON. *Gestora para logística reversa de eletroeletrônicos.*
-  Disponível em: <https://greeneletron.org.br>.
-- INSTITUTO DE MEIO AMBIENTE DE MATO GROSSO DO SUL. **Plano Estadual de Resíduos
-  Sólidos (PERS/MS)** e **Gestão de Resíduos Sólidos**. Campo Grande: IMASUL.
-  Disponível em: https://www.imasul.ms.gov.br/programas-e-projetos/gestao-de-residuos-solidos/
-- PREFEITURA MUNICIPAL DE CAMPO GRANDE. **Ecopontos — Carta de Serviços ao
-  Usuário**. Disponível em: https://cartadeservicos.campogrande.ms.gov.br/servicos/ecopontos/
-- GREEN ELETRON. **Ponto de Coleta** e **Saiba onde descartar aparelhos
-  eletrônicos e pilhas em Campo Grande**. Disponível em: https://greeneletron.org.br/ponto-de-coleta/
+  de Resíduos Sólidos. Brasília, DF: Presidência da República, 2010.
+- BRASIL. **Decreto nº 10.240, de 12 de fevereiro de 2020.** Regulamenta a
+  implementação de sistema de logística reversa de produtos eletroeletrônicos e
+  seus componentes de uso doméstico. Brasília, DF: Presidência da República, 2020.
+- BRASIL. **Lei nº 13.709, de 14 de agosto de 2018.** Lei Geral de Proteção de
+  Dados Pessoais (LGPD). Brasília, DF: Presidência da República, 2018.
+- INSTITUTO DE MEIO AMBIENTE DE MATO GROSSO DO SUL (IMASUL). **Gestão de
+  Resíduos Sólidos** e **Plano Estadual de Resíduos Sólidos (PERS/MS)**. Campo
+  Grande: IMASUL. Disponível em:
+  https://www.imasul.ms.gov.br/programas-e-projetos/gestao-de-residuos-solidos/.
+  Acesso em: set. 2026.
+- PREFEITURA MUNICIPAL DE CAMPO GRANDE. **Ecopontos**: Carta de Serviços ao
+  Usuário. Campo Grande, [2026]. Disponível em:
+  https://cartadeservicos.campogrande.ms.gov.br/servicos/ecopontos/. Acesso em:
+  22 out. 2026.
+
+### Dados e levantamentos
+
+- BALDÉ, C. P. et al. **The Global E-waste Monitor 2024.** Genebra; Bonn:
+  International Telecommunication Union (ITU); United Nations Institute for
+  Training and Research (UNITAR), 2024. Disponível em:
+  https://ewastemonitor.info/the-global-e-waste-monitor-2024/. Acesso em: set. 2026.
+- INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA (IBGE). **Censo Demográfico
+  2022**: população dos municípios de Mato Grosso do Sul. Rio de Janeiro: IBGE,
+  2023. Disponível em: https://www.ibge.gov.br/cidades-e-estados/ms.html. Acesso
+  em: set. 2026.
+- MATO GROSSO DO SUL. Secretaria de Estado de Meio Ambiente, Desenvolvimento,
+  Ciência, Tecnologia e Inovação (SEMADESC). **MS – Censo 2022 – População.**
+  Campo Grande: SEMADESC, 2023. Disponível em:
+  https://www.semadesc.ms.gov.br/wp-content/uploads/2023/06/MS-Censo-2022-Populacao.pdf.
+  Acesso em: 22 out. 2026.
+- GREEN ELETRON. **Onde descartar**: localizador de pontos de coleta de
+  eletroeletrônicos (pontos da Green Eletron e da ABREE). São Paulo, [2026].
+  Disponível em: https://greeneletron.org.br/onde-descartar/. Acesso em: 22 out. 2026.
+- GREEN ELETRON. **Ponto de coleta.** São Paulo, [2026]. Disponível em:
+  https://greeneletron.org.br/ponto-de-coleta/. Acesso em: set. 2026.
+- ASSOCIAÇÃO BRASILEIRA DE RECICLAGEM DE ELETROELETRÔNICOS E ELETRODOMÉSTICOS
+  (ABREE). **Site institucional.** Disponível em: https://abree.org.br/. Acesso
+  em: set. 2026.
 - UNIVERSITY OF HERTFORDSHIRE; COMPARITECH. **Estudo com 200 discos rígidos de
-  segunda mão**. Hatfield, 2019.
-- **[PREENCHER]** Fonte dos percentuais de composição material por categoria de
-  equipamento usados em `js/model.js`.
-- **[PREENCHER]** Fonte dos fatores de CO₂e evitado por material.
+  segunda mão.** Hatfield, 2019.
+
+### Notícias usadas no levantamento do interior e de soluções existentes
+
+- CORREIOS passam a receber equipamentos eletrônicos para descarte em MS.
+  **Midiamax**, Campo Grande, 14 out. 2026. Disponível em:
+  https://midiamax.com.br/cotidiano/2026/correios-passam-receber-equipamentos-eletronicos-descarte-ms/.
+  Acesso em: 22 out. 2026.
+- AGÊNCIAS dos Correios passam a recolher lixo eletrônico gratuitamente em todo
+  o país. **Mercado & Consumo**, São Paulo, 14 out. 2026. Disponível em:
+  https://mercadoeconsumo.com.br/14/10/2026/sustentabilidade/agencias-dos-correios-passam-a-recolher-lixo-eletronico-gratuitamente-em-todo-o-pais/.
+  Acesso em: 22 out. 2026.
+- ECOPONTO de eletrônicos cumpre missão ambiental e social em Dourados. **RCN67**,
+  Dourados. Disponível em:
+  https://www.rcn67.com.br/dourados/ecoponto-de-eletronicos-cumpre-missao-ambiental-e-social-em-dourados/.
+  Acesso em: 22 out. 2026.
+- PREFEITURA MUNICIPAL DE TRÊS LAGOAS. **Três Lagoas arrecada 2,5 toneladas de
+  resíduos eletrônicos durante Caravana "Eletrônico Não é Lixo".** Três Lagoas,
+  out. 2025. Disponível em:
+  https://www.treslagoas.ms.gov.br/tres-lagoas-arrecada-25-toneladas-de-residuos-eletronicos-durante-caravana-eletronico-nao-e-lixo/.
+  Acesso em: 22 out. 2026.
+- CORUMBÁ terá campanha de coleta de lixo eletrônico em setembro. **O Pantaneiro**,
+  Corumbá. Disponível em:
+  https://www.opantaneiro.com.br/corumba/corumba-tera-campanha-de-coleta-de-lixo-eletronico-em-setembro/229403.
+  Acesso em: 22 out. 2026.
+- PREFEITURA MUNICIPAL DE PONTA PORÃ. **Ponta Porã prepara Coleta de Lixo
+  Eletrônico no encerramento da Semana do Meio Ambiente.** Ponta Porã, 22 maio
+  2025. Disponível em:
+  https://pontapora.ms.gov.br/v2/ponta-pora-prepara-coleta-de-lixo-eletronico-no-encerramento-da-semana-do-meio-ambiente/.
+  Acesso em: 22 out. 2026.
+
+### Composição material e fatores de CO₂e (`js/model.js`)
+
+- UNITED NATIONS ENVIRONMENT PROGRAMME (UNEP). **Recycling – from e-waste to
+  resources.** Paris: UNEP; StEP Initiative, 2009. Referência de ordem de
+  grandeza para a composição: uma tonelada de celulares usados traz cerca de
+  130 kg de cobre e 340 g de ouro, contra 15% de cobre e 300 mg/kg de ouro na
+  tabela do projeto. Os percentuais das outras categorias são aproximações que a
+  equipe compilou a partir dessa literatura, não a transcrição de uma tabela
+  única — o que a limitação 8 (seção 14) declara.
+- NUSS, P.; ECKELMAN, M. J. Life cycle assessment of metals: a scientific
+  synthesis. **PLOS ONE**, v. 9, n. 7, e101298, 2014. DOI:
+  10.1371/journal.pone.0101298. Disponível em:
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC4085040/. Acesso em: 22 out. 2026.
+  É a fonte do fator do **ouro** (12.500 kg CO₂e por kg de metal primário),
+  usado sem alteração. Para os outros metais a mesma fonte dá cobre 2,8,
+  alumínio 8,2, ferro 1,5 e neodímio 17,6 kg CO₂e/kg; o projeto usa 3,5, 9,0,
+  1,8 e 25 — de 10% a 40% acima, e portanto um teto. Para plástico (1,7) e vidro
+  (0,6) não se localizou fonte primária. Vale ainda a ressalva de método: esses
+  fatores medem a produção primária, e o processo de reciclagem também emite;
+  o "CO₂e evitado" do painel é por isso um limite superior.
 
 ### Bibliotecas de terceiros
 
