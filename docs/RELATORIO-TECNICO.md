@@ -998,7 +998,7 @@ está concluído foi verificado pela suíte de testes e pelo roteiro da seção 
 | 3 | Back-end, banco e API; cadeia de custódia gravada no servidor | 27/08 | Concluído |
 | 4 | Contas, papéis e administração | 31/08 | Concluído |
 | 5 | Atestado de apagamento seguro | 31/08 | Concluído |
-| 6 | Suíte de testes automatizados | 31/08 | Concluído — 429 testes |
+| 6 | Suíte de testes automatizados | 31/08 | Concluído — 443 testes em 22/10 |
 | 7 | Conta de reserva e recuperação de acesso pelo terminal | 09/09 | Concluído |
 | 8 | Levantamento de dados locais de MS | 25/09 | Concluído em 22/10 — interior levantado e Campo Grande recontado (seção 1.1) |
 | 9 | Competência por etapa (RF21) | 16/10 | Concluído em 08/10 — seção 9.7.2 |
@@ -1333,7 +1333,7 @@ python -m pytest
 python -m pytest --cov=backend --cov-report=term-missing
 ```
 
-**429 testes, cerca de 11 a 21 segundos conforme a máquina, 92% do código do servidor**, assim distribuídos:
+**443 testes, cerca de 11 a 21 segundos conforme a máquina, 92% do código do servidor**, assim distribuídos:
 
 | Arquivo | Cobre |
 |---|---|
@@ -1352,7 +1352,7 @@ python -m pytest --cov=backend --cov-report=term-missing
 |---|---|
 | `backend/modelo.py` | 100% |
 | `backend/banco.py` | 98% |
-| `backend/app.py` | 84% |
+| `backend/app.py` | 85% |
 
 O que falta em `app.py` é `main()`, a descoberta do IP na rede e a impressão das
 credenciais — código que só roda ao subir o servidor.

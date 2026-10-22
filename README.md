@@ -60,7 +60,7 @@ python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-São 429 testes em cerca de 11 a 21 segundos, cobrindo 92% do servidor. Cada teste
+São 443 testes em cerca de 11 a 21 segundos, cobrindo 92% do servidor. Cada teste
 trabalha numa **cópia temporária** do banco, então rodar a suíte não toca em
 `backend/etrilha.db` nem nas contas da demonstração. Para o número de cobertura:
 
