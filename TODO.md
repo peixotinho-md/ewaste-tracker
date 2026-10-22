@@ -21,6 +21,31 @@ capturas de tela já feitas para o relatório e qualquer etiqueta impressa.
 Enquanto as etiquetas são de demonstração, o custo é baixo e cai a cada semana
 que passa. É a decisão que vale tomar agora, e não depois de 23/10.
 
+**Medido em 22/10: pesos ímpares não resolvem, trocam um defeito por outro.**
+Simulação com 3.000 códigos aleatórios, todas as trocas de um caractere e todas
+as inversões de dois vizinhos:
+
+| Pesos | Troca de 1 caractere escapa | Inversão de vizinhos escapa |
+|---|---|---|
+| Atuais (8, 7, 6, 5, 4, 3, 2) | 5,5% | 0% |
+| Ímpares (13, 11, 9, 7, 5, 3, 1) | 0% | 3,3% |
+
+Com pesos vizinhos diferindo de 1, a inversão `ab → ba` muda a soma em
+`(a − b)`, que nunca é múltiplo de 32. Com pesos ímpares a diferença vira
+`2 · (a − b)`, e `a − b = ±16` passa. Como 32 não é primo, nenhum jogo de pesos
+numa soma ponderada módulo 32 pega os dois erros ao mesmo tempo.
+
+Saídas que pegam os dois, a avaliar:
+- **Algoritmo de Damm** sobre um quasigrupo de ordem 32 — pega toda troca simples
+  e toda inversão de vizinhos, com um caractere só.
+- **Módulo primo** (31 ou 37) com pesos distintos — pega quase tudo, mas o dígito
+  passa a ter 31 ou 37 valores, e o alfabeto de 32 não fecha certo.
+
+Em qualquer caso, o custo continua o mesmo: mudar os dois lados
+(`backend/modelo.py` e `js/model.js`), o teste de paridade e o que trava os 5%
+em `testes/teste_modelo.py`, regerar `dados/itens-demo.json` e trocar os códigos
+citados no relatório e nas capturas de `docs/evidencias-pe3/`.
+
 ## 1. A pasta `backup/` nunca foi commitada
 
 São 25 arquivos e 724 KB — a maior massa do repositório depois de `vendor/`. O
