@@ -445,10 +445,13 @@ sem conexão e conferência manual dos indicadores do painel.</p>
 <li>O tema tem aplicação direta no contexto profissional de TI, área que gera
   e-waste constantemente: HDs, impressoras, servidores e cabeamento.</li>
 </ul>
-<p><strong>Evidência local.</strong> Em Mato Grosso do Sul, <strong>47,8% dos resíduos sólidos ainda vão
-para lixões</strong> e <strong>menos de 1% do lixo doméstico recebe tratamento</strong>. O problema
-que este projeto ataca — destinação sem comprovação — não é hipótese distante:
-é o caso da maior parte do que se descarta no estado.</p>
+<p><strong>Evidência de contexto.</strong> Segundo o Sistema Nacional de Informações sobre
+Saneamento (SNIS), ano-base 2019, citado pelo Governo de MS em 2022, os lixões
+ainda eram <strong>47,8% das unidades de disposição final de resíduos do país</strong> (1.114
+unidades), e a incineração, 0,7%. O dado é nacional e conta locais, não
+toneladas — não diz quanto do resíduo de MS vai para lixão. O que ele mostra é
+que, quase metade dos locais de destino do país ainda sendo lixão, a destinação
+sem controle é comum no sistema em que o e-waste de MS também circula.</p>
 <hr />
 <h2 id="3-publico-beneficiado">3. Público beneficiado</h2>
 <table>
@@ -2560,10 +2563,11 @@ porque nenhum deles quebra a tela:</p>
 </ol>
 <hr />
 <h2 id="12-viabilidade">12. Viabilidade</h2>
-<p><strong>Técnica.</strong> O protótipo já funciona com tecnologias de navegador, sem
-dependência de serviço pago. O back-end previsto (API REST + banco relacional) é
-compatível com o que a equipe estuda no semestre e não exige infraestrutura
-especial. A leitura de QR usa hardware que os operadores já têm: o celular.</p>
+<p><strong>Técnica.</strong> O protótipo funciona de ponta a ponta sem dependência de serviço
+pago: front-end em HTML, CSS e JavaScript sem build, e back-end em Flask com
+API REST sobre SQLite — tecnologias que a equipe estuda no semestre e que não
+exigem infraestrutura especial. A leitura de QR usa hardware que os operadores já
+têm: o celular.</p>
 <p><strong>Executiva.</strong> O custo material é baixo — etiquetas adesivas e celulares comuns.
 O obstáculo real não é técnico, é de <strong>adesão</strong>: a solução só funciona se os
 pontos de coleta, cooperativas e recicladoras registrarem as leituras. Isso exige
@@ -2873,10 +2877,20 @@ relatório.</p>
 </ul>
 <h3 id="noticias-usadas-no-levantamento-do-interior-e-de-solucoes-existentes">Notícias usadas no levantamento do interior e de soluções existentes</h3>
 <ul>
-<li>CORREIOS passam a receber equipamentos eletrônicos para descarte em MS.
+<li>
+<p>MENOS de 1% do lixo doméstico é destinado a tratamento; lixões recebem 47,8%
+  dos resíduos sólidos. <strong>Agência de Notícias do Governo de Mato Grosso do Sul</strong>,
+  Campo Grande, 15 maio 2022. Disponível em:
+  https://agenciadenoticias.ms.gov.br/menos-de-1-do-lixo-domestico-e-destinado-a-tratamento-lixoes-recebem-478-dos-residuos-solidos-2/.
+  Acesso em: 23 out. 2026. O título diz "resíduos"; o corpo do texto, com dados
+  do SNIS 2019, refere-se a unidades de disposição final — é o que a seção 2 usa.</p>
+</li>
+<li>
+<p>CORREIOS passam a receber equipamentos eletrônicos para descarte em MS.
   <strong>Midiamax</strong>, Campo Grande, 14 out. 2026. Disponível em:
   https://midiamax.com.br/cotidiano/2026/correios-passam-receber-equipamentos-eletronicos-descarte-ms/.
-  Acesso em: 22 out. 2026.</li>
+  Acesso em: 22 out. 2026.</p>
+</li>
 <li>AGÊNCIAS dos Correios passam a recolher lixo eletrônico gratuitamente em todo
   o país. <strong>Mercado &amp; Consumo</strong>, São Paulo, 14 out. 2026. Disponível em:
   https://mercadoeconsumo.com.br/14/10/2026/sustentabilidade/agencias-dos-correios-passam-a-recolher-lixo-eletronico-gratuitamente-em-todo-o-pais/.

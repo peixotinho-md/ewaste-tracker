@@ -204,10 +204,13 @@ sem conexão e conferência manual dos indicadores do painel.
 - O tema tem aplicação direta no contexto profissional de TI, área que gera
   e-waste constantemente: HDs, impressoras, servidores e cabeamento.
 
-**Evidência local.** Em Mato Grosso do Sul, **47,8% dos resíduos sólidos ainda vão
-para lixões** e **menos de 1% do lixo doméstico recebe tratamento**. O problema
-que este projeto ataca — destinação sem comprovação — não é hipótese distante:
-é o caso da maior parte do que se descarta no estado.
+**Evidência de contexto.** Segundo o Sistema Nacional de Informações sobre
+Saneamento (SNIS), ano-base 2019, citado pelo Governo de MS em 2022, os lixões
+ainda eram **47,8% das unidades de disposição final de resíduos do país** (1.114
+unidades), e a incineração, 0,7%. O dado é nacional e conta locais, não
+toneladas — não diz quanto do resíduo de MS vai para lixão. O que ele mostra é
+que, quase metade dos locais de destino do país ainda sendo lixão, a destinação
+sem controle é comum no sistema em que o e-waste de MS também circula.
 
 ---
 
@@ -1411,10 +1414,11 @@ porque nenhum deles quebra a tela:
 
 ## 12. Viabilidade
 
-**Técnica.** O protótipo já funciona com tecnologias de navegador, sem
-dependência de serviço pago. O back-end previsto (API REST + banco relacional) é
-compatível com o que a equipe estuda no semestre e não exige infraestrutura
-especial. A leitura de QR usa hardware que os operadores já têm: o celular.
+**Técnica.** O protótipo funciona de ponta a ponta sem dependência de serviço
+pago: front-end em HTML, CSS e JavaScript sem build, e back-end em Flask com
+API REST sobre SQLite — tecnologias que a equipe estuda no semestre e que não
+exigem infraestrutura especial. A leitura de QR usa hardware que os operadores já
+têm: o celular.
 
 **Executiva.** O custo material é baixo — etiquetas adesivas e celulares comuns.
 O obstáculo real não é técnico, é de **adesão**: a solução só funciona se os
@@ -1677,6 +1681,13 @@ relatório.
   segunda mão.** Hatfield, 2019.
 
 ### Notícias usadas no levantamento do interior e de soluções existentes
+
+- MENOS de 1% do lixo doméstico é destinado a tratamento; lixões recebem 47,8%
+  dos resíduos sólidos. **Agência de Notícias do Governo de Mato Grosso do Sul**,
+  Campo Grande, 15 maio 2022. Disponível em:
+  https://agenciadenoticias.ms.gov.br/menos-de-1-do-lixo-domestico-e-destinado-a-tratamento-lixoes-recebem-478-dos-residuos-solidos-2/.
+  Acesso em: 23 out. 2026. O título diz "resíduos"; o corpo do texto, com dados
+  do SNIS 2019, refere-se a unidades de disposição final — é o que a seção 2 usa.
 
 - CORREIOS passam a receber equipamentos eletrônicos para descarte em MS.
   **Midiamax**, Campo Grande, 14 out. 2026. Disponível em:
