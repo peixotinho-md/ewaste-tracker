@@ -34,10 +34,11 @@ as credenciais estão em **[docs/CREDENCIAIS-DEMO.md](docs/CREDENCIAIS-DEMO.md)*
 
 ## Como executar
 
-**1. Instalar a dependência** (uma vez só):
+Precisa de Python 3.10 ou mais novo.
+
+**1. Instalar a dependência** (uma vez só), de dentro da pasta do projeto:
 
 ```powershell
-cd C:\Users\rpalmeida\ewaste
 python -m pip install -r requirements.txt
 ```
 

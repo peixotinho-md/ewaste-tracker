@@ -3,9 +3,12 @@
 ## e-Trilha MS — rastreamento de resíduos eletrônicos por QR Code
 
 **Curso:** 262 — Tecnologia em Análise e Desenvolvimento de Sistemas
+
 **Disciplinas articuladas:** Algoritmos e Programação · Arquitetura de Computadores ·
 Redes de Computadores · Sistemas Operacionais · Projeto de Extensão em Sustentabilidade e Diversidade
+
 **Professor de referência:** Vitor Gabriel de Souza Farias — RF1440
+
 **Eixo:** 3 — Resíduos e Economia Circular
 
 **Equipe**
@@ -51,6 +54,7 @@ logística reversa é opaca entre o ponto de coleta e a recicladora.
 Estado de Mato Grosso do Sul. O recorte é estadual porque a estrutura de coleta é
 desigual: a capital concentra ecopontos e cooperativas, enquanto municípios do
 interior dependem de campanhas pontuais.
+
 **Campo Grande.** O Decreto 10.240/2020 pede 1 ponto de coleta para cada 25 mil
 habitantes nos municípios acima de 80 mil, o que dá **~36** para os 897.938
 habitantes da capital. O primeiro levantamento, de setembro de 2026, contou cerca
@@ -104,6 +108,7 @@ MS; eles foram descartados, e por isso a contagem é por endereço, não por
 posição no mapa.
 
 **3. Quem é afetado?**
+
 - Moradores urbanos com eletrônicos obsoletos sem destino;
 - Pequenas e médias empresas de TI, que geram sucata continuamente (servidores,
   impressoras, no-breaks, cabeamento);
@@ -111,11 +116,13 @@ posição no mapa.
 - Órgãos públicos municipais responsáveis pela gestão de resíduos.
 
 **4. Quais são as consequências?**
+
 - *Ambientais:* contaminação de solo e água por chumbo, mercúrio, cádmio e lítio;
 - *Econômicas:* perda de cobre, alumínio, aço, ouro e terras raras que teriam
   valor de mercado e evitariam mineração primária;
 - *Sociais:* perda de renda para cooperativas de catadores e exposição de
   trabalhadores a resíduos perigosos em desmontagem informal.
+
 **Quanto isso representa em MS.** Não há medição de e-waste por estado. O que se
 pode afirmar é o rateio do dado nacional por habitante, e é assim que deve ser
 lido — estimativa, não medição:
@@ -133,6 +140,7 @@ Aplicando a taxa nacional de coleta formal (cerca de 3%), algo em torno de
 **32.200 t/ano** em MS não teriam destinação comprovada.
 
 **5. Como o problema é tratado atualmente?**
+
 - Ecopontos municipais e pontos de entrega voluntária, divulgados de forma
   fragmentada;
 - Programas de logística reversa de fabricantes e a rede Green Eletron;
@@ -140,6 +148,7 @@ Aplicando a taxa nacional de coleta formal (cerca de 3%), algo em torno de
 
 Nenhum desses instrumentos oferece **rastreabilidade por item**: a informação para
 por "recebemos o material".
+
 **O que existe em MS.** O **Plano Estadual de Resíduos Sólidos (PERS/MS)**,
 gerido pelo IMASUL, organiza a política em 9 programas e 139 metas e ações — e um
 dos três programas que concentram mais de 80% do investimento previsto é
@@ -194,6 +203,7 @@ sem conexão e conferência manual dos indicadores do painel.
   uma barreira concreta e resolvível com tecnologia;
 - O tema tem aplicação direta no contexto profissional de TI, área que gera
   e-waste constantemente: HDs, impressoras, servidores e cabeamento.
+
 **Evidência local.** Em Mato Grosso do Sul, **47,8% dos resíduos sólidos ainda vão
 para lixões** e **menos de 1% do lixo doméstico recebe tratamento**. O problema
 que este projeto ataca — destinação sem comprovação — não é hipótese distante:
@@ -219,6 +229,7 @@ de resíduos eletrônicos em Mato Grosso do Sul, do registro do aparelho até a
 comprovação da destinação final.
 
 **Específicos.**
+
 1. Gerar identificador único e etiqueta QR para cada dispositivo descartado;
 2. Registrar a passagem do aparelho por cada etapa da cadeia por leitura do QR;
 3. Garantir que o histórico seja somente de acréscimo e que nenhuma etapa possa
@@ -251,6 +262,7 @@ dos Correios, lançada às vésperas desta entrega, é a que chega mais perto e
 confirma que a rastreabilidade virou demanda; pelo que foi divulgado até
 22/10/2026, porém, ela entrega um comprovante de postagem, não uma trilha que o
 cidadão consulte.
+
 **Em MS.** Campo Grande publica os ecopontos na Carta de Serviços ao Usuário e a
 concessionária CG Solurb atende por telefone; a Green Eletron mantém um
 localizador nacional de pontos. Nenhum dos dois acompanha o aparelho depois da
@@ -872,9 +884,10 @@ aqui, a variável de ambiente é a mitigação honesta para uma demonstração.
   8, 7, 6, 5, 4, 3, 2, e todo peso **par** divide o módulo 32, o que deixa passar
   a troca cujo efeito na soma é múltiplo de 32. Nas posições de peso ímpar a
   detecção é total; no conjunto, cerca de **5% das trocas de um caractere
-  escapam** (`testes/teste_modelo.py` mede e trava esse número). Pesos todos
-  ímpares seriam coprimos com 32 e levariam a brecha a zero — ao custo de mudar
-  o dígito de todo código já emitido. Ver limitação nº 7.
+  escapam** (`testes/teste_modelo.py` mede e trava esse número). Em troca, toda
+  inversão de dois caracteres vizinhos é detectada. Trocar por pesos ímpares não
+  resolve: medido em 22/10, eles zeram a troca simples, mas passam a deixar
+  escapar 3,3% das inversões. Ver limitação nº 7.
 - **Prefixo obrigatório** (`normalizar_codigo`): o código só é aceito começando
   por `MS`, como em `MS-XXXX-XXXX`. São duas verificações com papéis distintos —
   o prefixo diz de qual sistema é a etiqueta, e recusa de imediato qualquer outra
@@ -1003,7 +1016,7 @@ está concluído foi verificado pela suíte de testes e pelo roteiro da seção 
 | 8 | Levantamento de dados locais de MS | 25/09 | Concluído em 22/10 — interior levantado e Campo Grande recontado (seção 1.1) |
 | 9 | Competência por etapa (RF21) | 16/10 | Concluído em 08/10 — seção 9.7.2 |
 | 10 | Teste em celular real, em campo | 16/10 | Não iniciado |
-| 11 | Decisão sobre o dígito verificador | 16/10 | Em aberto — ver Limitações |
+| 11 | Decisão sobre o dígito verificador | 16/10 | Em estudo — pesos ímpares medidos e descartados em 22/10; ver Limitações |
 | 12 | Evidências de teste em imagem para o relatório | 23/10 | Concluído em 08/10 — seção 11.2 |
 | 13 | Consolidação do Relatório Técnico | 23/10 | Concluído em 22/10 — fontes e dados locais fechados |
 | 14 | Correções da revisão do servidor (sessões e corpo JSON) | 27/09 | Concluído — 22 testes novos |
@@ -1496,12 +1509,15 @@ não um formulário.
 7. **O dígito verificador não pega todo erro de um caractere.** A soma
    ponderada usa os pesos 8, 7, 6, 5, 4, 3, 2, e os pares dividem o módulo 32:
    cerca de 5% das trocas de um caractere produzem outro código com o mesmo
-   dígito. Nas posições de peso ímpar a detecção é total. Pesos todos ímpares
-   fechariam a brecha, e a correção é de uma linha em cada lado
-   (`backend/modelo.py` e `js/model.js`) — o que custa é o resto: todo código já
-   emitido muda de dígito, o que invalidaria as etiquetas impressas e os dez
-   itens de `dados/itens-demo.json`. Vale fazer antes de qualquer etiqueta real
-   ser colada em aparelho. O número está medido e travado em
+   dígito. Nas posições de peso ímpar a detecção é total, e toda inversão de
+   dois vizinhos é pega. A saída que parecia óbvia — pesos todos ímpares — foi
+   medida em 22/10 e **troca um defeito por outro**: zera a troca simples, mas
+   deixa passar 3,3% das inversões. Como 32 não é primo, nenhum jogo de pesos
+   numa soma módulo 32 pega os dois erros. Pegar os dois pede outro algoritmo,
+   como o de Damm, e qualquer mudança faz todo código já emitido mudar de
+   dígito, o que invalidaria as etiquetas impressas e os dez itens de
+   `dados/itens-demo.json`. Vale decidir antes de qualquer etiqueta real ser
+   colada em aparelho. O número está medido e travado em
    `testes/teste_modelo.py`, que falha se ele mudar.
 8. **Composição material e fatores de CO₂e são médias de referência**, não
    medições. Servem para ordem de grandeza, não para contabilidade ambiental

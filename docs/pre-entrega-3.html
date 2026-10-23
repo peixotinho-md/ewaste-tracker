@@ -180,6 +180,7 @@
     </div>
     <h1>Pré-Entrega 3: e-Trilha MS</h1>
     <p class="subtitulo">Fluxo principal funcionando, relatório preliminar completo e evidências dos testes</p>
+    <p class="subtitulo">Evidências de 08/10/2026 · documento atualizado em 23/10/2026</p>
     <dl class="ficha">
       <div><dt>Curso</dt><dd>262 — Tecnologia em Análise e Desenvolvimento de Sistemas</dd></div>
       <div><dt>Professor referência</dt><dd>Vitor Gabriel de Souza Farias — RF1440</dd></div>
@@ -207,7 +208,7 @@
   <section id="evolucao">
     <h2 class="secao"><span class="n">1</span> O que mudou desde a Pré-Entrega 2</h2>
 
-    <p>A Etapa 8 pede o <strong>fluxo principal funcionando</strong>, o <strong>relatório preliminar completo</strong> e as <strong>evidências dos testes</strong>. Além disso, fechamos a limitação nº 1 do projeto, que estava no caminho crítico do cronograma.</p>
+    <p>A Etapa 8 pede o <strong>fluxo principal funcionando</strong>, o <strong>relatório preliminar completo</strong> e as <strong>evidências dos testes</strong>. Além disso, fechamos a limitação nº 1 do projeto, que estava no caminho crítico do cronograma, e, em 22/10, o levantamento de dados do interior de MS e as fontes que faltavam no relatório.</p>
 
     <div class="destaque">
       <p>Cada etapa da cadeia agora só é registrada <strong>pelo ponto que está com o aparelho</strong>. Todo operador é vinculado a um ponto de coleta no momento em que recebe o papel, e só registra os aparelhos que estão nesse ponto: o ecoponto coleta, faz a triagem e despacha para uma recicladora; <strong>só aquela recicladora registra a reciclagem e emite o certificado</strong>. Um notebook percorreu a cadeia inteira assim, pela interface, com duas contas. A suíte passou de 366 para <strong>443 testes</strong>, todos passando.</p>
@@ -220,7 +221,8 @@
           <tr><td>Competência por etapa (RF21)</td><td><span class="selo ok">Implementado</span></td><td>Ponto obrigatório para operador, regra no servidor, tela que não oferece o que seria recusado e 56 testes novos (seção 3).</td></tr>
           <tr><td>Evidências de teste em imagem</td><td><span class="selo ok">Fechada</span></td><td>Percurso completo capturado em 08/10/2026 (seção 4).</td></tr>
           <tr><td>Revisão de segurança do servidor</td><td><span class="selo ok">Fechada</span></td><td>Dois defeitos corrigidos em 27/09, com 22 testes novos (seção 5).</td></tr>
-          <tr><td>Relatório Técnico</td><td><span class="selo parcial">Preliminar</span></td><td>As 17 seções estão escritas; restam 6 marcadores de trabalho de campo e de fonte (seção 8).</td></tr>
+          <tr><td>Levantamento de dados locais de MS</td><td><span class="selo ok">Fechado</span></td><td>Interior levantado e contagem de Campo Grande refeita em 22/10 (seção 8).</td></tr>
+          <tr><td>Relatório Técnico</td><td><span class="selo ok">Completo</span></td><td>As 17 seções escritas, sem marcadores pendentes; referências em ABNT com fonte para composição e CO₂e (seção 8).</td></tr>
         </tbody>
       </table>
     </div>
@@ -426,18 +428,15 @@ UPDATE apagamentos  -&gt; <span class="no">recusado</span>  O atestado de apagam
   <section id="relatorio">
     <h2 class="secao"><span class="n">8</span> Estado do Relatório Técnico</h2>
 
-    <p>O Relatório está em <code>docs/RELATORIO-TECNICO.md</code>, com as <strong>17 seções exigidas pela DAC</strong> escritas. Nesta etapa ele recebeu as evidências (11.2), os números da suíte (11.4), o RF21 implementado (requisitos, autorização, limitações e melhorias futuras) e o cronograma de 08/10. Restam <strong>6 marcadores</strong>, nenhum de código:</p>
-    <div class="pendencias">
-      <h4>O que o relatório ainda pede da equipe</h4>
-      <ol>
-        <li>Visita a um ecoponto ou cooperativa, relatando como o registro é feito hoje.</li>
-        <li>Levantamento de pontos em Dourados, Três Lagoas, Corumbá e Ponta Porã.</li>
-        <li>Divisão do trabalho na equipe e decisões que mudaram no caminho.</li>
-        <li>Datas de acesso e formatação ABNT das referências.</li>
-        <li>Fonte dos percentuais de composição material por categoria.</li>
-        <li>Fonte dos fatores de CO₂e por material — o número que o painel mais destaca.</li>
-      </ol>
-    </div>
+    <p>O Relatório está em <code>docs/RELATORIO-TECNICO.md</code> (e em HTML, em <code>docs/relatorio-tecnico.html</code>), com as <strong>17 seções exigidas pela DAC</strong> escritas e <strong>sem marcadores pendentes</strong>. Em 08/10 ele recebeu as evidências (11.2), os números da suíte (11.4) e o RF21. Em 22/10 recebeu:</p>
+    <ul>
+      <li><strong>O interior de MS.</strong> Dourados, Três Lagoas, Corumbá e Ponta Porã, com população, pontos exigidos pelo Decreto 10.240/2020, pontos cadastrados e o tipo de cada um (seção 1.1).</li>
+      <li><strong>A contagem de Campo Grande refeita.</strong> O levantamento de setembro contava só a Green Eletron e chegava a 39% de cobertura. Somada a ABREE, a outra gestora, a capital tem 36 pontos cadastrados — o que a regra pede. Mas 25 deles são balcão de loja para aparelho pequeno, e nenhum registra nada além da entrega. O argumento passou de <em>faltam pontos</em> para <em>os pontos existem, mas a informação para na entrega</em>.</li>
+      <li><strong>Como o registro é feito hoje</strong>, pela Carta de Serviços de Campo Grande: o ecoponto anota nome, CPF e placa de quem entrega, e nada sobre o material.</li>
+      <li><strong>Uma solução nova na pesquisa</strong>: desde 14/10/2026 os Correios recebem eletrônicos pequenos nas agências e os encaminham à Rede Circulare. É a mais próxima da nossa; pelo que foi divulgado, entrega comprovante de envio, não uma trilha que o cidadão consulte (seção 5).</li>
+      <li><strong>A seção 10 (Desenvolvimento)</strong>, com a evolução, as decisões que mudaram no caminho e as dificuldades.</li>
+      <li><strong>As referências em ABNT</strong>, com data de acesso, e as fontes da composição material e do CO₂e. O fator do ouro vem de Nuss e Eckelman (2014); os dos outros metais estão de 10% a 40% acima dessa fonte, e o relatório declara que o CO₂e evitado é por isso um teto.</li>
+    </ul>
   </section>
 
   <!-- 9 -->
@@ -447,12 +446,11 @@ UPDATE apagamentos  -&gt; <span class="no">recusado</span>  O atestado de apagam
     <div class="pendencias">
       <h4>Pendências, em ordem de prioridade</h4>
       <ol>
-        <li><strong>Decidir o dígito verificador.</strong> Cerca de 5% dos erros de um caractere passam, porque os pesos pares dividem o módulo 32. A correção é de uma linha em cada lado, mas muda o dígito de todo código já emitido. Quanto mais tarde, mais caro.</li>
+        <li><strong>Decidir o dígito verificador.</strong> Cerca de 5% dos erros de um caractere passam, porque os pesos pares dividem o módulo 32. A correção que parecia de uma linha — pesos todos ímpares — foi medida em 22/10 e troca um defeito por outro: zera a troca simples, mas deixa passar 3,3% das inversões de vizinhos, que hoje são todas pegas. Pegar os dois pede outro algoritmo, como o de Damm. Qualquer mudança faz todo código já emitido mudar de dígito.</li>
         <li><strong>Teste em celular real</strong>, com etiqueta impressa. Pela rede local, sem HTTPS, a câmera não abre — o teste precisa prever isso.</li>
-        <li><strong>Os seis marcadores do relatório</strong>, sobretudo a visita de campo.</li>
       </ol>
     </div>
-    <p>Do cronograma interno, ficam concluídos o RF21 (previsto para 16/10) e as evidências em imagem (previstas para 23/10). O levantamento de dados do interior segue parcial.</p>
+    <p>Do cronograma interno, ficam concluídos o RF21 (previsto para 16/10), as evidências em imagem e a consolidação do relatório (previstas para 23/10) e o levantamento de dados locais. A suíte foi rodada de novo em 22/10: 443 testes passando, 92% do servidor.</p>
   </section>
 
   <!-- 10 -->
@@ -473,7 +471,7 @@ UPDATE apagamentos  -&gt; <span class="no">recusado</span>  O atestado de apagam
       <p>MICROSOFT. <strong>Playwright for Python</strong>. Usado só para dirigir o navegador na captura das evidências. Disponível em: <a href="https://playwright.dev/python/">https://playwright.dev/python/</a></p>
     </div>
 
-    <p class="nota-metodo"><strong>Nota de método.</strong> As evidências foram produzidas em 08/10/2026 com Windows 11, Python 3.13 e Google Chrome, com o servidor ouvindo apenas em <code>127.0.0.1</code>. O banco foi criado do zero a partir de <code>dados/*.json</code> e descartado depois; os códigos citados existiram só nele. As referências de contexto do problema estão na Pré-Entrega 2 e no Relatório Técnico.</p>
+    <p class="nota-metodo"><strong>Nota de método.</strong> As evidências foram produzidas em 08/10/2026 com Windows 11, Python 3.13 e Google Chrome, com o servidor ouvindo apenas em <code>127.0.0.1</code>. O banco foi criado do zero a partir de <code>dados/*.json</code> e descartado depois; os códigos citados existiram só nele. As referências de contexto do problema, incluindo as do levantamento de 22/10/2026, estão na Pré-Entrega 2 e no Relatório Técnico.</p>
   </section>
 
 </div>
